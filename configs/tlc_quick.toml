@@ -1,0 +1,19 @@
+[project]
+name = "tlc-development"
+context_mode = "tlc"
+
+[source]
+dashboard_end = "2024-01-08"
+
+[simulation]
+seed = 42
+dgp = "RCT_SYN"
+
+[model]
+estimators = ["naive_ols", "adjusted_ols", "dml"]
+scenario_estimator = "dml"
+
+[evaluation]
+seeds = 3
+bootstrap_draws = 30
+reporting_min_draws = 199

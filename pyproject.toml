@@ -1,0 +1,45 @@
+[project]
+name = "gsm-poc"
+version = "0.1.0"
+description = "GSM Causal Marketplace: first-two-week controlled PoC"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "duckdb>=1.3,<2",
+  "pyarrow>=18,<24",
+  "numpy>=1.26,<3",
+  "pandas>=2.2,<3",
+  "scikit-learn>=1.5,<1.7",
+  "econml>=0.16,<0.17",
+  "scipy>=1.12,<2",
+  "joblib>=1.4,<2",
+  "streamlit>=1.40,<2",
+  "altair>=5,<7",
+]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.49,<2",
+    "pytest>=8,<10",
+    "ruff>=0.9,<1",
+]
+
+[project.scripts]
+gsm-poc = "gsm_poc.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gsm_poc"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

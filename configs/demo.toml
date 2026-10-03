@@ -1,0 +1,25 @@
+[project]
+name = "offline-development"
+context_mode = "synthetic"
+
+[simulation]
+seed = 42
+slot_minutes = 120
+sessions_per_block = 50
+dgp = "RCT_SYN"
+
+[model]
+estimators = ["naive_ols", "adjusted_ols", "dml"]
+scenario_estimator = "dml"
+n_trees = 20
+folds = 5
+
+[evaluation]
+seeds = 3
+bootstrap_draws = 10
+reporting_min_draws = 199
+
+[scenario]
+delta_price_x = 0.10
+delta_price_y = 0.0
+n_sessions = 10000

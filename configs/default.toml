@@ -1,0 +1,17 @@
+[project]
+name = "tlc-reporting"
+context_mode = "tlc"
+
+[simulation]
+seed = 42
+dgp = "RCT_SYN"
+
+[model]
+estimators = ["naive_ols", "adjusted_ols", "dml"]
+scenario_estimator = "dml"
+
+[evaluation]
+seeds = 100
+bootstrap_draws = 199
+reporting_min_draws = 199
+dgps = ["RCT_SYN", "OBSERVED_CONFOUNDING", "HIDDEN_CONFOUNDING", "NULL_EFFECT", "COLLINEAR_PRICE"]

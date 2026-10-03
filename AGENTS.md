@@ -21,6 +21,7 @@ Reusable working agreements for coding agents. Follow repository conventions and
 - Continue through implementation and verification. If blocked, complete independent work and report the precise blocker.
 
 ## Python and dependencies
+- If venv not created, create venv using python3.11.
 - Use the declared Python version and the project's configured environment, dependency manager, formatter, linter, and type checker.
 - Follow existing typing and documentation conventions. Prefer clear names, cohesive functions, specific exceptions, and comments that explain non-obvious reasoning.
 - Avoid mutable default arguments, unnecessary import-time side effects, and hidden global state.

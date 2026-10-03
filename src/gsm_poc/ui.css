@@ -1,0 +1,72 @@
+/* Hallmark · macrostructure: Workbench · tone: technical · anchor hue: cobalt
+ * genre: modern-minimal · theme: Cobalt · enrichment: none · nav: N9 · footer: Ft2
+ * audience: pricing and operations · use: compare price scenarios
+ * local font pairing: Bahnschrift + Segoe UI · motion: none
+ * pre-emit critique: P4 H4 E4 S5 R5 V4
+ */
+html, body { overflow-x: clip; }
+.stApp { background: var(--color-paper); color: var(--color-ink); }
+.stApp p, .stApp label, .stApp input, .stApp button {
+  font-family: var(--font-body);
+}
+.stApp h1, .stApp h2, .stApp h3 {
+  font-family: var(--font-display);
+  font-style: normal;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.stApp h1 { font-size: var(--text-display); letter-spacing: -0.025em; }
+[data-testid="stMainBlockContainer"] {
+  max-width: 1280px;
+  padding-top: var(--space-xl);
+  padding-bottom: var(--space-2xl);
+}
+[data-testid="stSidebar"] { background: var(--color-surface); }
+[data-testid="stMetric"] {
+  padding: var(--space-md) 0;
+  border-top: var(--rule-thin) solid var(--color-rule);
+}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {
+  color: var(--color-muted);
+  opacity: 1;
+}
+[data-testid="stMetricValue"] { font-family: var(--font-display); }
+.stApp button {
+  min-height: 44px;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+}
+.stApp input:not([type="checkbox"]):not([type="radio"]),
+.stApp select, .stApp textarea { min-height: 44px; }
+.stApp button:focus-visible, .stApp input:focus-visible,
+.stApp [role="slider"]:focus-visible, .stApp [role="tab"]:focus-visible,
+.stApp [role="combobox"]:focus-visible, .stApp a:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.stApp button:disabled, .stApp [aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.stApp [aria-invalid="true"] { border-color: var(--color-error); }
+.stApp [data-testid="stAlert"] { border-radius: var(--radius-sm); }
+.stApp button:active { transform: translateY(1px); }
+@media (hover: hover) {
+  .stApp button:hover { color: var(--color-accent); }
+}
+@media (max-width: 768px) {
+  [data-testid="stMainBlockContainer"] {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+  [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+  [data-testid="stColumn"] { flex: 1 1 100%; min-width: 0; }
+  [data-testid="stTabs"] button { padding: var(--space-sm); font-size: var(--text-sm); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stApp *, .stApp *::before, .stApp *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
