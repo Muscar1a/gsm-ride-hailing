@@ -123,3 +123,14 @@ See [architecture](docs/ARCHITECTURE.md), [implementation plan](docs/IMPLEMENTAT
 [identification](docs/IDENTIFICATION.md), [benchmark protocol](docs/BENCHMARK.md),
 and [GSM data contract](docs/GSM_DATA_CONTRACT.md).
 Supply, matching/charging simulation, DiD and field switchback are next-phase work.
+
+The supplied [data requirements](<docs/GSM Causal Marketplace - Data Requirements.pdf>)
+request eight raw source groups over the latest 12 months. They also specify a
+separate Swissmetro choice benchmark, which is not yet implemented in this PoC.
+
+## Current PoC submission
+
+The [04 October submission documents](docs/submission_20261004/README.md) include
+a technical report PDF, a short progress update and a solo contributor's work plan.
+The documents compare current progress with the
+[full initial proposal](docs/GSM_Causal_Marketplace_Proposal.md).
