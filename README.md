@@ -107,17 +107,12 @@ rejected at every context. Small bootstrap runs withhold scenario intervals.
 ## Verification
 
 ```powershell
-uv run ruff check src tests scripts
-uv run ruff format --check src tests scripts
+uv run ruff check src tests
+uv run ruff format --check src tests
 uv run pytest -q
 ```
 
-Tests use deterministic fixtures and no network calls. The optional browser smoke
-script uses a separately launched local dashboard and an installed browser:
-
-```powershell
-uv run python scripts/check_dashboard.py --url http://127.0.0.1:8501 --browser "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-```
+Tests use deterministic fixtures and no network calls.
 
 See [architecture](docs/ARCHITECTURE.md), [implementation plan](docs/IMPLEMENTATION_PLAN.md),
 [identification](docs/IDENTIFICATION.md), [benchmark protocol](docs/BENCHMARK.md),
