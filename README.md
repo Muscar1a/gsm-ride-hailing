@@ -125,6 +125,7 @@ rejected at every context. Small bootstrap runs withhold scenario intervals.
 ```powershell
 uv run ruff check src tests
 uv run ruff format --check src tests
+uvx ty check src/gsm_poc --error-on-warning
 uv run pytest -q
 ```
 
@@ -144,4 +145,4 @@ separate Swissmetro choice benchmark, which is not yet implemented in this PoC.
 The [04 October submission documents](docs/submission_20261004/README.md) include
 a technical report PDF, a short progress update and a solo contributor's work plan.
 The documents compare current progress with the
-[full initial proposal](docs/GSM_Causal_Marketplace_Proposal.md).
+[full initial proposal](docs/general/GSM_Causal_Marketplace_Proposal.md).

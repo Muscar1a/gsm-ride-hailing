@@ -1,6 +1,6 @@
 # Thiết kế chi tiết core engine — GSM Causal Marketplace
 
-**Căn cứ:** [GSM Causal Marketplace Proposal](../GSM_Causal_Marketplace_Proposal.md).  
+**Căn cứ:** [GSM Causal Marketplace Proposal](GSM_Causal_Marketplace_Proposal.md).
 **Phạm vi:** nguyên mẫu thị trường hai phía, một cụm, hai dịch vụ, theo lộ trình năm tuần của proposal.  
 **Loại tài liệu:** đặc tả thiết kế để triển khai và nghiệm thu. Công thức, giao diện và giá trị khởi đầu dưới đây là quyết định thiết kế; không phải kết quả thực nghiệm hoặc mô tả tiến độ mã nguồn.
 
@@ -566,7 +566,7 @@ Các quyết định này được lưu thành cấu hình/version để triển
 
 ## 20. Tài liệu nền và nguyên tắc sử dụng thiết kế
 
-- [Proposal GSM Causal Marketplace](../GSM_Causal_Marketplace_Proposal.md): nguồn yêu cầu, phạm vi và lộ trình.
+- [Proposal GSM Causal Marketplace](GSM_Causal_Marketplace_Proposal.md): nguồn yêu cầu, phạm vi và lộ trình.
 - [GSM data contract](../GSM_DATA_CONTRACT.md): nguồn và nguyên tắc dữ liệu; tên bảng nghiên cứu không là yêu cầu schema GSM.
 - [Benchmark protocol](../BENCHMARK.md): phân biệt parameter recovery, policy value và business impact.
 

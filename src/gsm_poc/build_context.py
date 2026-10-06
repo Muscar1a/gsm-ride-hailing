@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from gsm_poc.artifacts import fingerprint, write_frame, write_json
-from gsm_poc.build_silver import connection
+from gsm_poc.build_silver import connection, fetch_required_row
 from gsm_poc.config import Config
 
 
@@ -38,7 +38,9 @@ def build_context(config: Config, silver: Path, build_id: str) -> dict:
                 quantile_cont(trip_time, 0.9) AS trip_seconds_p90 FROM train {suffix}
             """).df()
             )
-        minimum, maximum = con.execute("SELECT min(trip_km), max(trip_km) FROM train").fetchone()
+        minimum, maximum = fetch_required_row(
+            con.execute("SELECT min(trip_km), max(trip_km) FROM train")
+        )
     if tables[-1].sample_count.iloc[0] < config.source.min_group_count:
         raise ValueError("Insufficient valid training trips even at whole-cluster fallback")
     rows = []

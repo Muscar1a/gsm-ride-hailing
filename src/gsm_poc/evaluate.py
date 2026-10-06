@@ -18,7 +18,7 @@ from gsm_poc.artifacts import (
     write_json,
 )
 from gsm_poc.config import Config
-from gsm_poc.estimate import FitResult, fit_all
+from gsm_poc.estimate import FitResult, ModelBundle, fit_all
 from gsm_poc.features import date_splits
 from gsm_poc.generate import TRUE_THETA, Generated, generate
 from gsm_poc.uncertainty import (
@@ -116,6 +116,28 @@ def effect_rows(
     return rows
 
 
+def resolve_target_log_price(model_bundle: ModelBundle, run_config: Config) -> np.ndarray | None:
+    delta_price = np.array(
+        [run_config.scenario.delta_price_x, run_config.scenario.delta_price_y], dtype=float
+    )
+    if (delta_price <= -1).any():
+        return None
+    delta_log_price = np.log(1 + delta_price)
+    inactive = set(range(2)) - set(model_bundle.active_treatments)
+    if any(abs(delta_log_price[k]) > 1e-12 for k in inactive):
+        return None
+    target_log_price = np.zeros(2, dtype=float)
+    for k in range(2):
+        if k in model_bundle.active_treatments:
+            target_log_price[k] = delta_log_price[k]
+        else:
+            observed_key = ("X", "Y")[k]
+            target_log_price[k] = model_bundle.diagnostics.get("constant_log_prices", {}).get(
+                observed_key, 0.0
+            )
+    return target_log_price
+
+
 def method_metrics(
     result: FitResult, draws: BootstrapResult | None, data: Generated, config: Config, run_id: str
 ) -> list[dict]:
@@ -125,19 +147,22 @@ def method_metrics(
     bundle = result.bundle
     scenario_rmse = None
     probability_valid = None
-    if bundle is not None:
-        truth = test[["block_id"]].merge(data.oracle, on="block_id", validate="one_to_one")
-        true_xy = truth[["b_x", "b_y"]].to_numpy() + np.array([np.log(1.1), 0]) @ theta.T
-        prediction = bundle.probabilities(test, np.array([np.log(1.1), 0]))
-        probability_valid = valid_probabilities(prediction)
-        if probability_valid:
-            scenario_rmse = float(
-                np.sqrt(
-                    np.average(
-                        np.mean((prediction[:, :2] - true_xy) ** 2, axis=1), weights=test.n_sessions
+    if bundle is not None and bundle.diagnostics.get("validation_probability_valid") is not False:
+        target_log_price = resolve_target_log_price(bundle, config)
+        if target_log_price is not None:
+            truth = test[["block_id"]].merge(data.oracle, on="block_id", validate="one_to_one")
+            true_xy = truth[["b_x", "b_y"]].to_numpy() + target_log_price @ theta.T
+            prediction = bundle.probabilities(test, target_log_price)
+            probability_valid = valid_probabilities(prediction)
+            if probability_valid:
+                scenario_rmse = float(
+                    np.sqrt(
+                        np.average(
+                            np.mean((prediction[:, :2] - true_xy) ** 2, axis=1),
+                            weights=test.n_sessions,
+                        )
                     )
                 )
-            )
     rows = []
     for effect in effects:
         j, k = ("X", "Y").index(effect["outcome"]), ("X", "Y").index(effect["treatment"])
@@ -194,9 +219,12 @@ def saved_method_evaluation(
 
 def aggregate_metrics(seed_metrics: pd.DataFrame, expected_seeds: int) -> pd.DataFrame:
     rows = []
-    for (dgp, estimator, outcome, treatment), group in seed_metrics.groupby(
+    for group_key, group in seed_metrics.groupby(
         ["dgp_id", "estimator", "outcome", "treatment"], dropna=False
     ):
+        if not isinstance(group_key, tuple) or len(group_key) != 4:
+            raise ValueError("Expected a four-column metric group key")
+        dgp, estimator, outcome, treatment = group_key
         errors = group.error.dropna().astype(float)
         covered = group.covered.dropna().astype(bool)
         fp = group.false_positive.dropna().astype(bool)

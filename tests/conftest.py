@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import dataclasses
 import datetime as dt
+from typing import Any
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -36,9 +38,17 @@ def generated(config):
 def exact_blocks(generated):
     # Deterministic conditional means provide a numerical oracle fixture only in tests.
     frame = generated.blocks.copy()
-    frame["q_x"] = generated.oracle.p_x.to_numpy()
-    frame["q_y"] = generated.oracle.p_y.to_numpy()
-    frame["q_none"] = generated.oracle.p_none.to_numpy()
+    n = int(1e12)
+    nx = np.round(generated.oracle.p_x.to_numpy() * n).astype(int)
+    ny = np.round(generated.oracle.p_y.to_numpy() * n).astype(int)
+    nnone = n - nx - ny
+    frame["n_sessions"] = n
+    frame["n_x"] = nx
+    frame["n_y"] = ny
+    frame["n_none"] = nnone
+    frame["q_x"] = nx / n
+    frame["q_y"] = ny / n
+    frame["q_none"] = nnone / n
     return frame
 
 
@@ -52,7 +62,7 @@ def tlc_fixture(config):
     rows = []
     for i in range(9):
         pickup = dt.datetime(2024, 1, 1, 0, i)
-        row = {c: "N" for c in STRING_COLUMNS}
+        row: dict[str, Any] = {c: "N" for c in STRING_COLUMNS}
         row.update({c: 1.0 for c in FLOAT_COLUMNS})
         row.update({c: 161 for c in INTEGER_COLUMNS})
         row.update({c: pickup for c in TIMESTAMP_COLUMNS})

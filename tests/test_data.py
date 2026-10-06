@@ -7,6 +7,7 @@ from gsm_poc.artifacts import read_json
 from gsm_poc.build_context import build_context
 from gsm_poc.build_marts import build_marts
 from gsm_poc.build_silver import build_silver
+from gsm_poc.config import TLC_SOURCE_VERSION
 from gsm_poc.validate import tlc_schema
 
 
@@ -41,7 +42,10 @@ def test_silver_keeps_duplicates_and_independent_quality(tlc_fixture):
 
 def test_grid_counts_and_empty_cells(tlc_fixture):
     config, source = tlc_fixture
-    silver = build_silver(config, source)
+    config = dataclasses.replace(
+        config, project=dataclasses.replace(config.project, context_mode="tlc")
+    )
+    silver = build_silver(config, {**source, "source_version": TLC_SOURCE_VERSION})
     output = build_marts(config, silver["silver"], silver["build_id"])
     mart = pd.read_parquet(output["mart"])
     assert len(mart) == 2 * 2 * 48 * 2
@@ -55,6 +59,11 @@ def test_grid_counts_and_empty_cells(tlc_fixture):
     assert empty.source_complete.all()
     assert empty.trip_seconds_p50.isna().all()
     assert empty.request_to_pickup_invalid_or_missing_share.isna().all()
+    empty_day = mart[mart.slot_start_local.dt.date == pd.Timestamp("2024-01-02").date()]
+    assert len(empty_day) == 2 * 48 * 2
+    assert empty_day.completed_trip_count.eq(0).all()
+    assert empty_day.source_complete.all()
+    assert empty_day.trip_seconds_p50.isna().all()
 
 
 def test_context_is_train_only_and_fallback_is_recorded(tlc_fixture):

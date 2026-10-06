@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import time
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -50,7 +51,7 @@ def bootstrap(
     records, bundles = [], []
     for draw in range(config.evaluation.bootstrap_draws):
         started = time.perf_counter()
-        record = {"draw_id": draw, "estimator": estimator, "status": "failed"}
+        record: dict[str, Any] = {"draw_id": draw, "estimator": estimator, "status": "failed"}
         bundle = None
         try:
             sampled = bootstrap_sample(train, rng)
@@ -70,7 +71,7 @@ def bootstrap(
                 for k, index in enumerate(bundle.active_treatments):
                     record[f"theta_{outcome}{('x', 'y')[index]}"] = float(bundle.theta[j, k])
             record["baseline_coefficients"] = bundle.base_rate_model.coef_.tolist()
-            record["baseline_intercepts"] = bundle.base_rate_model.intercept_.tolist()
+            record["baseline_intercepts"] = np.asarray(bundle.base_rate_model.intercept_).tolist()
             record.update(status="succeeded", original_days=int(sampled.original_day_id.nunique()))
         except (ValueError, np.linalg.LinAlgError, RuntimeError) as exc:
             bundle = None

@@ -21,6 +21,7 @@ FEATURE_COLUMNS = (
 )
 TREATMENT_COLUMNS = ("log_multiplier_x", "log_multiplier_y")
 OUTCOME_COLUMNS = ("q_x", "q_y")
+COUNT_COLUMNS = ("n_x", "n_y", "n_none")
 ORACLE_COLUMNS = {"u", "p_x", "p_y", "p_none", "b_x", "b_y", "theta", "true_probability"}
 
 
@@ -62,7 +63,7 @@ def require_observed(frame: pd.DataFrame) -> None:
     forbidden = ORACLE_COLUMNS.intersection(str(c).lower() for c in frame)
     if forbidden:
         raise ValueError(f"Oracle fields are forbidden in estimation input: {sorted(forbidden)}")
-    required = set(FEATURE_COLUMNS + TREATMENT_COLUMNS + OUTCOME_COLUMNS) | {
+    required = set(FEATURE_COLUMNS + TREATMENT_COLUMNS + OUTCOME_COLUMNS + COUNT_COLUMNS) | {
         "n_sessions",
         "day_id",
         "original_day_id",
@@ -71,13 +72,35 @@ def require_observed(frame: pd.DataFrame) -> None:
     missing = required - set(frame)
     if missing:
         raise ValueError(f"Missing observed block columns: {sorted(missing)}")
-    numeric = frame[[*TREATMENT_COLUMNS, *OUTCOME_COLUMNS, "n_sessions"]].to_numpy(float)
+    numeric = frame[[*TREATMENT_COLUMNS, *OUTCOME_COLUMNS, *COUNT_COLUMNS, "n_sessions"]].to_numpy(
+        float
+    )
     if not np.isfinite(numeric).all() or (frame.n_sessions <= 0).any():
         raise ValueError("Outcomes, treatments and session weights must be finite and valid")
     if (frame[list(OUTCOME_COLUMNS)] < 0).any().any() or (
         frame[list(OUTCOME_COLUMNS)].sum(axis=1) > 1 + 1e-12
     ).any():
         raise ValueError("Invalid observed choice proportions")
+    if (frame[list(COUNT_COLUMNS)] < 0).any().any():
+        raise ValueError("Choice counts must be non-negative")
+    counts_and_sessions = frame[[*COUNT_COLUMNS, "n_sessions"]].to_numpy(float)
+    if not np.equal(counts_and_sessions, np.round(counts_and_sessions)).all():
+        raise ValueError("Choice counts and n_sessions must be integers")
+    if not (frame[list(COUNT_COLUMNS)].sum(axis=1) == frame.n_sessions).all():
+        raise ValueError("Choice counts do not conserve sessions")
+    for service in ("x", "y"):
+        expected = frame[f"n_{service}"] / frame.n_sessions
+        if not np.isclose(frame[f"q_{service}"], expected, atol=1e-9, rtol=1e-9).all():
+            raise ValueError(
+                f"Observed choice proportion q_{service} does not match "
+                f"count ratio n_{service} / n_sessions"
+            )
+    if "q_none" in frame:
+        expected_none = frame["n_none"] / frame.n_sessions
+        if not np.isclose(frame["q_none"], expected_none, atol=1e-9, rtol=1e-9).all():
+            raise ValueError(
+                "Observed choice proportion q_none does not match count ratio n_none / n_sessions"
+            )
 
 
 def date_splits(frame: pd.DataFrame, config: Config) -> dict[str, pd.DataFrame]:

@@ -2,7 +2,7 @@
 
 Prepared in Vietnamese for the current PoC submission by the sole contributor,
 **Nguyễn Thành An** (`26ai.annt@vinuni.edu.vn`).
-The [full initial proposal](../GSM_Causal_Marketplace_Proposal.md) supplies the
+The [full initial proposal](../general/GSM_Causal_Marketplace_Proposal.md) supplies the
 objectives and five-week plan used to report progress. Current work covers only
 part of that scope; GSM-dependent conditions remain.
 

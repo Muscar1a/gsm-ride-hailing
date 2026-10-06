@@ -10,7 +10,7 @@ Phiên bản này đã triển khai pipeline dữ liệu, bộ sinh hành vi có
 
 Mục tiêu hiện tại là kiểm tra phương pháp và tính tái lập. Giá trị kinh doanh cần đo bằng doanh thu thực thu và biên đóng góp GSM; hiện chưa có dữ liệu hoặc bằng chứng doanh thu GSM.
 
-PoC do một người thực hiện, đồng thời chịu trách nhiệm nộp báo cáo. Báo cáo đối chiếu mục tiêu dự án trong [proposal ban đầu](../GSM_Causal_Marketplace_Proposal.md), theo yêu cầu cập nhật ngày 29/9.
+PoC do một người thực hiện, đồng thời chịu trách nhiệm nộp báo cáo. Báo cáo đối chiếu mục tiêu dự án trong [proposal ban đầu](../general/GSM_Causal_Marketplace_Proposal.md), theo yêu cầu cập nhật ngày 29/9.
 
 | Mục tiêu trong proposal | Trạng thái PoC hiện tại |
 |---|---|
@@ -166,4 +166,4 @@ Run benchmark 20 seed dùng `evaluate --config configs/demo.toml --seed 10001 --
 
 Manifest hai run ghi revision lúc đo `c2d24a2` và SHA code `8af06450fdbbc7269ad493bc92743e830f5270516e1273ef26f182f1040a4e2e`; SHA code nhận diện nội dung thực nghiệm, không chứng minh nội dung đã được push. SHA tệp TLC: `9897de352aa52cea36b70348cc6721b8d4494327ce39c85f0dba83d86ecaa098`. Run toàn tháng `20261003T131251-0b5e2209` chỉ dựng dữ liệu, không chạy benchmark 100 seed.
 
-Tài liệu đối chiếu trong repo: [proposal ban đầu](../GSM_Causal_Marketplace_Proposal.md), `docs/VALIDATION.md`, `docs/IDENTIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/BENCHMARK.md`, `docs/GSM_DATA_CONTRACT.md`. Tham chiếu kỹ thuật: [EconML LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html); nguồn dữ liệu: [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+Tài liệu đối chiếu trong repo: [proposal ban đầu](../general/GSM_Causal_Marketplace_Proposal.md), `docs/VALIDATION.md`, `docs/IDENTIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/BENCHMARK.md`, `docs/GSM_DATA_CONTRACT.md`. Tham chiếu kỹ thuật: [EconML LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html); nguồn dữ liệu: [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).

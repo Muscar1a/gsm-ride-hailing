@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from gsm_poc.artifacts import write_frame, write_json
-from gsm_poc.build_silver import connection
+from gsm_poc.build_silver import connection, fetch_required_row
 from gsm_poc.config import Config
 
 
@@ -46,12 +46,14 @@ def build_marts(config: Config, silver: Path, build_id: str) -> dict:
         """,
             [config.source.dashboard_end],
         ).df()
-        expected = con.execute(
-            """
+        expected = fetch_required_row(
+            con.execute(
+                """
           SELECT count(*) FROM silver WHERE valid_core AND pickup_datetime < cast(? AS TIMESTAMP)
         """,
-            [config.source.dashboard_end],
-        ).fetchone()[0]
+                [config.source.dashboard_end],
+            )
+        )[0]
     platforms = [{"HV0003": "Uber", "HV0005": "Lyft"}[p] for p in config.source.platforms]
     slots = pd.date_range(
         config.source.start,

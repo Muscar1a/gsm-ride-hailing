@@ -14,7 +14,7 @@ OLS đơn giản khi nhiễu gây confounding được quan sát. Một lần ch
 TLC hoàn tất 199/199 bootstrap cho mỗi phương pháp. Đây là bằng chứng kiểm chứng
 phương pháp trong điều kiện đã thử, chưa chứng minh tăng doanh thu thực tế.
 
-**Đối chiếu mục tiêu và vướng mắc.** Căn cứ [proposal ban đầu](../GSM_Causal_Marketplace_Proposal.md),
+**Đối chiếu mục tiêu và vướng mắc.** Căn cứ [proposal ban đầu](../general/GSM_Causal_Marketplace_Proposal.md),
 PoC mới kiểm chứng cầu/thay thế chéo với ma trận chung và số phiên cố định, mức C.
 Chưa có phản ứng cung, simulator một cụm hiệu chỉnh với cân bằng/nhàn rỗi, đầu ra
 kinh tế/ROI, thiết kế switchback chi tiết và sổ đối chiếu. Dữ liệu GSM chưa có;

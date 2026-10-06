@@ -14,11 +14,14 @@ from gsm_poc.uncertainty import bootstrap, bootstrap_sample
 def _replace_treatment(blocks, index, replacement):
     label = ("x", "y")[index]
     old = blocks[f"log_multiplier_{label}"].to_numpy()
-    # Preserve the deterministic conditional mean under the modified prices.
-    blocks[["q_x", "q_y"]] += (replacement - old)[:, None] * TRUE_THETA[:, index]
-    blocks["q_none"] = 1 - blocks[["q_x", "q_y"]].sum(axis=1)
     blocks[f"log_multiplier_{label}"] = replacement
     blocks[f"multiplier_{label}"] = np.exp(replacement)
+    q_xy = blocks[["q_x", "q_y"]].to_numpy() + (replacement - old)[:, None] * TRUE_THETA[:, index]
+    n = blocks.n_sessions.to_numpy()
+    counts = np.round(q_xy * n[:, None]).astype(int)
+    n_none = n - counts.sum(axis=1)
+    blocks["n_x"], blocks["n_y"], blocks["n_none"] = counts[:, 0], counts[:, 1], n_none
+    blocks["q_x"], blocks["q_y"], blocks["q_none"] = counts[:, 0] / n, counts[:, 1] / n, n_none / n
 
 
 def test_draw_losing_parent_treatment_is_failed_and_safe_to_report(config, exact_blocks):
@@ -32,13 +35,15 @@ def test_draw_losing_parent_treatment_is_failed_and_safe_to_report(config, exact
     splits = date_splits(blocks, config)
     train, context = splits["train"], splits["test"]
     fitted = fit_estimator(train, config, "adjusted_ols")
+    assert fitted.bundle is not None
     assert fitted.bundle.active_treatments == (0, 1)
 
     rng = np.random.default_rng(np.random.SeedSequence([42, 8071]))
-    shapes = [
-        fit_estimator(bootstrap_sample(train, rng), config, "adjusted_ols").bundle.theta.shape
-        for _ in range(3)
-    ]
+    shapes = []
+    for _ in range(3):
+        boot_fitted = fit_estimator(bootstrap_sample(train, rng), config, "adjusted_ols")
+        assert boot_fitted.bundle is not None
+        shapes.append(boot_fitted.bundle.theta.shape)
     assert shapes == [(2, 2), (2, 1), (2, 2)]
 
     draws = bootstrap(train, config, "adjusted_ols", seed=42)
@@ -76,10 +81,12 @@ def test_bootstrap_preserves_legitimate_partial_parent(config, exact_blocks, act
     splits = date_splits(blocks, config)
     fitted = fit_estimator(splits["train"], config, "adjusted_ols")
     draws = bootstrap(splits["train"], config, "adjusted_ols")
+    assert fitted.bundle is not None
     assert fitted.bundle.active_treatments == (active,)
     assert draws.successful_draws == draws.requested_draws == 3
     assert draws.interval_status == "ok"
     for bundle, record in zip(draws.bundles, draws.records, strict=True):
+        assert bundle is not None
         assert bundle.active_treatments == (active,)
         assert bundle.theta.shape == (2, 1)
         np.testing.assert_allclose(bundle.theta[:, 0], TRUE_THETA[:, active], atol=1e-10)
@@ -109,6 +116,15 @@ def test_bootstrap_preserves_legitimate_partial_parent(config, exact_blocks, act
         assert forecast["theta_interval"][j][active]["lower"] == pytest.approx(
             TRUE_THETA[j, active]
         )
+    unidentified_request = ScenarioRequest(
+        delta_price_x=0.1 if active == 1 else 0.0,
+        delta_price_y=0.1 if active == 0 else 0.0,
+    )
+    forecast = scenario(
+        fitted.bundle, splits["test"], unidentified_request, config, "partial-run", draws
+    )
+    assert forecast["status"] == "not_identified"
+    assert "probabilities" not in forecast
 
 
 def test_error_after_fit_does_not_count_bundle_as_successful(config, exact_blocks, monkeypatch):
@@ -118,6 +134,7 @@ def test_error_after_fit_does_not_count_bundle_as_successful(config, exact_block
         def tolist(self):
             raise ValueError("Cannot serialize bootstrap coefficients")
 
+    assert fitted.bundle is not None
     monkeypatch.setattr(fitted.bundle.base_rate_model, "coef_", InvalidCoefficients())
     monkeypatch.setattr("gsm_poc.uncertainty.fit_estimator", lambda *args, **kwargs: fitted)
     draws = bootstrap(date_splits(exact_blocks, config)["train"], config, "adjusted_ols")

@@ -120,8 +120,7 @@ def observed_tab(workspace: Path, manifest: dict) -> None:
         ["slot_start_local", "platform"], as_index=False
     ).completed_trip_count.sum()
     chart = (
-        alt.Chart(series)
-        .mark_line()
+        alt.Chart(series, mark="line")
         .encode(
             x=alt.X("slot_start_local:T", title="Pickup time (New York)"),
             y=alt.Y("completed_trip_count:Q", title="Completed trips"),
@@ -190,8 +189,7 @@ def method_tab(workspace: Path, manifest: dict) -> None:
         )
         values["effect"] = values.outcome + " ← price " + values.treatment
         chart = (
-            alt.Chart(values)
-            .mark_bar()
+            alt.Chart(values, mark="bar")
             .encode(
                 y=alt.Y("effect:N", title=None),
                 x=alt.X("value:Q", title="Probability / log price"),
@@ -285,12 +283,14 @@ def scenario_tab(workspace: Path, manifest: dict, config: Config) -> None:
             "Price X change to inspect (%)", min_value=-90.0, max_value=100.0, value=20.0, step=1.0
         )
     bundle, draws = load_model(workspace, manifest, estimator)
+    target_context_set = "all" if zone == "All zones" else f"zone_{zone}"
     request = ScenarioRequest(
         "interactive-price-scenario",
         delta_price_x=delta_x / 100,
         delta_price_y=delta_y / 100,
         n_sessions=int(sessions),
         interval_level=config.evaluation.interval_level,
+        target_context_set=target_context_set,
     )
     result = scenario(bundle, context, request, config, manifest["run_id"], draws)
     if result["status"] in ("out_of_support", "not_identified", "invalid_probability"):
@@ -319,8 +319,7 @@ def scenario_tab(workspace: Path, manifest: dict, config: Config) -> None:
                 value_name="Probability (%)",
             )
             chart = (
-                alt.Chart(long)
-                .mark_bar()
+                alt.Chart(long, mark="bar")
                 .encode(
                     x=alt.X("Service:N", title=None),
                     y=alt.Y("Probability (%):Q", scale=alt.Scale(domain=[0, 100])),
@@ -346,6 +345,8 @@ def scenario_tab(workspace: Path, manifest: dict, config: Config) -> None:
                 f"Based on {sessions:,} assumed quote sessions. These are simulated "
                 "booking choices; completed trips require a supply model."
             )
+            scope_label = "All zones" if zone == "All zones" else ZONE_NAMES.get(zone, str(zone))
+            st.write(f"Scope: **{scope_label}**")
             st.write(f"Support: **{STATUS_LABELS[result['support_status']]}**")
             st.write(f"Interval: **{STATUS_LABELS[result['bootstrap']['interval_status']]}**")
         st.dataframe(table, hide_index=True, width="stretch")
@@ -355,7 +356,9 @@ def scenario_tab(workspace: Path, manifest: dict, config: Config) -> None:
         with st.expander("Effect matrix and interpretation"):
             st.dataframe(
                 pd.DataFrame(
-                    result["theta"], index=["Choice X", "Choice Y"], columns=["Price X", "Price Y"]
+                    result["theta"],
+                    index=pd.Index(["Choice X", "Choice Y"]),
+                    columns=pd.Index(["Price X", "Price Y"]),
                 ),
                 width="stretch",
             )

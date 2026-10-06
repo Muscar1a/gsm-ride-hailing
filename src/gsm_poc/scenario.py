@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from itertools import product
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,6 +25,7 @@ class ScenarioRequest:
     delta_price_y: float = 0.0
     n_sessions: int = 10000
     interval_level: float = 0.95
+    target_context_set: str = "all"
 
     def validate(self) -> None:
         values = np.array(
@@ -45,6 +47,8 @@ class ScenarioRequest:
             raise ValueError("n_sessions must be a positive integer")
         if not 0 < self.interval_level < 1:
             raise ValueError("interval_level must lie between 0 and 1")
+        if not isinstance(self.target_context_set, str) or not self.target_context_set.strip():
+            raise ValueError("target_context_set must be a non-empty string")
 
 
 def _adjacent(value: float) -> list[float]:
@@ -109,9 +113,26 @@ def scenario(
     draws: BootstrapResult | None = None,
 ) -> dict:
     request.validate()
-    output = {
+    if contexts.empty:
+        raise ValueError("No selected scenario context")
+    weights = (
+        contexts.n_sessions.to_numpy(float) if "n_sessions" in contexts else np.ones(len(contexts))
+    )
+    if not np.isfinite(weights).all() or (weights <= 0).any():
+        raise ValueError("Scenario context session weights must be positive and finite")
+    zones = sorted(int(z) for z in contexts.zone_id.unique()) if "zone_id" in contexts else []
+    scope = {
+        "target_context_set": request.target_context_set,
+        "zones": zones,
+        "selected_zone": zones[0] if len(zones) == 1 else None,
+        "context_blocks": int(len(contexts)),
+        "context_weight_sessions": int(weights.sum()),
+    }
+    output: dict[str, Any] = {
         "run_id": run_id,
         "scenario_id": request.scenario_id,
+        "target_context_set": request.target_context_set,
+        "scope": scope,
         "source_kind": (
             bundle.source_kind
             if bundle
@@ -139,8 +160,6 @@ def scenario(
             ],
         )
         return output
-    if contexts.empty:
-        raise ValueError("No selected scenario context")
     bundle.encoder.transform(contexts)
     baseline_multiplier = np.array([request.baseline_multiplier_x, request.baseline_multiplier_y])
     target_multiplier = baseline_multiplier * (
@@ -175,11 +194,6 @@ def scenario(
             ],
         )
         return output
-    weights = (
-        contexts.n_sessions.to_numpy(float) if "n_sessions" in contexts else np.ones(len(contexts))
-    )
-    if not np.isfinite(weights).all() or (weights <= 0).any():
-        raise ValueError("Scenario context session weights must be positive and finite")
     p0, p1 = np.average(before, axis=0, weights=weights), np.average(after, axis=0, weights=weights)
     delta = p1 - p0
     estimates = {

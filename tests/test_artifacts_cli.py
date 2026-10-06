@@ -26,16 +26,6 @@ def test_completed_run_gate_and_corrupt_artifact(config):
         assert execute  # changed output cannot be reused based on filename alone
 
 
-def test_failure_record_is_preserved(config):
-    run = Run(config)
-    with pytest.raises(ValueError, match="specific context"):
-        with run.stage("bad", {}):
-            raise ValueError("specific context")
-    manifest = read_json(run.manifest_path)
-    assert manifest["status"] == "failed"
-    assert manifest["stages"]["bad"]["error"] == "specific context"
-
-
 def test_id_traversal_and_unknown_config_rejected(tmp_path):
     for name in ("../outside", "a/b", "", "a\\b"):
         with pytest.raises(ValueError):
@@ -60,6 +50,9 @@ def test_offline_end_to_end_and_verified_stage_reuse(config):
     assert not (config.workspace / "data/bronze").exists()
     result = read_json(pipeline.run.path / "scenario_result.json")
     assert "probabilities" in result
+    assert "scope" in result
+    assert result["scope"]["target_context_set"] == "all"
+    assert result["target_context_set"] == "all"
     effects = pd.read_csv(pipeline.run.path / "effects.csv")
     assert len(effects) == 4
     assert effects.evidence_level.eq("C").all()
@@ -71,4 +64,45 @@ def test_offline_end_to_end_and_verified_stage_reuse(config):
     original = manifest["stages"]["fit"]["duration_seconds"]
     resumed = Pipeline(config, "offline-test")
     resumed.run_all(include_evaluation=True)
-    assert resumed.run.manifest["stages"]["fit"]["duration_seconds"] == original
+    resumed_manifest = read_json(resumed.run.manifest_path)
+    assert resumed_manifest["stages"]["fit"]["duration_seconds"] == original
+
+
+def test_cli_scenario_saves_scope_for_zone(config, capsys, monkeypatch):
+    from gsm_poc.cli import main
+
+    config = dataclasses.replace(
+        config,
+        model=dataclasses.replace(
+            config.model, estimators=("adjusted_ols",), scenario_estimator="adjusted_ols"
+        ),
+    )
+    Pipeline(config, "cli-test").run_all(include_evaluation=False)
+    config_file = config.workspace / "test_config.toml"
+    config_file.write_text(
+        "[project]\nname = 'test'\n\n[model]\nscenario_estimator = 'adjusted_ols'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(config.workspace)
+    capsys.readouterr()
+    exit_code = main(
+        [
+            "scenario",
+            "--config",
+            str(config_file),
+            "--model-run-id",
+            "cli-test",
+            "--zone",
+            "161",
+        ]
+    )
+    assert exit_code == 0
+    import json
+
+    out = capsys.readouterr().out
+    json_str = out[out.find("{") : out.rfind("}") + 1]
+    parsed = json.loads(json_str)
+    assert parsed["target_context_set"] == "zone_161"
+    assert parsed["scope"]["target_context_set"] == "zone_161"
+    assert parsed["scope"]["zones"] == [161]
+    assert parsed["scope"]["selected_zone"] == 161

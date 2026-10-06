@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import dataclasses
+from typing import Any
+
 import joblib
 import pandas as pd
 
@@ -22,7 +25,7 @@ from gsm_poc.build_silver import build_silver
 from gsm_poc.config import Config
 from gsm_poc.estimate import FitResult, fit_all
 from gsm_poc.evaluate import effect_rows, monte_carlo, saved_method_evaluation
-from gsm_poc.features import date_splits
+from gsm_poc.features import date_splits, require_observed
 from gsm_poc.generate import generate, save_generated
 from gsm_poc.ingest import ingest
 from gsm_poc.scenario import ScenarioRequest, scenario
@@ -30,7 +33,9 @@ from gsm_poc.uncertainty import BootstrapResult, bootstrap
 
 
 class Pipeline:
-    def __init__(self, config: Config, run_id: str | None = None) -> None:
+    def __init__(self, config: Config, run_id: str | None = None, **kwargs: Any) -> None:
+        if "runId" in kwargs and run_id is None:
+            run_id = kwargs["runId"]
         self.config, self.run = config, Run(config, run_id)
 
     def ingest(self) -> dict:
@@ -84,7 +89,11 @@ class Pipeline:
                 )
         return self.run.manifest["observed_build"]
 
-    def context(self, build_id: str | None = None) -> tuple[pd.DataFrame | None, str]:
+    def context(
+        self, build_id: str | None = None, **kwargs: Any
+    ) -> tuple[pd.DataFrame | None, str]:
+        if "buildId" in kwargs and build_id is None:
+            build_id = kwargs["buildId"]
         if self.config.project.context_mode == "synthetic":
             return None, "synthetic-v1"
         record = self.run.manifest.get("observed_build")
@@ -110,14 +119,26 @@ class Pipeline:
         version = fingerprint({"metadata": metadata, "parquet_sha256": sha256_file(path)})
         return frame, version
 
-    def generate(self, build_id: str | None = None) -> str:
-        contexts, version = self.context(build_id)
-        with self.run.stage("generate", {"context_version": version}) as execute:
+    def generate(self, build_id: str | None = None, **kwargs: Any) -> str:
+        if "buildId" in kwargs and build_id is None:
+            build_id = kwargs["buildId"]
+
+        contexts = None
+        context_version = None
+
+        def generate_inputs():
+            nonlocal contexts, context_version
+            contexts, context_version = self.context(build_id)
+            return {"context_version": context_version}
+
+        with self.run.stage("generate", generate_inputs) as execute:
             if execute:
-                data = generate(self.config, contexts, version)
+                if context_version is None:
+                    raise RuntimeError("Generate stage inputs did not resolve the context version")
+                data = generate(self.config, contexts, context_version)
                 paths = save_generated(self.config, data)
                 self.run.manifest["dataset_id"] = data.dataset_id
-                self.run.manifest["context_version"] = version
+                self.run.manifest["context_version"] = context_version
                 self.run.outputs(
                     "generate",
                     paths,
@@ -126,26 +147,46 @@ class Pipeline:
                 )
         return self.run.manifest["dataset_id"]
 
-    def fit(self, dataset_id: str | None = None) -> None:
-        dataset_id = safe_id(dataset_id or self.run.manifest.get("dataset_id", ""))
-        root = self.config.workspace / "data/synthetic" / dataset_id
-        observed = root / "observed/choice_block.parquet"
-        metadata_path = root / "manifest.json"
-        inputs = {
-            "dataset_id": dataset_id,
-            "observed_sha256": sha256_file(observed),
-            "metadata_sha256": sha256_file(metadata_path),
-        }
-        with self.run.stage("fit", inputs) as execute:
+    def fit(self, dataset_id: str | None = None, **kwargs: Any) -> None:
+        if "datasetId" in kwargs and dataset_id is None:
+            dataset_id = kwargs["datasetId"]
+
+        def fit_inputs():
+            rawDatasetId = dataset_id or self.run.manifest.get("dataset_id", "")
+            if not rawDatasetId:
+                raise ValueError(
+                    "Dataset ID is required to fit models; pass --dataset-id or run generate"
+                )
+            validatedDatasetId = safe_id(rawDatasetId)
+            root = self.config.workspace / "data/synthetic" / validatedDatasetId
+            observed = root / "observed/choice_block.parquet"
+            metadataPath = root / "manifest.json"
+            if not observed.is_file():
+                raise FileNotFoundError(f"Observed choice block not found: {observed}")
+            if not metadataPath.is_file():
+                raise FileNotFoundError(f"Dataset manifest not found: {metadataPath}")
+            return {
+                "dataset_id": validatedDatasetId,
+                "observed_sha256": sha256_file(observed),
+                "metadata_sha256": sha256_file(metadataPath),
+            }
+
+        with self.run.stage("fit", fit_inputs) as execute:
             if execute:
+                rawDatasetId = dataset_id or self.run.manifest.get("dataset_id", "")
+                validatedDatasetId = safe_id(rawDatasetId)
+                root = self.config.workspace / "data/synthetic" / validatedDatasetId
+                observed = root / "observed/choice_block.parquet"
+                metadataPath = root / "manifest.json"
                 blocks = pd.read_parquet(observed)
-                metadata = read_json(metadata_path)
+                metadata = read_json(metadataPath)
                 if metadata["source_kind"] != self.run.manifest["source_kind"]:
                     raise ValueError("Dataset source kind differs from run configuration")
                 if metadata["dgp_id"] != self.config.simulation.dgp:
                     raise ValueError("Dataset DGP differs from run configuration")
                 if metadata["seed"] != self.config.simulation.seed:
                     raise ValueError("Dataset seed differs from configuration; pass --seed")
+                require_observed(blocks)
                 splits = date_splits(blocks, self.config)
                 results, split_record = fit_all(blocks, self.config)
                 paths, effects, draws_all = [], [], {}
@@ -165,7 +206,9 @@ class Pipeline:
                         write_model(draws_path, draws)
                         records = pd.DataFrame(draws.records)
                         if records.empty:
-                            records = pd.DataFrame(columns=["draw_id", "estimator", "status"])
+                            records = pd.DataFrame(
+                                columns=pd.Index(["draw_id", "estimator", "status"])
+                            )
                         write_frame(records_path, records)
                         paths.extend([model_path, draws_path, records_path])
                     else:
@@ -174,7 +217,12 @@ class Pipeline:
                     paths.append(diagnostics)
                     effects.extend(
                         effect_rows(
-                            result, draws, splits["test"], self.config, self.run.run_id, dataset_id
+                            result,
+                            draws,
+                            splits["test"],
+                            self.config,
+                            self.run.run_id,
+                            validatedDatasetId,
                         )
                     )
                 effects_path = self.run.path / "effects.csv"
@@ -198,7 +246,7 @@ class Pipeline:
                 write_json(split_path, split_record)
                 paths.extend([effects_path, context_path, split_path])
                 self.run.manifest.update(
-                    dataset_id=dataset_id,
+                    dataset_id=validatedDatasetId,
                     model_results={
                         name: result.diagnostics["status"] for name, result in results.items()
                     },
@@ -212,29 +260,54 @@ class Pipeline:
                 )
 
     def method_evaluation(self) -> None:
-        dataset_id = self.run.manifest["dataset_id"]
-        root = self.config.workspace / "data/synthetic" / dataset_id
-        oracle = root / "oracle/oracle_block.parquet"
-        inputs = {
-            "dataset_id": dataset_id,
-            "oracle_sha256": sha256_file(oracle),
-            "observed_sha256": sha256_file(root / "observed/choice_block.parquet"),
-            "metadata_sha256": sha256_file(root / "manifest.json"),
-            "models": {},
-        }
-        for name in self.config.model.estimators:
-            directory = self.run.path / "models" / name
-            diagnostics_path = directory / "diagnostics.json"
-            model_inputs = {"diagnostics_sha256": sha256_file(diagnostics_path)}
-            if read_json(diagnostics_path)["status"] != "not_identified":
-                model_inputs.update(
-                    model_sha256=sha256_file(directory / "model_bundle.joblib"),
-                    bootstrap_sha256=sha256_file(directory / "bootstrap_bundles.joblib"),
+        def evaluation_inputs():
+            dataset_id = self.run.manifest.get("dataset_id")
+            if not dataset_id:
+                raise ValueError(
+                    "Run manifest has no dataset_id; fit must run before method_evaluation"
                 )
-            inputs["models"][name] = model_inputs
-        with self.run.stage("method_evaluation", inputs) as execute:
+            root = self.config.workspace / "data/synthetic" / dataset_id
+            oracle = root / "oracle/oracle_block.parquet"
+            observed = root / "observed/choice_block.parquet"
+            metadataPath = root / "manifest.json"
+            if not oracle.is_file():
+                raise FileNotFoundError(f"Oracle block not found: {oracle}")
+            if not observed.is_file():
+                raise FileNotFoundError(f"Observed choice block not found: {observed}")
+            if not metadataPath.is_file():
+                raise FileNotFoundError(f"Dataset manifest not found: {metadataPath}")
+            inputs = {
+                "dataset_id": dataset_id,
+                "oracle_sha256": sha256_file(oracle),
+                "observed_sha256": sha256_file(observed),
+                "metadata_sha256": sha256_file(metadataPath),
+                "scenario": self.config.scenario.__dict__,
+                "models": {},
+            }
+            for name in self.config.model.estimators:
+                directory = self.run.path / "models" / name
+                diagnosticsPath = directory / "diagnostics.json"
+                if not diagnosticsPath.is_file():
+                    raise FileNotFoundError(f"Estimator diagnostics not found: {diagnosticsPath}")
+                modelInputs = {"diagnostics_sha256": sha256_file(diagnosticsPath)}
+                if read_json(diagnosticsPath)["status"] != "not_identified":
+                    modelBundle = directory / "model_bundle.joblib"
+                    bootstrapBundles = directory / "bootstrap_bundles.joblib"
+                    if not modelBundle.is_file():
+                        raise FileNotFoundError(f"Model bundle not found: {modelBundle}")
+                    if not bootstrapBundles.is_file():
+                        raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrapBundles}")
+                    modelInputs.update(
+                        model_sha256=sha256_file(modelBundle),
+                        bootstrap_sha256=sha256_file(bootstrapBundles),
+                    )
+                inputs["models"][name] = modelInputs
+            return inputs
+
+        with self.run.stage("method_evaluation", evaluation_inputs) as execute:
             if execute:
                 results, draws = self.load_models()
+                dataset_id = self.run.manifest["dataset_id"]
                 metrics = saved_method_evaluation(
                     self.config, dataset_id, results, draws, self.run.run_id
                 )
@@ -262,52 +335,109 @@ class Pipeline:
         request: ScenarioRequest | None = None,
         model_run_id: str | None = None,
         zone: int | None = None,
+        **kwargs: Any,
     ) -> dict:
-        selected_run = model_run_id or self.run.run_id
-        directory = self.config.workspace / "runs" / safe_id(selected_run)
-        if model_run_id:
-            completed_run(self.config.workspace, selected_run)
-        request = request or ScenarioRequest(
-            delta_price_x=self.config.scenario.delta_price_x,
-            delta_price_y=self.config.scenario.delta_price_y,
-            n_sessions=self.config.scenario.n_sessions,
-            interval_level=self.config.evaluation.interval_level,
+        if "modelRunId" in kwargs and model_run_id is None:
+            model_run_id = kwargs["modelRunId"]
+
+        selectedRun = model_run_id or self.run.run_id
+        directory = self.config.workspace / "runs" / safe_id(selectedRun)
+        targetContextSet = (
+            f"zone_{zone}" if zone is not None else self.config.scenario.target_context_set
         )
-        name = self.config.model.scenario_estimator
-        diagnostics = read_json(directory / "models" / name / "diagnostics.json")
-        model_path = directory / "models" / name / "model_bundle.joblib"
-        bundle = joblib.load(model_path) if diagnostics["status"] != "not_identified" else None
-        draws = joblib.load(model_path.with_name("bootstrap_bundles.joblib")) if bundle else None
-        contexts = pd.read_parquet(directory / "scenario_contexts.parquet")
-        if zone is not None:
-            contexts = contexts[contexts.zone_id == zone]
-        inputs = {
-            "model_run_id": selected_run,
-            "request": request.__dict__,
-            "zone": zone,
-            "diagnostics_sha256": sha256_file(directory / "models" / name / "diagnostics.json"),
-            "model_sha256": sha256_file(model_path) if bundle else None,
-            "bootstrap_sha256": (
-                sha256_file(model_path.with_name("bootstrap_bundles.joblib")) if bundle else None
-            ),
-            "contexts_sha256": sha256_file(directory / "scenario_contexts.parquet"),
-        }
-        with self.run.stage("scenario", inputs) as execute:
+        if request is None:
+            resolvedRequest = ScenarioRequest(
+                delta_price_x=self.config.scenario.delta_price_x,
+                delta_price_y=self.config.scenario.delta_price_y,
+                n_sessions=self.config.scenario.n_sessions,
+                interval_level=self.config.evaluation.interval_level,
+                target_context_set=targetContextSet,
+            )
+        elif zone is not None and request.target_context_set == "all":
+            resolvedRequest = dataclasses.replace(request, target_context_set=targetContextSet)
+        else:
+            resolvedRequest = request
+
+        def scenario_inputs():
+            if model_run_id:
+                completed_run(self.config.workspace, selectedRun)
+            name = self.config.model.scenario_estimator
+            diagnosticsPath = directory / "models" / name / "diagnostics.json"
+            if not diagnosticsPath.is_file():
+                raise FileNotFoundError(f"Estimator diagnostics not found: {diagnosticsPath}")
+            diagnostics = read_json(diagnosticsPath)
+            modelPath = directory / "models" / name / "model_bundle.joblib"
+            bootstrapPath = modelPath.with_name("bootstrap_bundles.joblib")
+            modelSha256 = None
+            bootstrapSha256 = None
+            if diagnostics["status"] != "not_identified":
+                if not modelPath.is_file():
+                    raise FileNotFoundError(f"Model bundle not found: {modelPath}")
+                if not bootstrapPath.is_file():
+                    raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrapPath}")
+                modelSha256 = sha256_file(modelPath)
+                bootstrapSha256 = sha256_file(bootstrapPath)
+            contextsPath = directory / "scenario_contexts.parquet"
+            if not contextsPath.is_file():
+                raise FileNotFoundError(f"Scenario contexts not found: {contextsPath}")
+            return {
+                "model_run_id": selectedRun,
+                "request": dataclasses.asdict(resolvedRequest),
+                "zone": zone,
+                "diagnostics_sha256": sha256_file(diagnosticsPath),
+                "model_sha256": modelSha256,
+                "bootstrap_sha256": bootstrapSha256,
+                "contexts_sha256": sha256_file(contextsPath),
+            }
+
+        with self.run.stage("scenario", scenario_inputs) as execute:
             path = self.run.path / "scenario_result.json"
             if execute:
-                result = scenario(bundle, contexts, request, self.config, selected_run, draws)
+                name = self.config.model.scenario_estimator
+                diagnostics = read_json(directory / "models" / name / "diagnostics.json")
+                model_path = directory / "models" / name / "model_bundle.joblib"
+                bundle = (
+                    joblib.load(model_path) if diagnostics["status"] != "not_identified" else None
+                )
+                draws = (
+                    joblib.load(model_path.with_name("bootstrap_bundles.joblib"))
+                    if bundle
+                    else None
+                )
+                contexts = pd.read_parquet(directory / "scenario_contexts.parquet")
+                if zone is not None:
+                    contexts = contexts[contexts.zone_id == zone]
+                result = scenario(
+                    bundle, contexts, resolvedRequest, self.config, selectedRun, draws
+                )
                 write_json(path, result)
                 self.run.outputs("scenario", [path], output_status=result["status"])
             else:
                 result = read_json(path)
         return result
 
-    def evaluate(self, build_id: str | None = None) -> None:
-        context, version = self.context(build_id)
-        with self.run.stage("evaluate", {"context_version": version}) as execute:
+    def evaluate(self, build_id: str | None = None, **kwargs: Any) -> None:
+        if "buildId" in kwargs and build_id is None:
+            build_id = kwargs["buildId"]
+
+        context = None
+        context_version = None
+
+        def evaluate_inputs():
+            nonlocal context, context_version
+            context, context_version = self.context(build_id)
+            return {"context_version": context_version}
+
+        with self.run.stage("evaluate", evaluate_inputs) as execute:
             if execute:
+                if context_version is None:
+                    raise RuntimeError("Evaluate stage inputs did not resolve the context version")
                 result = monte_carlo(
-                    self.config, context, version, self.run.path / "evaluation", self.run.run_id
+                    self.config,
+                    context,
+                    context_version,
+                    self.run.path / "evaluation",
+                    self.run.run_id,
                 )
                 paths = [
                     result["summary"],
@@ -317,7 +447,9 @@ class Pipeline:
                 ]
                 self.run.outputs("evaluate", paths, output_rows=result["rows"])
 
-    def run_all(self, include_evaluation: bool = True) -> str:
+    def run_all(self, include_evaluation: bool = True, **kwargs: Any) -> str:
+        if "includeEvaluation" in kwargs:
+            include_evaluation = kwargs["includeEvaluation"]
         if self.config.project.context_mode == "tlc":
             self.build()
         self.generate()

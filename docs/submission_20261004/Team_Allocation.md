@@ -2,7 +2,7 @@
 
 - Hình thức thực hiện: **Cá nhân**
 - Người thực hiện: **Nguyễn Thành An — 26ai.annt@vinuni.edu.vn**
-- Mục tiêu Phase 3 làm căn cứ kế hoạch (theo [proposal ban đầu](../GSM_Causal_Marketplace_Proposal.md)): **Ước lượng ba độ co giãn (cầu theo giá, phản ứng cung, thay thế chéo); tích hợp simulator một cụm; bàn giao dashboard kịch bản và thiết kế switchback.** Đánh giá doanh thu, biên đóng góp và ROI khi đủ dữ liệu. PoC hiện tại thực hiện phần đầu của lộ trình năm tuần.
+- Mục tiêu Phase 3 làm căn cứ kế hoạch (theo [proposal ban đầu](../general/GSM_Causal_Marketplace_Proposal.md)): **Ước lượng ba độ co giãn (cầu theo giá, phản ứng cung, thay thế chéo); tích hợp simulator một cụm; bàn giao dashboard kịch bản và thiết kế switchback.** Đánh giá doanh thu, biên đóng góp và ROI khi đủ dữ liệu. PoC hiện tại thực hiện phần đầu của lộ trình năm tuần.
 - Mã nguồn: **[Muscar1a/gsm-ride-hailing](https://github.com/Muscar1a/gsm-ride-hailing)** — công khai. Demo: chạy cục bộ, chưa có URL công khai.
 - Dữ liệu GSM: theo [tài liệu yêu cầu dữ liệu](<../GSM Causal Marketplace - Data Requirements.pdf>), tám nhóm nguồn gốc trong 12 tháng gần nhất; giữ schema gốc, bao gồm vùng lân cận/đối chứng.
 

@@ -5,14 +5,16 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 DGPS = ("RCT_SYN", "OBSERVED_CONFOUNDING", "HIDDEN_CONFOUNDING", "NULL_EFFECT", "COLLINEAR_PRICE")
 ESTIMATORS = ("naive_ols", "adjusted_ols", "dml")
 TLC_SOURCE_VERSION = "NYC_TLC_HVFHV_2024-01"
 TLC_SOURCE_START = "2024-01-01"
 TLC_SOURCE_END = "2024-02-01"
+SectionConfig = TypeVar("SectionConfig")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -94,6 +96,7 @@ class ScenarioConfig:
     delta_price_x: float = 0.10
     delta_price_y: float = 0.0
     n_sessions: int = 10000
+    target_context_set: str = "all"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -169,6 +172,11 @@ class Config:
             raise ValueError("interval_level must lie between 0 and 1")
         if not 0 <= self.evaluation.max_failure_fraction < 1:
             raise ValueError("max_failure_fraction must lie in [0, 1)")
+        if (
+            not isinstance(self.scenario.target_context_set, str)
+            or not self.scenario.target_context_set.strip()
+        ):
+            raise ValueError("target_context_set must be a non-empty string")
 
     def as_dict(self) -> dict[str, Any]:
         value = dataclasses.asdict(self)
@@ -196,14 +204,23 @@ class Config:
         unknown = set(raw) - set(section_types)
         if unknown:
             raise ValueError(f"Unknown config sections: {sorted(unknown)}")
-        sections = {}
-        for name, section_type in section_types.items():
+
+        def load_section(name: str, section_type: Callable[..., SectionConfig]) -> SectionConfig:
             values = dict(raw.get(name, {}))
             for key, value in values.items():
                 if isinstance(value, list):
                     values[key] = tuple(value)
             try:
-                sections[name] = section_type(**values)
+                return section_type(**values)
             except TypeError as exc:
                 raise ValueError(f"Invalid {name} configuration: {exc}") from exc
-        return cls(workspace=workspace, **sections)
+
+        return cls(
+            workspace=workspace,
+            project=load_section("project", ProjectConfig),
+            source=load_section("source", SourceConfig),
+            simulation=load_section("simulation", SimulationConfig),
+            model=load_section("model", ModelConfig),
+            evaluation=load_section("evaluation", EvaluationConfig),
+            scenario=load_section("scenario", ScenarioConfig),
+        )

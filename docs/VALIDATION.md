@@ -72,8 +72,10 @@ three estimators, 10 day-bootstrap draws per identified estimator. All 15 seed
 jobs completed; no seed jobs failed. Evaluation time was 82.12 seconds.
 
 The table reports the **largest per-cell theta RMSE** within each 2×2 matrix.
-Scenario RMSE is for X/Y probabilities on frozen test contexts, with a +10% X
-price change. Units are probability/log-price and probability, respectively.
+Scenario RMSE is for X/Y probabilities on frozen test contexts under the configured
+scenario (default +10% X price change). If the scenario changes an unidentified price
+(such as when only price Y varies), the scenario cannot be forecast and scenario RMSE
+is unavailable (None). Units are probability/log-price and probability, respectively.
 
 | DGP | Naive OLS max RMSE | Adjusted OLS max RMSE | DML max RMSE | DML scenario RMSE |
 |---|---:|---:|---:|---:|

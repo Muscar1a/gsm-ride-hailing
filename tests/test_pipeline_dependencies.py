@@ -103,8 +103,11 @@ def test_refit_refreshes_method_metrics_with_same_dataset_and_oracle(fitted_pipe
     blocks = pd.read_parquet(observed)
     train = blocks.day_id < pipeline.config.source.train_end
     # Correct the observed training proportions without changing simulated truth.
-    blocks.loc[train, "q_x"] += 0.04
-    blocks.loc[train, "q_none"] -= 0.04
+    delta_sessions = (0.04 * blocks.loc[train, "n_sessions"]).round().astype(int)
+    blocks.loc[train, "n_x"] += delta_sessions
+    blocks.loc[train, "n_none"] -= delta_sessions
+    blocks.loc[train, "q_x"] = blocks.loc[train, "n_x"] / blocks.loc[train, "n_sessions"]
+    blocks.loc[train, "q_none"] = blocks.loc[train, "n_none"] / blocks.loc[train, "n_sessions"]
     write_frame(observed, blocks)
 
     pipeline.fit(dataset_id)
@@ -249,3 +252,113 @@ def test_unidentified_stages_reuse_without_model_or_bootstrap_files(config, caps
     output = capsys.readouterr().out
     assert "method_evaluation: reuse verified artifacts" in output
     assert "scenario: reuse verified artifacts" in output
+
+
+def testFitRecordsPrerequisiteFailureInLifecycleWhenDatasetMissing(config):
+    pipeline = Pipeline(config, "missing-dataset-prerequisite")
+    assert pipeline.run.manifest["status"] == "pending"
+    assert "fit" not in pipeline.run.manifest["stages"]
+
+    with pytest.raises(FileNotFoundError, match="not found"):
+        pipeline.fit("non_existent_dataset")
+
+    manifest = read_json(pipeline.run.manifest_path)
+    assert manifest["status"] == "failed"
+    assert "fit" in manifest["stages"]
+    assert manifest["stages"]["fit"]["status"] == "failed"
+    assert manifest["stages"]["fit"]["error_type"] == "FileNotFoundError"
+    assert "not found" in manifest["stages"]["fit"]["error"].lower()
+    assert manifest["stages"]["fit"]["started_at"] is not None
+    assert manifest["stages"]["fit"]["ended_at"] is not None
+
+
+def testFitRecordsPrerequisiteFailureInLifecycleWhenDatasetIdEmpty(config):
+    pipeline = Pipeline(config, "empty-dataset-prerequisite")
+    assert pipeline.run.manifest["status"] == "pending"
+
+    with pytest.raises(ValueError, match="Dataset ID is required"):
+        pipeline.fit("")
+
+    manifest = read_json(pipeline.run.manifest_path)
+    assert manifest["status"] == "failed"
+    assert "fit" in manifest["stages"]
+    assert manifest["stages"]["fit"]["status"] == "failed"
+    assert manifest["stages"]["fit"]["error_type"] == "ValueError"
+    assert "Dataset ID is required" in manifest["stages"]["fit"]["error"]
+
+
+def testGenerateRecordsPrerequisiteFailureWhenTlcContextMissing(config):
+    tlcConfig = dataclasses.replace(
+        config,
+        project=dataclasses.replace(config.project, context_mode="tlc"),
+    )
+    pipeline = Pipeline(tlcConfig, "missing-tlc-context-generate")
+    assert pipeline.run.manifest["status"] == "pending"
+    assert "generate" not in pipeline.run.manifest["stages"]
+
+    with pytest.raises(ValueError, match="TLC context is missing"):
+        pipeline.generate()
+
+    manifest = read_json(pipeline.run.manifest_path)
+    assert manifest["status"] == "failed"
+    assert "generate" in manifest["stages"]
+    assert manifest["stages"]["generate"]["status"] == "failed"
+    assert manifest["stages"]["generate"]["error_type"] == "ValueError"
+    assert "TLC context is missing" in manifest["stages"]["generate"]["error"]
+    assert manifest["stages"]["generate"]["started_at"] is not None
+    assert manifest["stages"]["generate"]["ended_at"] is not None
+
+
+def testEvaluateRecordsPrerequisiteFailureWhenTlcContextMissing(config):
+    tlcConfig = dataclasses.replace(
+        config,
+        project=dataclasses.replace(config.project, context_mode="tlc"),
+    )
+    pipeline = Pipeline(tlcConfig, "missing-tlc-context-evaluate")
+    assert pipeline.run.manifest["status"] == "pending"
+    assert "evaluate" not in pipeline.run.manifest["stages"]
+
+    with pytest.raises(ValueError, match="TLC context is missing"):
+        pipeline.evaluate()
+
+    manifest = read_json(pipeline.run.manifest_path)
+    assert manifest["status"] == "failed"
+    assert "evaluate" in manifest["stages"]
+    assert manifest["stages"]["evaluate"]["status"] == "failed"
+    assert manifest["stages"]["evaluate"]["error_type"] == "ValueError"
+    assert "TLC context is missing" in manifest["stages"]["evaluate"]["error"]
+    assert manifest["stages"]["evaluate"]["started_at"] is not None
+    assert manifest["stages"]["evaluate"]["ended_at"] is not None
+
+
+def testScenarioRecordsPrerequisiteFailureWhenModelMissing(config):
+    pipeline = Pipeline(config, "missing-model-scenario")
+    assert pipeline.run.manifest["status"] == "pending"
+    assert "scenario" not in pipeline.run.manifest["stages"]
+
+    with pytest.raises(FileNotFoundError, match="diagnostics"):
+        pipeline.scenario()
+
+    manifest = read_json(pipeline.run.manifest_path)
+    assert manifest["status"] == "failed"
+    assert "scenario" in manifest["stages"]
+    assert manifest["stages"]["scenario"]["status"] == "failed"
+    assert manifest["stages"]["scenario"]["error_type"] == "FileNotFoundError"
+    assert "diagnostics" in manifest["stages"]["scenario"]["error"].lower()
+    assert manifest["stages"]["scenario"]["started_at"] is not None
+    assert manifest["stages"]["scenario"]["ended_at"] is not None
+
+
+def testScenarioRecordsPrerequisiteFailureWhenModelRunIdMissingOrIncomplete(config):
+    pipeline = Pipeline(config, "missing-model-run-id-scenario")
+    assert pipeline.run.manifest["status"] == "pending"
+
+    with pytest.raises((FileNotFoundError, ValueError)):
+        pipeline.scenario(modelRunId="non-existent-model-run")
+
+    manifest = read_json(pipeline.run.manifest_path)
+    assert manifest["status"] == "failed"
+    assert "scenario" in manifest["stages"]
+    assert manifest["stages"]["scenario"]["status"] == "failed"
+    assert manifest["stages"]["scenario"]["started_at"] is not None
+    assert manifest["stages"]["scenario"]["ended_at"] is not None

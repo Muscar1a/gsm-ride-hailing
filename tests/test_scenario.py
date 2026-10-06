@@ -28,6 +28,12 @@ def test_plus10_log_ratio_orientation_and_count_conservation(config, fitted):
     assert sum(v["before_probability"] for v in values.values()) == pytest.approx(1)
     assert sum(v["after_expected_choices"] for v in values.values()) == pytest.approx(10000)
     assert result["evidence_level"] == "C"
+    assert result["target_context_set"] == "all"
+    assert result["scope"]["target_context_set"] == "all"
+    assert result["scope"]["zones"] == sorted(context.zone_id.unique())
+    assert result["scope"]["context_blocks"] == len(context)
+    assert result["scope"]["context_weight_sessions"] == int(context.n_sessions.sum())
+    assert result["request"]["target_context_set"] == "all"
     assert result["interval"] is None
     assert result["bootstrap"]["interval_status"] == "interval_unstable"
 
@@ -86,6 +92,8 @@ def test_bad_draws_are_counted_and_interval_withheld(config, fitted):
         ScenarioRequest(delta_price_x=-1),
         ScenarioRequest(delta_price_x=float("nan")),
         ScenarioRequest(n_sessions=0),
+        ScenarioRequest(target_context_set=""),
+        ScenarioRequest(target_context_set="   "),
     ],
 )
 def test_invalid_request_rejected(config, fitted, scenario_request):
@@ -94,8 +102,24 @@ def test_invalid_request_rejected(config, fitted, scenario_request):
         scenario(bundle, context, scenario_request, config, "test-run")
 
 
-@pytest.mark.parametrize("selected_count", [0, 1, 19, 20])
-@pytest.mark.parametrize("target_x", [1.05, 1.1])
+def test_scenario_saves_custom_scope_and_selected_zone(config, fitted):
+    bundle, context = fitted
+    selected = context[context.zone_id == 161]
+    request = ScenarioRequest(target_context_set="zone_161")
+    result = scenario(bundle, selected, request, config, "test-run")
+    assert result["target_context_set"] == "zone_161"
+    assert result["scope"]["target_context_set"] == "zone_161"
+    assert result["scope"]["zones"] == [161]
+    assert result["scope"]["selected_zone"] == 161
+    assert result["scope"]["context_blocks"] == len(selected)
+    assert result["scope"]["context_weight_sessions"] == int(selected.n_sessions.sum())
+    assert result["request"]["target_context_set"] == "zone_161"
+
+
+@pytest.mark.parametrize(
+    ("selected_count", "target_x"),
+    [(0, 1.1), (19, 1.1), (20, 1.1), (19, 1.05), (20, 1.05)],
+)
 def test_support_counts_each_selected_context_at_each_price_corner(
     config, fitted, selected_count, target_x
 ):

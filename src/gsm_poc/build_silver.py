@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import duckdb
 
@@ -19,6 +20,13 @@ def connection(config: Config) -> duckdb.DuckDBPyConnection:
     spill.mkdir(parents=True, exist_ok=True)
     con.execute("SET temp_directory = ?", [str(spill)])
     return con
+
+
+def fetch_required_row(con: duckdb.DuckDBPyConnection) -> tuple[Any, ...]:
+    row = con.fetchone()
+    if row is None:
+        raise RuntimeError("Expected a row from the aggregate query")
+    return row
 
 
 def copy_parquet(con: duckdb.DuckDBPyConnection, relation: str, path: Path) -> None:
@@ -54,11 +62,13 @@ def build_silver(config: Config, source: dict) -> dict:
     with connection(config) as con:
         con.register("zones", lookup)
         con.read_parquet(str(trip_path), file_row_number=True).create_view("raw")
-        source_rows = con.execute("SELECT count(*) FROM raw").fetchone()[0]
-        missing_core = con.execute("""
+        source_rows = fetch_required_row(con.execute("SELECT count(*) FROM raw"))[0]
+        missing_core = fetch_required_row(
+            con.execute("""
             SELECT count(*) FROM raw WHERE pickup_datetime IS NULL
               OR PULocationID IS NULL OR hvfhs_license_num IS NULL
-        """).fetchone()[0]
+        """)
+        )[0]
         copy_parquet(
             con,
             """SELECT * FROM raw WHERE pickup_datetime IS NULL
@@ -127,13 +137,15 @@ def build_silver(config: Config, source: dict) -> dict:
                 list(config.source.platforms),
             ],
         )
-        scoped = con.execute("SELECT count(*), count(DISTINCT trip_row_id) FROM silver").fetchone()
+        scoped = fetch_required_row(
+            con.execute("SELECT count(*), count(DISTINCT trip_row_id) FROM silver")
+        )
         if scoped[0] != scoped[1]:
             raise ValueError("Technical row IDs are not unique")
         null_counts = {
-            name: con.execute(
-                f'SELECT count(*) FILTER (WHERE "{name}" IS NULL) FROM silver'
-            ).fetchone()[0]
+            name: fetch_required_row(
+                con.execute(f'SELECT count(*) FILTER (WHERE "{name}" IS NULL) FROM silver')
+            )[0]
             for name in TLC_COLUMNS
         }
         flags = (
@@ -150,14 +162,18 @@ def build_silver(config: Config, source: dict) -> dict:
             "unknown_flag_value",
         )
         flag_counts = {
-            name: con.execute(f"SELECT count(*) FILTER (WHERE {name}) FROM silver").fetchone()[0]
+            name: fetch_required_row(
+                con.execute(f"SELECT count(*) FILTER (WHERE {name}) FROM silver")
+            )[0]
             for name in flags
         }
-        duplicate_groups, duplicate_rows = con.execute(f"""
+        duplicate_groups, duplicate_rows = fetch_required_row(
+            con.execute(f"""
           SELECT count(*), coalesce(sum(n), 0) FROM (
             SELECT count(*) AS n FROM silver GROUP BY {", ".join(TLC_COLUMNS)} HAVING count(*) > 1
           )
-        """).fetchone()
+        """)
+        )
         copy_parquet(con, "SELECT * FROM silver", silver_path)
         report = {
             "build_id": build_id,

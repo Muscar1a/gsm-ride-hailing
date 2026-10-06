@@ -148,6 +148,7 @@ class Run:
         self.manifest_path = self.path / "manifest.json"
         effective_hash = fingerprint(config.as_dict())
         runtime = environment(config.workspace)
+        self.manifest: dict[str, Any]
         if self.manifest_path.exists():
             self.manifest = read_json(self.manifest_path)
             if self.manifest["config_hash"] != effective_hash:
@@ -180,16 +181,52 @@ class Run:
             self.manifest["artifacts"][str(relative).replace("\\", "/")] = sha256_file(path)
         self.save()
 
+    def fail_stage(
+        self,
+        stage_name: str,
+        error: Exception | str,
+        error_type: str | None = None,
+        started_at: str | None = None,
+        duration_seconds: float = 0.0,
+    ) -> None:
+        self.manifest["status"] = "failed"
+        resolved_started_at = (
+            started_at or self.manifest["stages"].get(stage_name, {}).get("started_at") or utc_now()
+        )
+        self.manifest["stages"][stage_name] = {
+            "status": "failed",
+            "started_at": resolved_started_at,
+            "ended_at": utc_now(),
+            "duration_seconds": duration_seconds,
+            "error_type": error_type
+            or (type(error).__name__ if isinstance(error, Exception) else "ValueError"),
+            "error": str(error),
+        }
+        self.save()
+
     @contextlib.contextmanager
-    def stage(self, name: str, inputs: Any):
+    def stage(self, stage_name: str, stage_inputs: Any):
+        started = time.perf_counter()
+        started_at = utc_now()
+        try:
+            resolved_inputs = stage_inputs() if callable(stage_inputs) else stage_inputs
+        except Exception as exc:
+            self.fail_stage(
+                stage_name,
+                exc,
+                started_at=started_at,
+                duration_seconds=time.perf_counter() - started,
+            )
+            raise
+
         digest = fingerprint(
             {
-                "inputs": inputs,
+                "inputs": resolved_inputs,
                 "config": self.manifest["config_hash"],
                 "code": self.manifest["environment"]["source_code_sha256"],
             }
         )
-        previous = self.manifest["stages"].get(name, {})
+        previous = self.manifest["stages"].get(stage_name, {})
         reusable = previous.get("status") == "succeeded" and previous.get("input_hash") == digest
         if reusable:
             for relative, expected in previous.get("outputs", {}).items():
@@ -198,22 +235,21 @@ class Run:
                     reusable = False
                     break
         if reusable:
-            print(f"{name}: reuse verified artifacts", flush=True)
+            print(f"{stage_name}: reuse verified artifacts", flush=True)
             yield False
             return
-        started = time.perf_counter()
         self.manifest["status"] = "running"
-        self.manifest["stages"][name] = {
+        self.manifest["stages"][stage_name] = {
             "status": "running",
-            "started_at": utc_now(),
+            "started_at": started_at,
             "input_hash": digest,
         }
         self.save()
-        print(f"{name}: running", flush=True)
+        print(f"{stage_name}: running", flush=True)
         try:
             yield True
         except Exception as exc:
-            self.manifest["stages"][name].update(
+            self.manifest["stages"][stage_name].update(
                 status="failed",
                 error_type=type(exc).__name__,
                 error=str(exc),
@@ -224,14 +260,14 @@ class Run:
             self.save()
             raise
         else:
-            stage = self.manifest["stages"][name]
-            stage.update(
+            stage_record = self.manifest["stages"][stage_name]
+            stage_record.update(
                 status="succeeded",
                 duration_seconds=time.perf_counter() - started,
                 ended_at=utc_now(),
             )
             self.save()
-            print(f"{name}: succeeded ({stage['duration_seconds']:.2f}s)", flush=True)
+            print(f"{stage_name}: succeeded ({stage_record['duration_seconds']:.2f}s)", flush=True)
 
     def outputs(self, stage: str, paths: list[Path], **counts: Any) -> None:
         self.register(paths)

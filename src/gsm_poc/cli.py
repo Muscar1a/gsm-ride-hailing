@@ -50,6 +50,7 @@ def parser() -> argparse.ArgumentParser:
             cmd.add_argument("--baseline-y", type=float, default=1.0)
             cmd.add_argument("--n-sessions", type=int, default=10000)
             cmd.add_argument("--zone", type=int)
+            cmd.add_argument("--target-context-set", default=None)
     return root
 
 
@@ -100,6 +101,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "evaluate":
             pipeline.evaluate(args.build_id)
         elif args.command == "scenario":
+            if args.target_context_set is not None:
+                target_context_set = args.target_context_set
+            elif args.zone is not None:
+                target_context_set = f"zone_{args.zone}"
+            else:
+                target_context_set = config.scenario.target_context_set
             request = ScenarioRequest(
                 args.scenario_id,
                 args.baseline_x,
@@ -108,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.delta_y,
                 args.n_sessions,
                 config.evaluation.interval_level,
+                target_context_set=target_context_set,
             )
             result = pipeline.scenario(request, args.model_run_id, args.zone)
             print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
