@@ -38,6 +38,10 @@ shows the first seven days in the operational dashboard. Simulation uses 7,440
 blocks / 372,000 sessions and 30 day-bootstrap draws. Dropoffs outside the cluster
 are retained. Downloads are bounded and checked by size, schema and SHA-256.
 
+The v0 TLC adapter covers January 2024 only: January 1 inclusive through February 1
+exclusive. TLC ingest and builds reject date scopes outside that source coverage.
+Synthetic simulations can use other date scopes without claiming observed TLC coverage.
+
 `configs/default.toml` uses all 31 days for operations and targets 100 seeds across
 five DGPs and 199 bootstrap draws. This is an expensive reporting configuration.
 Measure a bounded run first; the profile is not a claim that this evaluation has
@@ -78,8 +82,20 @@ uv run python -m gsm_poc evaluate --config configs/demo.toml --seeds 20 --dgps R
 Resume an interrupted stage with its run ID and the same effective CLI overrides.
 Reuse requires matching data, config, source code, lockfile/environment and
 output checksums. After changing code or dependencies, start a new run. Monte
-Carlo checkpoints preserve each attempted seed and its failures. No job runs in
-response to a dashboard slider.
+Carlo checkpoints preserve each attempted seed and its estimator-specific failures;
+a failed estimator does not discard another estimator's valid results. Per-seed metrics
+record failure types/messages, and checkpoints retain each estimator's status. Seeds
+with any estimator failure are retried on resume; successful checkpoints are reused.
+No job runs in response to a dashboard slider.
+
+Fit reuse checks both observed blocks and the dataset manifest. Changed metadata
+invalidates reuse; a source kind, DGP or seed that conflicts with the run configuration
+is rejected before replacing model outputs.
+
+Method-evaluation reuse checks the current observed data, dataset metadata,
+oracle, diagnostics, fitted models and bootstrap bundles. Scenario reuse also
+checks its evaluation contexts and bootstrap bundle. A changed input reruns the
+affected stage even when the dataset ID or model bytes are unchanged.
 
 ## Data, models and exports
 

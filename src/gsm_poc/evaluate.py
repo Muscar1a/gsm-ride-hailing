@@ -240,6 +240,35 @@ def aggregate_metrics(seed_metrics: pd.DataFrame, expected_seeds: int) -> pd.Dat
     return pd.DataFrame(rows)
 
 
+def _failed_method_rows(
+    config: Config, run_id: str, estimator: str, source_kind: str, error: Exception
+) -> list[dict]:
+    return [
+        {
+            "run_id": run_id,
+            "dgp_id": config.simulation.dgp,
+            "seed": config.simulation.seed,
+            "estimator": estimator,
+            "outcome": outcome,
+            "treatment": treatment,
+            "status": "failed",
+            "source_kind": source_kind,
+            "evidence_level": "C",
+            "error": None,
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "covered": None,
+            "false_positive": None,
+            "scenario_probability_rmse": None,
+            "interval_status": "interval_unstable",
+            "requested_draws": config.evaluation.bootstrap_draws,
+            "successful_draws": 0,
+        }
+        for outcome in ("X", "Y")
+        for treatment in ("X", "Y")
+    ]
+
+
 def monte_carlo(
     config: Config, context: pd.DataFrame | None, context_version: str, output: Path, run_id: str
 ) -> dict:
@@ -275,49 +304,70 @@ def monte_carlo(
                 "seed": seed,
                 "status": "running",
                 "bootstrap_draws": config.evaluation.bootstrap_draws,
+                "estimator_results": {},
             }
             write_json(checkpoint, state)
             print(f"evaluate: {dgp}, seed {seed}", flush=True)
             try:
                 data = generate(seed_config, context, context_version)
-                results, _ = fit_all(data.blocks, seed_config)
                 train = date_splits(data.blocks, seed_config)["train"]
-                rows = []
-                for name, result in results.items():
-                    draws = (
-                        bootstrap(train, seed_config, name) if result.bundle is not None else None
-                    )
-                    rows.extend(method_metrics(result, draws, data, seed_config, run_id))
-                frame = pd.DataFrame(rows)
-                state["status"] = "succeeded"
             except (ValueError, RuntimeError, np.linalg.LinAlgError) as exc:
                 state.update(status="failed", error_type=type(exc).__name__, error=str(exc))
-                # Keep each attempted estimator/cell in the denominator on seed failure.
-                frame = pd.DataFrame(
-                    [
-                        {
-                            "run_id": run_id,
-                            "dgp_id": dgp,
-                            "seed": seed,
-                            "estimator": name,
-                            "outcome": outcome,
-                            "treatment": treatment,
-                            "status": "failed",
-                            "source_kind": "semi_synthetic" if context is not None else "synthetic",
-                            "evidence_level": "C",
-                            "error": None,
-                            "covered": None,
-                            "false_positive": None,
-                            "scenario_probability_rmse": None,
-                            "interval_status": "interval_unstable",
-                            "requested_draws": config.evaluation.bootstrap_draws,
-                            "successful_draws": 0,
+                rows = []
+                for name in config.model.estimators:
+                    state["estimator_results"][name] = {
+                        "status": "failed",
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    }
+                    rows.extend(
+                        _failed_method_rows(
+                            seed_config,
+                            run_id,
+                            name,
+                            "semi_synthetic" if context is not None else "synthetic",
+                            exc,
+                        )
+                    )
+            else:
+                state["status"] = "succeeded"
+                rows = []
+                for name in config.model.estimators:
+                    method_config = dataclasses.replace(
+                        seed_config,
+                        model=dataclasses.replace(
+                            seed_config.model, estimators=(name,), scenario_estimator=name
+                        ),
+                    )
+                    try:
+                        # The fit-stage validation gate applies separately to each method.
+                        results, _ = fit_all(data.blocks, method_config)
+                        result = results[name]
+                        draws = (
+                            bootstrap(train, method_config, name)
+                            if result.bundle is not None
+                            else None
+                        )
+                        rows.extend(method_metrics(result, draws, data, method_config, run_id))
+                        state["estimator_results"][name] = {
+                            "status": "succeeded",
+                            "model_status": result.diagnostics["status"],
                         }
-                        for name in config.model.estimators
-                        for outcome in ("X", "Y")
-                        for treatment in ("X", "Y")
-                    ]
-                )
+                    except (ValueError, RuntimeError, np.linalg.LinAlgError) as exc:
+                        state["status"] = "failed"
+                        state.setdefault("error_type", type(exc).__name__)
+                        state.setdefault("error", str(exc))
+                        state["estimator_results"][name] = {
+                            "status": "failed",
+                            "error_type": type(exc).__name__,
+                            "error": str(exc),
+                        }
+                        rows.extend(
+                            _failed_method_rows(
+                                method_config, run_id, name, data.metadata["source_kind"], exc
+                            )
+                        )
+            frame = pd.DataFrame(rows)
             write_frame(metrics_path, frame)
             state.update(
                 duration_seconds=time.perf_counter() - started,

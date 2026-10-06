@@ -56,11 +56,24 @@ fixed before cross-fitting. The baseline model is a linear regression on the
 same explicit basis, fitted to `Q - T @ theta.T`; this matches the declared
 additive DGP and does not use oracle baseline labels.
 
+Invalid choice probabilities on validation stop the fit stage with the estimator
+and failure reason recorded in the run manifest. No model is published from that
+fit. Scenarios also reject saved bundles explicitly marked as failing validation,
+even if the selected test-context predictions are valid.
+
+Monte Carlo evaluates each estimator independently on the same generated seed.
+A fit or validation failure counts against that estimator's attempted-run denominator
+while other estimators retain their valid results. Shared data-generation failures
+count against every configured estimator.
+
 Training is January 1–20, validation January 21–25 and final evaluation January
 26–31. Nuisance folds group all zones/blocks by original training day. Bootstrap
 resamples days and refits nuisance models, theta and the probability baseline.
 Duplicate copies of a sampled day retain their original group. Held-out evaluation
 contexts remain fixed. Default estimator IID confidence intervals are disabled.
+Bootstrap draws must retain the original training sample's active treatments.
+A draw that loses variation in an originally varying price counts as a failed refit,
+so coefficient columns stay aligned and the failure enters the interval-quality checks.
 
 Intervals are individual day-bootstrap percentile intervals, not simultaneous
 intervals. The reporting profile requires at least 199 successful draws, at most
@@ -80,8 +93,11 @@ New multipliers equal baseline multipliers times `(1 + delta_price)`. Prediction
 uses `theta @ (log(new) - log(baseline))`. A +10% change therefore uses log(1.1).
 Both baseline and target must have joint price support. Interior price values use
 the declared local linearity assumption; all required neighboring price corners
-are checked. Unseen context groups and small price cells yield explicit support
-warnings. Values outside 0.90–1.10 receive no forecast.
+are checked. The minimum training-block count is checked separately for each
+selected zone/weekend/peak group at every required price corner. Counts from other
+groups do not substitute for a thin group; no automatic pooling fallback is used.
+Unseen or small groups yield `insufficient_support`, with the group, count and
+minimum in the warning. Values outside 0.90–1.10 receive no forecast.
 
 Predictions are validated at every individual context before averaging. NONE is
 the probability complement. Expected bookings equal assumed sessions times the

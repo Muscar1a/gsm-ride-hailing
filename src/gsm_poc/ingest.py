@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 
 from gsm_poc.artifacts import atomic_path, read_json, sha256_file, utc_now, write_json
-from gsm_poc.config import Config
+from gsm_poc.config import TLC_SOURCE_VERSION, Config
 from gsm_poc.validate import tlc_schema, zone_lookup
 
 
@@ -60,6 +60,7 @@ def _download(url: str, target: Path, config: Config) -> dict:
 
 
 def ingest(config: Config) -> dict:
+    config.source.require_tlc_scope()
     bronze = config.workspace / "data/bronze"
     manifest_path = bronze / "source_manifest.json"
     trip_path = bronze / "fhvhv_tripdata_2024-01.parquet"
@@ -110,7 +111,7 @@ def ingest(config: Config) -> dict:
         "source_id": trip["sha256"],
         "source_kind": "observed_tlc",
         "source_complete": True,
-        "source_version": "NYC_TLC_HVFHV_2024-01",
+        "source_version": TLC_SOURCE_VERSION,
         "trip": trip,
         "zones": zones,
         "schema": schema,

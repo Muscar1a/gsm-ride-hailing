@@ -210,6 +210,13 @@ def fit_all(blocks: pd.DataFrame, config: Config) -> tuple[dict[str, FitResult],
                 validation, validation[list(TREATMENT_COLUMNS)].to_numpy()
             )
             result.diagnostics["validation_probability_valid"] = valid_probabilities(probabilities)
+            if not result.diagnostics["validation_probability_valid"]:
+                reason = (
+                    f"{result.bundle.estimator}: invalid choice probabilities on validation; "
+                    "model rejected"
+                )
+                result.diagnostics.update(status="invalid_probability", reason=reason)
+                raise ValueError(reason)
             result.diagnostics["validation_prediction_rmse"] = float(
                 np.sqrt(
                     np.average(

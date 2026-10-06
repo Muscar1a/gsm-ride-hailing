@@ -7,7 +7,7 @@ from pathlib import Path
 import duckdb
 
 from gsm_poc.artifacts import atomic_path, fingerprint, sha256_file, write_json
-from gsm_poc.config import Config
+from gsm_poc.config import TLC_SOURCE_VERSION, Config
 from gsm_poc.validate import FLAG_COLUMNS, TLC_COLUMNS, tlc_schema, zone_lookup
 
 
@@ -28,6 +28,9 @@ def copy_parquet(con: duckdb.DuckDBPyConnection, relation: str, path: Path) -> N
 
 
 def build_silver(config: Config, source: dict) -> dict:
+    config.source.require_tlc_scope()
+    if source.get("source_version", TLC_SOURCE_VERSION) != TLC_SOURCE_VERSION:
+        raise ValueError("The v0 TLC adapter requires the January 2024 source version")
     if not source.get("source_complete"):
         raise ValueError("A complete source manifest is required before building silver")
     trip_path = config.workspace / source["trip_path"]

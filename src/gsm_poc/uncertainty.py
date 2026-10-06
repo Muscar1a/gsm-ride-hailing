@@ -10,6 +10,7 @@ import pandas as pd
 
 from gsm_poc.config import Config
 from gsm_poc.estimate import ModelBundle, fit_estimator
+from gsm_poc.features import TREATMENT_COLUMNS
 
 
 @dataclasses.dataclass
@@ -43,6 +44,8 @@ def bootstrap(
     train: pd.DataFrame, config: Config, estimator: str, seed: int | None = None
 ) -> BootstrapResult:
     actual_seed = config.simulation.seed if seed is None else seed
+    treatments = train[list(TREATMENT_COLUMNS)].to_numpy(float)
+    expected_active = tuple(np.flatnonzero(np.ptp(treatments, axis=0) > 1e-10).tolist())
     rng = np.random.default_rng(np.random.SeedSequence([actual_seed, 8071]))
     records, bundles = [], []
     for draw in range(config.evaluation.bootstrap_draws):
@@ -57,14 +60,21 @@ def bootstrap(
                     result.diagnostics.get("reason", "Bootstrap draw is not identified")
                 )
             bundle = result.bundle
-            record.update(status="succeeded", original_days=int(sampled.original_day_id.nunique()))
+            if bundle.active_treatments != expected_active:
+                raise ValueError(
+                    "Bootstrap draw identifies treatment columns "
+                    f"{[TREATMENT_COLUMNS[k] for k in bundle.active_treatments]}; "
+                    f"expected {[TREATMENT_COLUMNS[k] for k in expected_active]}"
+                )
             for j, outcome in enumerate(("x", "y")):
                 for k, index in enumerate(bundle.active_treatments):
                     record[f"theta_{outcome}{('x', 'y')[index]}"] = float(bundle.theta[j, k])
             record["baseline_coefficients"] = bundle.base_rate_model.coef_.tolist()
             record["baseline_intercepts"] = bundle.base_rate_model.intercept_.tolist()
+            record.update(status="succeeded", original_days=int(sampled.original_day_id.nunique()))
         except (ValueError, np.linalg.LinAlgError, RuntimeError) as exc:
-            record.update(error_type=type(exc).__name__, error=str(exc))
+            bundle = None
+            record.update(status="failed", error_type=type(exc).__name__, error=str(exc))
         record["duration_seconds"] = time.perf_counter() - started
         records.append(record)
         bundles.append(bundle)

@@ -30,6 +30,10 @@ confounding, null effects and collinear prices. Record:
 - Bootstrap interval coverage and null false positives, with binomial intervals.
 - Attempted/valid/failed counts, identification rejections and runtime.
 
+Fit and validation failures are recorded separately for each estimator on a shared
+generated seed. A rejected estimator does not remove another estimator's valid
+measurements. A failure to generate the shared data is recorded for every estimator.
+
 The preconfigured technical targets for RCT_SYN are theta RMSE at most 0.10
 per cell and scenario probability RMSE at most 0.02. They are controlled-DGP
 targets, not business success criteria. Hidden confounding is a stress case;

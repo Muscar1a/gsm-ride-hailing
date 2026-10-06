@@ -12,6 +12,7 @@ from gsm_poc.config import Config
 
 
 def build_marts(config: Config, silver: Path, build_id: str) -> dict:
+    config.source.require_tlc_scope()
     with connection(config) as con:
         con.read_parquet(str(silver)).create_view("silver")
         aggregates = con.execute(

@@ -10,6 +10,9 @@ from typing import Any
 
 DGPS = ("RCT_SYN", "OBSERVED_CONFOUNDING", "HIDDEN_CONFOUNDING", "NULL_EFFECT", "COLLINEAR_PRICE")
 ESTIMATORS = ("naive_ols", "adjusted_ols", "dml")
+TLC_SOURCE_VERSION = "NYC_TLC_HVFHV_2024-01"
+TLC_SOURCE_START = "2024-01-01"
+TLC_SOURCE_END = "2024-02-01"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -38,6 +41,19 @@ class SourceConfig:
     max_download_bytes: int = 1_000_000_000
     duckdb_memory_limit: str = "4GB"
     threads: int = 4
+
+    def require_tlc_scope(self) -> None:
+        """Check the v0 monthly source contract, independently of observed trip dates."""
+        lower, upper = map(dt.date.fromisoformat, (TLC_SOURCE_START, TLC_SOURCE_END))
+        start, end, dashboard_end = map(
+            dt.date.fromisoformat, (self.start, self.end, self.dashboard_end)
+        )
+        if not lower <= start < dashboard_end <= end <= upper:
+            raise ValueError(
+                "The v0 TLC adapter covers January 2024 only; source.start, source.end "
+                f"and source.dashboard_end must stay within [{TLC_SOURCE_START}, {TLC_SOURCE_END}) "
+                "with exclusive end dates"
+            )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -102,6 +118,8 @@ class Config:
         dashboard_end = dt.date.fromisoformat(self.source.dashboard_end)
         if not dates[0] < dashboard_end <= dates[3]:
             raise ValueError("dashboard_end must be inside the source date scope")
+        if self.project.context_mode == "tlc":
+            self.source.require_tlc_scope()
         if (dates[1] - dates[0]).days < self.model.folds:
             raise ValueError("Training must contain at least one original day per fold")
         if not self.source.zones or len(set(self.source.zones)) != len(self.source.zones):

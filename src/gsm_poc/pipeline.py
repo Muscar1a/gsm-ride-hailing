@@ -130,11 +130,16 @@ class Pipeline:
         dataset_id = safe_id(dataset_id or self.run.manifest.get("dataset_id", ""))
         root = self.config.workspace / "data/synthetic" / dataset_id
         observed = root / "observed/choice_block.parquet"
-        inputs = {"dataset_id": dataset_id, "observed_sha256": sha256_file(observed)}
+        metadata_path = root / "manifest.json"
+        inputs = {
+            "dataset_id": dataset_id,
+            "observed_sha256": sha256_file(observed),
+            "metadata_sha256": sha256_file(metadata_path),
+        }
         with self.run.stage("fit", inputs) as execute:
             if execute:
                 blocks = pd.read_parquet(observed)
-                metadata = read_json(root / "manifest.json")
+                metadata = read_json(metadata_path)
                 if metadata["source_kind"] != self.run.manifest["source_kind"]:
                     raise ValueError("Dataset source kind differs from run configuration")
                 if metadata["dgp_id"] != self.config.simulation.dgp:
@@ -210,9 +215,24 @@ class Pipeline:
         dataset_id = self.run.manifest["dataset_id"]
         root = self.config.workspace / "data/synthetic" / dataset_id
         oracle = root / "oracle/oracle_block.parquet"
-        with self.run.stage(
-            "method_evaluation", {"oracle_sha256": sha256_file(oracle), "dataset_id": dataset_id}
-        ) as execute:
+        inputs = {
+            "dataset_id": dataset_id,
+            "oracle_sha256": sha256_file(oracle),
+            "observed_sha256": sha256_file(root / "observed/choice_block.parquet"),
+            "metadata_sha256": sha256_file(root / "manifest.json"),
+            "models": {},
+        }
+        for name in self.config.model.estimators:
+            directory = self.run.path / "models" / name
+            diagnostics_path = directory / "diagnostics.json"
+            model_inputs = {"diagnostics_sha256": sha256_file(diagnostics_path)}
+            if read_json(diagnostics_path)["status"] != "not_identified":
+                model_inputs.update(
+                    model_sha256=sha256_file(directory / "model_bundle.joblib"),
+                    bootstrap_sha256=sha256_file(directory / "bootstrap_bundles.joblib"),
+                )
+            inputs["models"][name] = model_inputs
+        with self.run.stage("method_evaluation", inputs) as execute:
             if execute:
                 results, draws = self.load_models()
                 metrics = saved_method_evaluation(
@@ -267,6 +287,10 @@ class Pipeline:
             "zone": zone,
             "diagnostics_sha256": sha256_file(directory / "models" / name / "diagnostics.json"),
             "model_sha256": sha256_file(model_path) if bundle else None,
+            "bootstrap_sha256": (
+                sha256_file(model_path.with_name("bootstrap_bundles.joblib")) if bundle else None
+            ),
+            "contexts_sha256": sha256_file(directory / "scenario_contexts.parquet"),
         }
         with self.run.stage("scenario", inputs) as execute:
             path = self.run.path / "scenario_result.json"

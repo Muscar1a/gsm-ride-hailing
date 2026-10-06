@@ -1,11 +1,13 @@
 import dataclasses
+from itertools import product
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from gsm_poc.estimate import fit_estimator
 from gsm_poc.features import date_splits
-from gsm_poc.scenario import ScenarioRequest, scenario
+from gsm_poc.scenario import ScenarioRequest, joint_support, scenario
 from gsm_poc.uncertainty import BootstrapResult
 
 
@@ -90,3 +92,64 @@ def test_invalid_request_rejected(config, fitted, scenario_request):
     bundle, context = fitted
     with pytest.raises(ValueError):
         scenario(bundle, context, scenario_request, config, "test-run")
+
+
+@pytest.mark.parametrize("selected_count", [0, 1, 19, 20])
+@pytest.mark.parametrize("target_x", [1.05, 1.1])
+def test_support_counts_each_selected_context_at_each_price_corner(
+    config, fitted, selected_count, target_x
+):
+    bundle, context = fitted
+    config = dataclasses.replace(
+        config, model=dataclasses.replace(config.model, min_price_cell_count=20)
+    )
+    # A fully supported synthetic table except for one selected group/corner.
+    rows = []
+    for zone, weekend, peak, x, y in product(
+        config.source.zones, (0, 1), (0, 1), (0.9, 1.0, 1.1), (0.9, 1.0, 1.1)
+    ):
+        count = selected_count if (zone, weekend, peak, x, y) == (161, 0, 0, 1.1, 1.0) else 20
+        rows.extend(
+            [
+                {
+                    "zone_id": zone,
+                    "is_weekend": weekend,
+                    "is_peak": peak,
+                    "multiplier_x": x,
+                    "multiplier_y": y,
+                }
+            ]
+            * count
+        )
+    bundle.train_support = pd.DataFrame(rows)
+    status, reasons = joint_support(bundle, context, np.array([target_x, 1.0]), config)
+    if selected_count < 20:
+        assert status == "insufficient_support"
+        assert any(
+            "zone_id=161" in reason and f"{selected_count} blocks" in reason for reason in reasons
+        )
+        forecast = scenario(
+            bundle, context, ScenarioRequest(delta_price_x=target_x - 1), config, "support-test"
+        )
+        assert forecast["status"] == "insufficient_support"
+        assert forecast["support_status"] == "insufficient_support"
+    else:
+        assert status == "ok"
+        assert not reasons
+    # A thin unselected group does not penalize an independently supported zone.
+    status, reasons = joint_support(
+        bundle, context[context.zone_id == 162], np.array([target_x, 1.0]), config
+    )
+    assert status == "ok"
+    assert not reasons
+
+
+def test_saved_bundle_with_failed_validation_has_no_forecast(config, fitted):
+    bundle, context = fitted
+    # Test probabilities are valid; the validation failure must still block this model.
+    bundle.diagnostics["validation_probability_valid"] = False
+    result = scenario(bundle, context, ScenarioRequest(), config, "failed-validation")
+    assert result["status"] == "invalid_probability"
+    assert any("validation" in reason.lower() for reason in result["reasons"])
+    assert "probabilities" not in result
+    assert "theta" not in result

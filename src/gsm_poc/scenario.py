@@ -67,6 +67,8 @@ def joint_support(
     ):
         return "out_of_support", ["Price is outside the designed multiplier range 0.90–1.10"]
     reasons = []
+    group_columns = ["zone_id", "is_weekend", "is_peak"]
+    groups = contexts[group_columns].drop_duplicates()
     for x, y in product(_adjacent(multipliers[0]), _adjacent(multipliers[1])):
         selected = bundle.train_support[
             np.isclose(bundle.train_support.multiplier_x, x)
@@ -74,22 +76,22 @@ def joint_support(
         ]
         if selected.empty:
             return "out_of_support", [f"Joint price corner ({x}, {y}) has no training blocks"]
-        relevant = selected[selected.zone_id.isin(contexts.zone_id.unique())]
-        if len(relevant) < config.model.min_price_cell_count:
-            reasons.append(
-                f"Joint price corner ({x}, {y}) has only {len(relevant)} selected blocks"
-            )
-        groups = contexts[["zone_id", "is_weekend", "is_peak"]].drop_duplicates()
-        support_groups = relevant[["zone_id", "is_weekend", "is_peak"]].drop_duplicates()
+        counts = selected.groupby(group_columns).size().rename("blocks").reset_index()
         joined = groups.merge(
-            support_groups,
+            counts,
             how="left",
-            indicator=True,
-            on=["zone_id", "is_weekend", "is_peak"],
+            on=group_columns,
             validate="one_to_one",
         )
-        if (joined._merge == "left_only").any():
-            reasons.append(f"Some selected contexts lack nearby training price corner ({x}, {y})")
+        joined["blocks"] = joined.blocks.fillna(0).astype(int)
+        for row in joined[joined.blocks < config.model.min_price_cell_count].itertuples(
+            index=False
+        ):
+            reasons.append(
+                f"Joint price corner ({x}, {y}) has only {row.blocks} blocks for "
+                f"context zone_id={row.zone_id}, is_weekend={row.is_weekend}, "
+                f"is_peak={row.is_peak}; minimum {config.model.min_price_cell_count}"
+            )
     if (
         bundle.diagnostics.get("condition_number") is None
         or bundle.diagnostics["condition_number"] > config.model.max_condition_number
@@ -128,6 +130,14 @@ def scenario(
     }
     if bundle is None:
         output.update(status="not_identified", reasons=["A valid model matrix is unavailable"])
+        return output
+    if bundle.diagnostics.get("validation_probability_valid") is False:
+        output.update(
+            status="invalid_probability",
+            reasons=[
+                "Model choice probabilities failed validation; model is ineligible for scenarios"
+            ],
+        )
         return output
     if contexts.empty:
         raise ValueError("No selected scenario context")

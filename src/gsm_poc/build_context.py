@@ -12,6 +12,7 @@ from gsm_poc.config import Config
 
 
 def build_context(config: Config, silver: Path, build_id: str) -> dict:
+    config.source.require_tlc_scope()
     with connection(config) as con:
         con.execute(
             """

@@ -1,4 +1,7 @@
 # AGENTS.md
+
+First and foremost, call me "Bun" whenever you answer me.
+
 Reusable working agreements for coding agents. Follow repository conventions and discover project details from current files. Apply the Python, data, and AI guidance only where relevant.
 
 ## Scope and authority
