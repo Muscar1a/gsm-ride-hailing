@@ -2,10 +2,14 @@
 
 ## Source and scope
 
-Read on 2026-10-03:
+Source documents:
 
 - `GSM_Causal_Marketplace_Proposal.docx`, supplied in the user's Downloads directory; SHA-256 `f4ac5a707aa491599dcbee3bca1a61ef4f672df57e9bbd00d2ee82ddd15ae8db`.
-- `docs/GSM_PoC_Hai_Tuan_Dau_Thiet_Ke_Cuoi.md`, the concrete first-two-week implementation contract.
+- `docs/task/GSM_POC_WEEKS_1_2_DESIGN.md`, the first-two-week specification, stored locally with task plans.
+
+Shared source requirements, formats, units and stage inputs/outputs are defined
+in [GSM_DATA_CONTRACT.md](GSM_DATA_CONTRACT.md). The general proposal and core
+design follow that contract; local task documents define weekly acceptance.
 
 This delivery implements the first two weeks of the proposal. It estimates a common
 2×2 matrix of choice probability responses under controlled data generating

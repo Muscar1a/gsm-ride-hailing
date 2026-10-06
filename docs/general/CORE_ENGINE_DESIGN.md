@@ -1,573 +1,825 @@
-# Thiết kế chi tiết core engine — GSM Causal Marketplace
+# Core Engine Design - GSM Causal Marketplace
 
-**Căn cứ:** [GSM Causal Marketplace Proposal](GSM_Causal_Marketplace_Proposal.md).
-**Phạm vi:** nguyên mẫu thị trường hai phía, một cụm, hai dịch vụ, theo lộ trình năm tuần của proposal.  
-**Loại tài liệu:** đặc tả thiết kế để triển khai và nghiệm thu. Công thức, giao diện và giá trị khởi đầu dưới đây là quyết định thiết kế; không phải kết quả thực nghiệm hoặc mô tả tiến độ mã nguồn.
+**Basis:** [GSM Causal Marketplace Proposal](GSM_Causal_Marketplace_Proposal.md).
+**Scope:** a two-sided marketplace prototype, one cluster, two services, five weeks.
+**Document type:** implementation and acceptance design. Formulas, interfaces,
+and starting values are design choices, not measurements or implementation status.
 
-## 1. Mục tiêu thiết kế và đầu ra bắt buộc
+Sources, formats, grain, units, interfaces, and stage I/O follow
+[GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). This document specifies algorithms;
+executed results are recorded in [VALIDATION.md](../VALIDATION.md).
 
-Core engine nhận một chính sách giá/thưởng, một thị trường nền và các mô hình phản ứng đã được phiên bản hóa. Nó dự báo trạng thái thị trường sau can thiệp, đặt cạnh chính sách hiện tại và lưu dự báo để đối chiếu với thử nghiệm.
+## 1. Objectives and required outputs
 
-Câu hỏi mẫu xuyên suốt thiết kế là: **tăng giá dịch vụ X 10% tại một cụm và khung giờ thì cầu, cung khả dụng, lựa chọn dịch vụ và nguồn cung nhàn rỗi thay đổi thế nào?** Tăng cung phải được tính từ cơ chế chi trả và phần hành vi linh hoạt của tài xế; không mặc định giá khách tăng thì cung tăng.
+Given a price/incentive policy, baseline market, and versioned response models,
+forecast the resulting market, compare with current policy, and freeze predictions
+for experimental reconciliation.
 
-| Yêu cầu của proposal | Đặc tả đầu ra | Thành phần chịu trách nhiệm |
+Reference scenario: **raise service X price 10% in a cluster/time window**.
+Report demand, serviceable supply, service choice, and idle supply. Customer
+price changes affect supply through compensation and adjustable driver decisions.
+
+| Requirement | Output | Component |
 |---|---|---|
-| Độ nhạy giá của khách | Tác động lên yêu cầu đặt; conversion từ báo giá báo riêng; đơn vị và tập dân số rõ | DemandResponse |
-| Thay thế chéo | Ma trận trực tiếp/chéo 2×2 theo vùng/khung/dịch vụ đủ dữ liệu | ChoiceResponse |
-| Phản ứng nguồn cung | Giờ xe có thể phục vụ theo thu nhập kỳ vọng/thưởng; phân biệt tăng giờ với chuyển vùng | SupplyResponse |
-| Cân bằng mới | Thu nhập kỳ vọng, cung và mức sử dụng xe nhất quán; hoặc trạng thái không hội tụ | EquilibriumSolver |
-| Vận hành | Chuyến hoàn thành, chờ, hủy, nhàn rỗi và sạc | MarketplaceSimulator |
-| Kinh tế | Doanh thu, chi phí, biên đóng góp tăng thêm, ROI khi đủ dữ liệu | EconomicEvaluator |
-| Bất định và bằng chứng | Khoảng bất định, vùng hỗ trợ, giả định và mức A/B/C gắn từng đầu ra | UncertaintyEngine, EvidenceRegistry |
-| Kiểm chứng | Lịch switchback, dự báo đóng băng và sổ đối chiếu dự báo–thực tế | ExperimentInterface |
-| Bàn giao | Dashboard so sánh, CSV/JSON và phiên bản có thể chạy lại | ScenarioRunner, ArtifactStore |
+| Customer price sensitivity | Request response; quote conversion separately; explicit unit/population | DemandResponse |
+| Cross-service response | Supported own/cross 2x2 matrix by zone/time/service | ChoiceResponse |
+| Supply | Serviceable vehicle-hours versus expected income/incentives; extra hours versus relocation | SupplyResponse |
+| Equilibrium | Consistent income/supply/utilization or nonconvergence status | EquilibriumSolver |
+| Operations | Completed trips, wait, cancellation, idle, charging | MarketplaceSimulator |
+| Economics | Revenue, costs, incremental contribution margin, supported ROI | EconomicEvaluator |
+| Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output | UncertaintyEngine, EvidenceRegistry |
+| Validation | Switchback schedule, frozen forecasts, reconciliation ledger | ExperimentInterface |
+| Handoff | Scenario dashboard, CSV/JSON, reproducible versions | ScenarioRunner, ArtifactStore |
 
-Nguyên mẫu hỗ trợ quyết định. Nó không tự áp giá trên GSM, không định giá cá nhân, không tối ưu dispatch từng chuyến trên hệ thống thật và không mô hình hóa cạnh tranh toàn thành phố. Người vận hành chọn kịch bản; một quy trình được GSM chấp thuận mới đưa chính sách sang thử nghiệm.
+The prototype supports decisions. Production execution requires GSM approval;
+individual pricing, production trip dispatch, and citywide competition modeling
+are outside this scope.
 
-## 2. Quyết định kiến trúc
+## 2. Architecture
 
-### 2.1 Tách ước lượng tham số khỏi mô phỏng thị trường
+### 2.1 Response estimation and market simulation
 
-Thiết kế chọn **mô hình thị trường có cấu trúc** làm engine dự báo. DML, DiD hoặc thử nghiệm ngẫu nhiên cung cấp các quan hệ phản ứng; simulator kết hợp chúng với quy tắc vận hành và chi trả. DML không phải toàn bộ core và không trực tiếp suy ra chuyến hoàn thành, xe nhàn rỗi hoặc ROI.
+Use a structural marketplace model for forecasting. DML, DiD, or experiments
+estimate responses; simulation combines them with operations and compensation.
+DML alone does not produce completed trips, idle vehicles, or ROI.
 
 ```mermaid
 flowchart TD
-    Sources["Nguồn GSM / nguồn kiểm chứng có nhãn"] --> Data["Ánh xạ, kiểm tra chất lượng, bảng nghiên cứu"]
+    Sources["GSM / labeled validation sources"] --> Data["Mapping, quality, research tables"]
     Data --> Identification["Estimand, DAG, assignment, support"]
-    Identification --> Responses["Cầu, thay thế chéo, phản ứng cung"]
-    Data --> Calibration["Hiệu chỉnh nền: matching, thời gian, hủy, sạc, chi trả"]
-    Responses --> Version["ModelVersion: tham số, miền hỗ trợ, bằng chứng"]
+    Identification --> Responses["Demand, cross-service, supply responses"]
+    Data --> Calibration["Baseline: matching, times, cancel, charging, pay"]
+    Responses --> Version["ModelVersion: parameters, support, evidence"]
     Calibration --> Version
-    Policy["Kịch bản giá / thưởng / giá hiệu dụng thuê bao"] --> Runner["ScenarioRunner"]
+    Policy["Prices, incentives, subscription effective prices"] --> Runner["ScenarioRunner"]
     Version --> Runner
-    Runner --> Solver["Cân bằng thu nhập kỳ vọng và cung"]
-    Solver --> Simulator["Simulator một cụm"]
+    Runner --> Solver["Income-supply equilibrium"]
+    Solver --> Simulator["One-cluster simulator"]
     Simulator --> Solver
-    Solver --> Economics["Đánh giá vận hành và kinh tế"]
-    Economics --> Uncertainty["Bất định, độ nhạy, trạng thái"]
-    Uncertainty --> Output["Dashboard / CSV / JSON / dự báo đóng băng"]
-    Output --> Experiment["Switchback được duyệt và sổ đối chiếu"]
+    Solver --> Economics["Operations and economics"]
+    Economics --> Uncertainty["Uncertainty, sensitivity, status"]
+    Uncertainty --> Output["Dashboard / CSV / JSON / frozen forecast"]
+    Output --> Experiment["Approved switchback and reconciliation"]
     Experiment --> Data
 ```
 
-### 2.2 Công nghệ và cách thực thi
+### 2.2 Technology and execution
 
-Chọn Python/SQL cho batch, DuckDB/Parquet cho bảng, EconML cho estimator DML và SimPy cho mô phỏng sự kiện rời rạc. Streamlit đọc artifact và hiển thị kết quả. SimPy cung cấp tiến trình/sự kiện và môi trường mô phỏng; các quy tắc marketplace phải do thiết kế này xác định, không có sẵn trong thư viện.
+Use Python/SQL batch jobs, DuckDB/Parquet tables, EconML DML, and proposed SimPy
+discrete-event simulation. SimPy supplies event/process scheduling; marketplace
+rules must be implemented explicitly. Streamlit reads completed artifacts.
 
-Estimator, hiệu chỉnh nền, bootstrap và giải cân bằng chạy theo job có giới hạn. Đổi lựa chọn hiển thị có thể đọc kết quả đã tính; yêu cầu kịch bản mới tạo job hữu hạn với trạng thái rõ. Không tải dữ liệu, fit model hoặc chạy bootstrap trong mỗi lần render giao diện. Chưa cần Kafka, một model registry dịch vụ riêng hoặc tự động triển khai chính sách cho phạm vi một cụm.
+Fitting, calibration, bootstrap, and equilibrium run as bounded jobs. Display
+changes read results; new scenarios create finite jobs with explicit status.
+Avoid fitting/bootstrap during rendering. Kafka, a separate registry service,
+and automated policy deployment are unnecessary for one cluster.
 
-## 3. Phạm vi thị trường, thời gian và đơn vị
+## 3. Market scope, time, and units
 
-`MarketDefinition` phải chốt danh sách vùng, ranh giới có phiên bản, vùng lân cận theo dõi, hai dịch vụ, quyền kiểm soát giá, nhóm tài xế/xe đủ điều kiện và horizon dự báo. Khởi đầu dùng các vùng nhỏ trong một cụm và khung tổng hợp 30 phút; kích thước khung có thể đổi theo độ phủ log. Khung tổng hợp này khác độ dài block thử nghiệm, khác ca tài xế và khác thời điểm sự kiện của simulator.
+`MarketDefinition` fixes zones/boundary versions, monitored neighbors, services,
+price control, eligible drivers/vehicles, and forecast horizon. Start with small
+zones and 30-minute aggregation, adjusted to log coverage. Aggregation differs
+from experiment blocks, driver shifts, and simulator event time.
 
-Simulator dùng giây và timestamp có timezone; báo cáo dùng ngày/khung theo timezone thị trường đã khai báo. Thị trường Việt Nam dùng `Asia/Ho_Chi_Minh` khi được xác nhận bởi metadata nguồn. Không chuyển timestamp không timezone thành UTC ngầm định.
+Use seconds and timezone-aware simulator timestamps. Report windows in the
+market timezone; use `Asia/Ho_Chi_Minh` for Vietnam only after source confirmation.
+Never silently convert naive source timestamps to UTC.
 
-| Đại lượng | Ký hiệu / đơn vị | Phân biệt bắt buộc |
+| Quantity | Symbol/unit | Required distinction |
 |---|---|---|
-| Lượt xem báo giá | $\lambda_{\text{quote}}$: phiên/giờ | Không phải request hoặc chuyến hoàn thành |
-| Conversion | $p_j$: xác suất chọn dịch vụ $j$ | Tập lựa chọn thực thấy và cửa sổ quan sát rõ |
-| Cầu đầu vào | $D_j$: yêu cầu/giờ | Tách request thử lại khỏi nhu cầu gốc; định nghĩa dedup có nghiệp vụ |
-| Cung có thể phục vụ | $H_{\text{serviceable}}$: giờ xe | Idle + reservation/dispatch + đi đón + phục vụ, loại sạc/nghỉ/không đủ điều kiện |
-| Cung sẵn sàng ngay | $H_{\text{idle}}$: giờ xe hoặc số xe theo thời điểm | Là một phần của $H_{\text{serviceable}}$ |
-| Thu nhập kỳ vọng | $E$: VND/giờ hoặc VND/ca | Cơ sở giờ/ca và thông tin trước quyết định phải thống nhất |
-| Giá/thưởng | $P / B$: VND, hoặc multiplier giá | Ghi trước/sau giảm, thuế/phí, đơn vị và phiên bản |
-| Kết quả vận hành | Chuyến, giây, tỷ lệ, giờ xe, kWh | Mỗi tỷ lệ có mẫu số |
+| Quote exposure | $\lambda_{\text{quote}}$: sessions/hour | Separate from requests/completed trips |
+| Conversion | $p_j$: choice probability | Actual displayed choice set and observation window |
+| Demand | $D_j$: requests/hour | Retry attempts versus original demand; declared business deduplication |
+| Serviceable supply | $H_{\text{serviceable}}$: vehicle-hours | Idle + reserved/dispatch + pickup + on-trip; exclude charging/break/ineligible |
+| Immediately available supply | $H_{\text{idle}}$: vehicle-hours or point-in-time count | Subset of serviceable supply |
+| Expected income | $E$: VND/hour or VND/shift | Consistent denominator and predecision information |
+| Price/incentive | $P/B$: VND or price multiplier | Before/after discount, tax/fees, unit, version |
+| Operations | Trips, seconds, rates, vehicle-hours, kWh | Explicit denominators for rates |
 
-Hai dịch vụ có thể dùng chung đội xe. Một vehicle-hour chỉ được đếm một lần trong tổng cụm; năng lực phục vụ nhiều dịch vụ được biểu diễn bằng eligibility, không nhân đôi nguồn cung. Nếu cả hai dịch vụ thuộc GSM, tổng kết quả kinh doanh phải bao gồm thay thế nội bộ. Không suy diễn lựa chọn `NONE` thành chuyển sang đối thủ.
+Count a shared vehicle-hour once across X/Y. Eligibility represents multiple
+services without duplicating supply. Include internal substitution in total GSM
+outcomes. `NONE` does not imply competitor choice.
 
-## 4. Hợp đồng dữ liệu đầu vào và bảng nghiên cứu
+## 4. Input contract and research tables
 
-### 4.1 Dữ liệu nguồn
+### 4.1 Sources
 
-GSM cung cấp bảng/log hiện hữu, schema gốc, khóa nối, lịch sử phiên bản và metadata. Nhóm nghiên cứu tự ánh xạ, kiểm tra cardinality và dựng bảng. Phạm vi dữ liệu theo [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md); không yêu cầu GSM chuẩn bị sẵn bảng huấn luyện hoặc hệ số nhân quả.
+Request **eight raw groups over the latest 12 months**, including neighbors and
+controls, using Parquet, UTF-8 CSV, or native export with original schema/rate,
+keys, metadata, and version history. Researchers map/check/build tables; GSM
+need not prepare training data or causal coefficients.
 
-Chuỗi nối cần giữ được session → quote set → quote → request/booking → trip và request → dispatch → driver/vehicle → shift/charging session. Nối theo thời điểm gần nhất chỉ được dùng khi có kiểm chứng sai số và nhãn liên kết không chắc chắn.
+Preserve session -> quote-set -> quote -> request/booking -> trip and
+request -> dispatch -> driver/vehicle -> shift/charging-session links.
+Nearest-time joins require error assessment and uncertainty labels.
 
-### 4.2 Các giao diện nội bộ được thiết kế
+### 4.2 Internal interfaces
 
-Tên dưới đây là **bảng logic được thiết kế**, không phải tên schema GSM hay interface đã có trong code.
+Names/grains follow the [shared research tables](../GSM_DATA_CONTRACT.md#3-shared-research-tables).
+These are proposed research interfaces. Python classes may use CamelCase;
+functions, parameters, tables, and artifacts use snake_case.
 
-| Giao diện | Grain / khóa logic | Nội dung tối thiểu |
+| Engine input | Contract tables | Content |
 |---|---|---|
-| ChoiceObservation | Một lần hiển thị tập lựa chọn / `display_id` | Session, thời điểm, vùng, alternatives, giá/ETA/khả dụng đã hiển thị, outcome/censoring |
-| PolicyAssignment | Một assignment / `assignment_id` | Đơn vị, assigned/applied, thời điểm, arm, rule/probability, override, policy version |
-| DemandBlock | Vùng × thời gian × dịch vụ | Phiên, request, mẫu số exposure, bối cảnh trước treatment, nguồn đầy đủ |
-| DriverDecision | Tài xế × quyết định ca/offer | Eligibility, điều kiện chi trả được biết, nhận/từ chối, outcome giờ phục vụ |
-| VehicleStateHistory | Vehicle × interval/event | Vùng, shift, trạng thái, service eligibility, SOC, gap và nguồn |
-| OperationalEvent | Request/dispatch/trip/charging event | Mốc thời gian, response, thời lượng, quãng đường, lý do và phiên bản quy tắc |
-| FinanceEntry | Một ledger entry / `entry_id` | Khoản thu/chi, liên kết nghiệp vụ, currency, funder, thời điểm và điều chỉnh |
-| BaselineSnapshot | Một cửa sổ nền có phiên bản | Rates, trạng thái ban đầu, phân bố thời gian, cung, pin/sạc, chất lượng |
+| Demand/choice | `quote_session`, `quote_option`, `booking_event`, `policy_assignment`, `demand_block` | Prechoice display/availability/price/ETA, outcome/censoring, exposure/requests, assignment |
+| Supply | `driver_offer_shift`, `driver_vehicle_state`, `policy_assignment` | Offered terms/eligibility, shift decisions, vehicle-hours/state/SOC, compensation |
+| Calibration | `operational_event`, `booking_event`, `driver_vehicle_state`, `payment_cost` | Matching/timing/cancel/charging/earnings/cost rules |
+| Simulation | `baseline_snapshot`, `demand_plan`, `admission_plan` | Initial states/roster/rates/rules, requests/hour, shift/serviceable-hour plans |
 
-Refresh báo giá trong một session không tạo thêm một khách độc lập. Thiết kế chọn một quyết định/session trong bản đầu: quy tắc chọn display dùng để xác định outcome được chốt trước fit, và không được chọn display dựa trên việc sau đó khách có đặt hay không. Phân tích chuỗi refresh là extension có estimand riêng.
+A refresh does not create another independent customer. Initially select one
+decision/session using a rule fixed before fitting and independent of subsequent
+booking. Refresh sequences need their own estimand.
 
-Giữ `missing`, `unknown`, `not_applicable` và zero thực riêng. Phiên thiếu liên kết request chỉ là `NONE` khi đã đủ cửa sổ quan sát và log hoàn chỉnh; nếu chưa đủ thì censored/unknown. Không có chuyến không chứng minh tài xế offline. Tổng state duration, số request/trip và ledger phải được đối soát với nguồn cùng scope.
+Keep missing, unknown, not-applicable, and observed zero distinct. No linked
+request means `NONE` only after complete observation/logging; otherwise censor
+or mark unknown. No trips does not establish offline state. Reconcile durations,
+requests/trips, and ledgers against the same source scope.
 
-### 4.3 Điều kiện dừng dữ liệu
+### 4.3 Blocking quality issues
 
-Schema/key không ánh xạ được, join nhiều–nhiều chưa giải thích, timestamp trái thứ tự, thiếu coverage cốt yếu hoặc tiền tệ/đơn vị chưa rõ phải tạo quality issue và chặn module bị ảnh hưởng. Không chặn mọi module khi lỗi chỉ làm một metric không khả dụng. Artifact giữ scope, tỷ lệ nối, số mẫu hợp lệ và lý do loại/censoring.
+Unmapped schema/keys, unexplained many-to-many joins, inconsistent timestamps,
+missing essential coverage, or unknown currency/units block affected modules.
+Independent outputs can continue. Keep scope, join rates, valid counts, and
+exclusion/censoring reasons in artifacts.
 
-## 5. Thiết kế nhận diện nhân quả và nguồn tham số
+## 5. Causal identification and parameter sources
 
-Mỗi quan hệ phải có `EstimandSpec`: treatment, outcome, dân số, horizon, cơ chế assignment, biến trước treatment, đơn vị suy luận, giả định, support và nguồn bằng chứng. Cùng tên “độ co giãn” nhưng outcome conversion, request rate và completed trips không được dùng thay nhau.
+Each `EstimandSpec` records treatment, outcome, population, horizon, assignment,
+pretreatment features, inference unit, assumptions, support, and evidence source.
+Conversion, request-rate, and completed-trip elasticities are distinct outcomes.
 
-| Nguồn biến thiên | Estimator theo thiết kế | Gate nhận diện | Nhãn khi đã kiểm chứng hợp lệ |
+| Variation | Estimator | Identification gate | Evidence after validation |
 |---|---|---|---|
-| Giá/thưởng phân bổ ngẫu nhiên | Ước lượng theo assignment, intention-to-treat làm chính | Assignment/A/A hợp lệ; exposure, interference và carryover được xử lý | A |
-| Thay đổi chính sách lịch sử với đối chứng | DiD thích hợp theo timing/group | Xu hướng song song có điều kiện, anticipation và thay đổi đồng thời được xem xét | B |
-| Dữ liệu lịch sử với gây nhiễu quan sát được | DML và baseline điều chỉnh | Biến trước treatment đủ, giá/offer còn biến thiên và overlap phù hợp | B với giả định nêu rõ |
-| Cơ chế sinh biết tham số | Các estimator trên observed giả lập, oracle chỉ chấm điểm | Không leakage, xác suất/trạng thái hợp lệ và thiết kế kiểm chứng cố định | C |
+| Randomized price/incentives | Assignment-based analysis; primary intention-to-treat | Valid assignment/A/A, exposure, interference, carryover | A |
+| Historical changes with controls | Timing/group-appropriate DiD | Conditional parallel trends, anticipation, concurrent changes assessed | B |
+| Historical observed confounding | DML plus adjusted baselines | Adequate pretreatment features, residual variation, overlap | B with explicit assumptions |
+| Known-parameter mechanism | Estimators on observed synthetic data; evaluator-only oracle | No leakage, valid probabilities/states, frozen validation design | C |
 
-Không nâng nhãn bằng chứng chỉ vì chọn tên estimator. Randomization chưa được thực thi không tạo bằng chứng A. Model card phải ghi những điều kiện chưa xác nhận; không có nguồn nhận diện phù hợp thì phản ứng được lưu là giả định C hoặc unavailable.
+Choosing an estimator or planning randomization does not upgrade evidence.
+Record unconfirmed assumptions in model cards; unsupported responses remain
+C assumptions or unavailable.
 
-DiD nhiều thời điểm sử dụng estimand group-time thích hợp; không mặc định một hồi quy two-way fixed effects duy nhất xử lý được mọi timing và dị biệt. Thiết kế ưu tiên khung của Callaway–Sant’Anna khi cấu trúc sự kiện phù hợp. ATT của một mức can thiệp rời rạc không tự trở thành đạo hàm theo log giá; chỉ dự báo các action có bằng chứng, hoặc công bố giả định nội suy riêng. [Phương pháp DiD nhiều nhóm/thời điểm](https://bcallaway11.github.io/did/).
+Use suitable group-time DiD estimands, preferably Callaway-Sant'Anna when event
+structure fits. A single two-way fixed-effects regression does not handle all
+heterogeneity/timing. A discrete-policy ATT is not automatically a log-price
+derivative; limit actions to evidence or declare interpolation assumptions.
+[Method](https://bcallaway11.github.io/did/).
 
-DAG phải phân biệt bối cảnh $W$ trước assignment, giá/thưởng được đề nghị, thông tin thu nhập đã hiển thị, hành vi lựa chọn, trạng thái vận hành sau can thiệp và ledger thực nhận. Thu nhập thực nhận và ETA bị chính sách làm thay đổi là outcome/mediator; không tự đưa chúng vào $W$ như confounder.
+DAGs distinguish pretreatment $W$, offered price/incentives, displayed income
+information, choice, post-treatment operational states, and realized ledgers.
+Realized earnings and policy-affected ETA are outcomes/mediators, not automatic
+confounder features.
 
-## 6. Engine cầu và thay thế chéo
+## 6. Demand and cross-service engine
 
-### 6.1 Tách lượng exposure và lựa chọn
+### 6.1 Exposure and choice
 
-Thiết kế dùng quote funnel làm tuyến chính khi đủ log:
-
-$$
-D_j(z, t; \pi) = \lambda_{\text{quote}}(z, t; \pi) \, p_j(z, t; \pi), \qquad j \in \{X, Y\}.
-$$
-
-Với khung dài $\Delta t$ giờ, số request kỳ vọng là $D_j \times \Delta t$. `DemandResponse` trả rates cùng scope và tập lựa chọn; simulator sinh yêu cầu từ rates này, không từ completed trips.
-
-Khi giá chỉ được thay sau khi khách vào phiên và chỉ xét phản ứng tức thời, thiết kế có thể giữ $\lambda_{\text{quote}}$ cố định với nhãn `conditional_on_quote_population`. Muốn dự báo tổng cầu gồm mở ứng dụng/quay lại trong horizon dài hơn, phải có mô hình exposure và assignment phù hợp cho tác động đó. Thiếu dữ liệu thì đầu ra tổng cầu dài hạn là unavailable; không ngầm dùng $\xi = 0$ như kết luận thực nghiệm.
-
-Một tuyến thay thế dùng request rate trực tiếp theo policy block khi request logs và identification đủ nhưng quote funnel không hoàn chỉnh. Tuyến này trả tác động tổng lên $D$; conversion và outside choice được để unavailable. Hai tuyến là cấu hình loại trừ nhau: không nhân thêm tác động conversion vào request rate đã có tác động tổng.
-
-### 6.2 Dạng hàm lựa chọn cho bản đầu
-
-Chọn mô hình phản ứng cục bộ theo log giá, với mức nền từ dữ liệu thị trường đích:
+With complete quote logs:
 
 $$
-p_{XY}(W; \pi) = p_{XY,0}(W) + \Theta_g(W)
+D_j(z,t;\pi)=\lambda_{\text{quote}}(z,t;\pi)\,p_j(z,t;\pi),\qquad j\in\{X,Y\}.
+$$
+
+Expected requests over $\Delta t$ hours are $D_j\Delta t$. The simulator consumes
+rates with declared scope/choice set, never completed-trip counts as demand.
+
+Immediate price changes after session entry may hold exposure fixed under
+`conditional_on_quote_population`. Longer-term traffic/return effects need an
+identified exposure model. Without it, long-term total demand is unavailable;
+zero exposure elasticity is an assumption, not a result.
+
+A mutually exclusive alternative models requests directly by policy block when
+request logs/identification qualify but quote logs are incomplete. It returns
+total request effects, leaving conversion/outside choice unavailable. Never
+multiply a total request effect by another conversion effect.
+
+### 6.2 Initial choice function
+
+Use a local log-price response with target-market baseline:
+
+$$
+p_{XY}(W;\pi)=p_{XY,0}(W)+\Theta_g(W)
 \begin{pmatrix}
-\log(P_X^{\text{eff}} / P_{X,0}^{\text{eff}}) \\
-\log(P_Y^{\text{eff}} / P_{Y,0}^{\text{eff}})
-\end{pmatrix},
-\qquad p_{\text{NONE}} = 1 - p_X - p_Y.
+\log(P_X^{\text{eff}}/P_{X,0}^{\text{eff}})\\
+\log(P_Y^{\text{eff}}/P_{Y,0}^{\text{eff}})
+\end{pmatrix},\qquad p_{\text{NONE}}=1-p_X-p_Y.
 $$
 
-Giá hiệu dụng là giá được hiển thị sau quyền lợi/khuyến mại được định nghĩa; subscription chỉ làm thay đổi giá hiệu dụng cho nhóm được ghi nhận đủ. Không coi toàn bộ phí thuê bao là giảm giá mỗi chuyến tùy ý. Bản đầu giữ tập người đăng ký cố định và không dự báo adoption/churn nếu chưa có module nhận diện riêng.
+Effective prices are displayed prices after defined benefits/promotions.
+Subscription effects require observed eligibility; do not arbitrarily allocate
+subscription fees as trip discounts. Initially hold subscriber membership fixed;
+adoption/churn needs separate identification.
 
-Mỗi hàng $\theta$ là dịch vụ được chọn, mỗi cột là giá thay đổi. Ma trận đồng thời biểu diễn hai own-price và hai cross-price effects. Độ co giãn conversion tại nền:
-
-$$
-\varepsilon^{\text{choice}}_{jk} = \theta_{jk} / p_{j,0}.
-$$
-
-Nếu mô hình exposure xác định được $\xi_k = \text{d} \log(\lambda_{\text{quote}}) / \text{d} \log(P_k)$, độ co giãn request rate là:
+Rows are chosen services; columns are changed prices. Own/cross conversion
+elasticity at baseline is:
 
 $$
-\varepsilon^{\text{request}}_{jk} = \xi_k + \varepsilon^{\text{choice}}_{jk}.
+\varepsilon^{\text{choice}}_{jk}=\theta_{jk}/p_{j,0}.
 $$
 
-Không xuất tỷ số elasticity khi mức nền gần zero; thay bằng tác động tuyệt đối và mẫu số. Giá zero hoặc giá âm không có log; chương trình miễn phí phải có treatment tiền tệ/categorical riêng, không thêm $\epsilon$ để giả tạo log giá.
-
-### 6.3 Ước lượng DML và baseline
-
-Baseline bắt buộc gồm naive OLS và adjusted OLS. DML học $\mathbb{E}[Q \mid W]$ và $\mathbb{E}[T \mid W]$ bằng nuisance models, dự đoán ngoài fold, rồi ước lượng quan hệ giữa phần dư. Cross-fitting và orthogonal score giúp giảm nhạy với lỗi nuisance trong điều kiện của phương pháp; không loại nhiễu chưa quan sát hoặc tự bảo đảm chuyển thị trường. [Double/Debiased Machine Learning](https://arxiv.org/abs/1608.00060).
-
-Dùng LinearDML cho effect tuyến tính trên một cơ sở nhỏ gồm nhóm vùng, khung giờ và tương tác được công bố. $W$ chứa bối cảnh trước assignment; effect features tách riêng trong `EffectBasis`. Theo dữ liệu, chọn pooled effect hoặc effect theo nhóm bằng validation, không mở model riêng ở mọi ô dữ liệu thưa. API cụ thể phải đối chiếu phiên bản đã khóa khi triển khai. [LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html).
-
-`ResolutionPolicy` quy định số mẫu/đơn vị độc lập tối thiểu, rank và hỗ trợ từng nhóm. Nếu nhóm nhỏ không đủ, fallback lên nhóm gộp có support, lưu `estimated_resolution` và `fallback_reason`. Không hiển thị hệ số pooled dưới nhãn đã học riêng cho vùng. Giá $X/Y$ cần biến thiên độc lập sau điều chỉnh; một giá biến thiên chỉ cho một cột, hai giá đồng tuyến không cho đủ ma trận.
-
-Baseline probabilities được fit từ train với nuisance/response phù hợp; effect và baseline phải dùng cùng đơn vị, nhóm và dạng hàm. Kiểm tra calibration và xác suất trên validation. Mọi learned preprocessing fit trong train/fold; không đọc oracle hoặc outcome test.
-
-### 6.4 Miền hỗ trợ và dạng hàm thay thế
-
-`SupportEnvelope` theo thị trường/nhóm ghi miền giá, tập action chung, coverage context, rank, cỡ mẫu và domain validity. Một miền min/max riêng cho từng giá không đủ; phải có support chung. Không hard-code miền 0,90–1,10 cho mọi thị trường: dùng biến thiên dữ liệu và biên độ chính sách được duyệt.
-
-Tính xác suất ở từng context trước tổng hợp. Âm, trên 1 hoặc tổng vượt 1 làm action invalid; không clipping/renormalization. Miền hợp lệ là giao của support dữ liệu, miền xác suất và biên độ vận hành. Ngoài miền có thể chạy sensitivity giả định C nếu người dùng chọn rõ, nhưng không xuất forecast chính thức như trong support.
-
-Nested logit là lựa chọn mở rộng khi cần dạng lựa chọn phi tuyến và có log alternatives/availability đủ. Nó phải có model card, identification và benchmark riêng; likelihood fit tốt không tự làm hệ số giá nhân quả. Không ép một ma trận DML bất kỳ vào logit bằng sửa xác suất để giữ tên “nhân quả”.
-
-### 6.5 Convention về ETA và phản hồi vận hành
-
-Bản đầu chọn `reduced_form_policy`: tác động lên request được ước lượng cho horizon và cơ chế policy đã định; simulator nhận dòng request đó. Không tự nhân thêm tác động chờ/ETA sau can thiệp lên cầu nếu effect đã bao gồm các đường vận hành đó.
-
-Một mode `structural_choice` có thể mô hình hóa giá, ETA/khả dụng và feedback từ simulator khi đã nhận diện các quan hệ trực tiếp/mediated thích hợp. Khi đó phải fit lại estimand và DAG, ghi rõ mediator nào được mô hình hóa. Hai mode không trộn trong cùng run. Bản đầu vẫn có vòng lặp thu nhập–cung; không cần giả định đã nhận diện feedback ETA để giải vòng lặp này.
-
-## 7. Engine phản ứng nguồn cung
-
-### 7.1 Outcome và treatment
-
-Supply không phải số chuyến tài xế đã chạy. Outcome chính là $H_{\text{serviceable}}$ trên dân số tài xế/xe đủ điều kiện trong horizon. Outcome phụ gồm nhận ca, nhận offer, acceptance, relocation và thời điểm sạc, mỗi loại có model/estimand riêng nếu cần.
-
-Treatment là điều kiện thưởng/chi trả được đề nghị và thông tin thu nhập kỳ vọng được biết trước quyết định. Với ca/lương cố định, engine phải cho phép phản ứng bổ sung giờ bằng 0; hành vi còn linh hoạt có thể là nhận thêm ca, acceptance hoặc dời sạc. Không suy ra expected earnings bằng realized earnings của chính ca rồi dùng nó như treatment.
-
-Nếu $E$ nền dương và có nguồn nhận diện cho thu nhập kỳ vọng, dùng phản ứng cục bộ:
+With identified exposure elasticity $\xi_k=\mathrm{d}\log(\lambda_{\text{quote}})/\mathrm{d}\log(P_k)$:
 
 $$
-H^*_{\text{serv},g} = H_{\text{serv},0,g} \exp\left(
-\gamma_g \log(E_g / E_{0,g}) + \kappa_g (B_g - B_{0,g})
-\right).
+\varepsilon^{\text{request}}_{jk}=\xi_k+\varepsilon^{\text{choice}}_{jk}.
 $$
 
-$\gamma$ là elasticity theo thu nhập kỳ vọng; $\kappa$ có đơn vị nghịch đảo tiền. Công thức là một lựa chọn cấu trúc, chỉ dùng trong miền đã kiểm chứng. Nếu $B$ đã được tính vào $E$, chỉ dùng một đường hoặc ước lượng $\kappa$ như hiệu ứng riêng được nhận diện; không đếm cùng khoản thưởng hai lần. Khi $E$ hoặc bonus nền bằng 0, dùng tác động theo VND/ca/offer hoặc treatment categorical, không dùng tỷ lệ phần trăm không xác định.
+Near-zero baselines require absolute effects and denominators instead of unstable
+elasticities. Zero/negative prices need monetary or categorical treatments;
+adding an arbitrary epsilon does not make log prices valid.
 
-$H_{\text{serv},0}$ bằng 0 hoặc các ràng buộc ca rời rạc không được xử lý bằng công thức nhân trên: dùng model xác suất tham gia/nhận ca và số giờ có điều kiện, giữ cả tài xế không tham gia trong mẫu. Các outcome zero vẫn là quan sát hợp lệ.
+### 6.3 DML and baselines
+
+Retain naive and adjusted OLS. DML learns $\mathbb{E}[Q\mid W]$ and
+$\mathbb{E}[T\mid W]$ out of fold, then relates residuals. Cross-fitting and
+orthogonal scores reduce nuisance-error sensitivity under method assumptions;
+they do not remove hidden confounding or guarantee market transfer.
+[Method](https://arxiv.org/abs/1608.00060).
+
+Use LinearDML with a declared small effect basis for zone/time groups and
+interactions. Keep context $W$ and effect features (`EffectBasis`) separate.
+Select pooled/group effects on validation; avoid separate models for every sparse
+cell. Verify APIs against locked versions. [LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html).
+
+`ResolutionPolicy` fixes minimum independent units, rank, and group support.
+Fallback to supported pooled groups with `estimated_resolution` and
+`fallback_reason`; pooled coefficients cannot be labeled zone-specific.
+One varying price identifies one column; collinear prices do not identify both.
+
+Fit baseline probabilities on train using compatible groups, units, and response
+forms. Validate calibration/probabilities. Learned preprocessing stays inside
+train/folds; oracle and test outcomes cannot enter fitting.
+
+### 6.4 Support and alternative forms
+
+`SupportEnvelope` records joint actions, price domains, context coverage, rank,
+counts, and domain validity. Separate min/max ranges are insufficient. Derive
+support from data and approved policy bounds; do not apply 0.90-1.10 universally.
+
+Check each context before aggregation. Negative probabilities, probabilities
+above one, or sums above one invalidate actions; no clipping/renormalization.
+Supported actions satisfy data support, probability validity, and operational
+bounds. Explicit C sensitivity runs outside support remain separate from forecasts.
+
+Nested logit is a possible nonlinear extension with adequate alternatives and
+availability logs, a model card, identification, and a separate benchmark.
+Likelihood fit alone does not make price coefficients causal. Do not force a
+DML matrix into logit through probability repair.
+
+### 6.5 ETA and operational feedback
+
+Initial mode is `reduced_form_policy`: request effects are defined for a policy
+mechanism/horizon. Do not add post-treatment wait/ETA demand effects already
+included in that estimate.
+
+`structural_choice` can add price, ETA/availability, and simulator feedback after
+identifying direct/mediated relationships and revising the DAG/estimand. Modes
+cannot mix in one run. The initial income-supply loop does not require an
+identified ETA-choice feedback model.
+
+## 7. Supply response engine
+
+### 7.1 Outcomes and treatment
+
+Primary outcome is $H_{\text{serviceable}}$ for eligible drivers/vehicles over
+the horizon, not trips worked. Shift acceptance, offers, trip acceptance,
+relocation, and charging timing may need separate models/estimands.
+
+Treatments are offered compensation/incentives and income information known
+before decisions. Fixed contracts may imply zero extra hours; additional shifts,
+acceptance, and charging timing remain possible responses. Never use the same
+shift's realized earnings to manufacture a pretreatment expectation.
+
+For positive baseline income and identified expected-income response:
+
+$$
+H^*_{\text{serv},g}=H_{\text{serv},0,g}\exp\left(
+\gamma_g\log(E_g/E_{0,g})+\kappa_g(B_g-B_{0,g})\right).
+$$
+
+$\gamma$ is income elasticity; $\kappa$ has inverse-currency units. This structural
+form applies only within validated support. If bonus is included in income,
+use one path or an independently identified bonus effect; do not count it twice.
+Zero baseline income/bonus requires amount or categorical treatments.
+
+Zero baseline hours and discrete shifts need participation/shift-acceptance
+models plus conditional hours. Retain nonparticipants and valid zero outcomes.
 
 ### 7.2 CompensationModel
 
-`CompensationModel` mô tả fixed pay, commission/revenue share, piece rate, bonus theo threshold, guarantee, cap và thời điểm chi trả. Nó cung cấp hai hàm logic: điều kiện được tài xế biết khi quyết định và sổ chi trả sau mô phỏng. Nếu giá khách tăng không đổi điều kiện/thu nhập dự kiến của tài xế, không truyền giá khách trực tiếp vào đường cung.
+Represent fixed pay, commissions/revenue share, piece rates, threshold bonuses,
+guarantees, caps, and payment timing. Produce predecision offered terms and
+post-simulation earnings ledgers. Customer price changes with unchanged expected
+compensation do not enter supply directly.
 
-Income feedback trong solver là kỳ vọng dưới quy tắc chi trả đã cố định, không tự đồng nhất với tiền khách trả. Các bonus threshold phải tính từ outcomes của từng driver/shift, không từ fare trung bình toàn thị trường. Cơ sở giờ dùng cho $E$ phải đúng với mô hình quyết định: giờ hiện diện, giờ làm việc hay ca được trả lương.
+Income feedback follows fixed compensation rules, not customer payments.
+Threshold bonuses use individual driver/shift outcomes, not market-average fares.
+Income denominators match the decision basis: presence hours, work hours, or paid shifts.
 
-### 7.3 Từ target hours đến lịch tài xế và xe
+### 7.3 Hours to driver/vehicle schedules
 
-`SupplyResponse` trả `AdmissionPlan`: target serviceable hours, lịch ca/nhận ca, eligibility, khả năng chuyển vùng và support. `ScheduleBuilder` chuyển target thành lịch hiện diện có ràng buộc xe, tài xế, hợp đồng và pin/sạc.
+`admission_plan` contains target serviceable hours, shifts/participation,
+eligibility, relocation options, and support. `ScheduleBuilder` enforces driver,
+vehicle, contract, and battery/charging constraints.
 
-$H_{\text{serviceable}}$ đã loại charging/break/ineligible. Khi tạo lịch để đáp ứng target, builder dự kiến cả thời gian hiện diện cần cho charging/break, rồi simulator đo lại $H_{\text{serviceable}}$ từ state intervals. Không trừ charging lần thứ hai khỏi target hoặc tạo tài xế fraction như tài xế thật. Nếu lịch không đáp ứng target, lưu gap và `capacity_constrained`; không tự thêm xe vượt roster. Quy tắc làm tròn/stochastic participation phải có seed và sensitivity.
+Serviceable targets already exclude charging/break/ineligible time. Build enough
+presence time, then measure actual serviceable hours from state intervals.
+Do not subtract charging again or create fractional drivers as physical drivers.
+Unmet targets retain gaps and `capacity_constrained`; never exceed the roster.
+Rounding/stochastic participation requires seeds and sensitivity checks.
 
-Theo dõi tổng giờ trên cụm và vùng lân cận. Relocation làm đổi phân bố vùng nhưng không tăng tổng giờ; nhận thêm ca/giờ mới tăng tổng cung. Một `FleetPool` chung quản lý xe phục vụ $X/Y$, không tách hai pool trùng cùng vehicle IDs.
+Track cluster and neighbor totals. Relocation redistributes hours; only added
+shifts/hours increase total supply. A shared `FleetPool` manages X/Y without
+duplicating vehicle IDs.
 
-## 8. Thiết kế simulator một cụm
+## 8. One-cluster simulator
 
-### 8.1 Đối tượng và trạng thái
+### 8.1 Entities and states
 
-| Đối tượng | Trạng thái/thuộc tính | Bất biến |
+| Entity | States/properties | Invariant |
 |---|---|---|
-| Request | `created`, `queued`, `assigned`, `pickup`, `on_trip`, `completed`, `canceled`, `expired` | Một trạng thái tại một thời điểm; có lý do terminal |
-| Driver/shift | `off_shift`, `scheduled`, `present`, `break`, `ended` | Không làm ngoài eligibility/ca nếu policy không cho phép |
-| Vehicle | `offline`, `idle`, `reserved`, `to_pickup`, `on_trip`, `charging_queue`, `charging`, `unavailable` | Một chuyến/dispatch reservation tại một thời điểm |
-| Station | capacity, charger availability, queue, outage | Không vượt số cổng hoạt động |
-| Boundary flow | vào/ra cụm, thời gian quay lại và SOC | Không xóa xe/chuyến ra ngoài chỉ để giữ cụm đóng |
+| Request | `created`, `queued`, `assigned`, `pickup`, `on_trip`, `completed`, `canceled`, `expired` | One state at a time; explicit terminal reason |
+| Driver/shift | `off_shift`, `scheduled`, `present`, `break`, `ended` | Eligibility/shift constraints respected |
+| Vehicle | `offline`, `idle`, `reserved`, `to_pickup`, `on_trip`, `charging_queue`, `charging`, `unavailable` | One trip/reservation at a time |
+| Station | Capacity, charger availability, queue, outage | Active-port capacity respected |
+| Boundary flow | Entry/exit, return time, SOC | Preserve trips/vehicles leaving the cluster |
 
-Timestamp trạng thái liên tục; cuối khung không reset xe đang đón/chạy/sạc. Tài xế và xe là đối tượng riêng có lịch phân xe. Warm-up và state snapshot đầu kỳ phải được khai báo; baseline và target dùng cùng điều kiện ban đầu có thể so sánh.
+States persist across reporting windows. Drivers and vehicles are separate
+entities with assignments. Declare warm-up/initial snapshots; baseline and
+target start from comparable conditions.
 
-### 8.2 Sinh request và service demand
+### 8.2 Request generation
 
-Chọn arrival process theo baseline diagnostics. Bản đầu có thể dùng Poisson piecewise với rate $D_j$ và OD/service mix theo context; đây là giả định cần kiểm tra, không mặc định request thật độc lập. Nếu có burst/overdispersion, dùng mô hình count thích hợp hoặc replay/resampling block bảo toàn phụ thuộc.
+Choose arrivals from baseline diagnostics. Initial piecewise Poisson rates $D_j$
+with contextual OD/service mix are assumptions to test. For bursts/overdispersion,
+use suitable count models or dependent block replay/resampling.
 
-$D_j$ đã chứa tác động giá. Khi một request được sinh, giá/khuyến mại được đóng theo policy version tại quote/booking. Không áp elasticity thêm lên xác suất hoàn thành. Retry có parent key và quy tắc horizon; report cả request attempts và demand đã xử lý retry theo định nghĩa chốt trước.
+Rates already contain price effects. Freeze quote/booking price/promotion under
+the applicable version; never apply elasticity again to completion. Retries retain
+parent keys and horizon rules. Report attempts and business-defined demand separately.
 
-### 8.3 Matching, acceptance và pickup
+### 8.3 Matching, acceptance, pickup
 
-Matcher chỉ xét xe idle, đúng dịch vụ, đủ SOC và ca. Chọn ranking đơn giản có phiên bản, ưu tiên ETA nhỏ nhất trong bán kính/threshold đã định; nếu không có candidate thì request nằm hàng đợi hoặc terminal theo deadline. Đây là quy tắc mô phỏng cần hiệu chỉnh với GSM, không tuyên bố tái tạo thuật toán dispatch nội bộ nếu log chưa đủ.
+Eligible candidates are idle, service-compatible, in-shift, and sufficiently
+charged. Initial versioned ranking minimizes ETA within declared radius/threshold;
+otherwise queue or terminate by deadline. Calibrate this rule before claiming
+GSM dispatch fidelity.
 
-Mỗi offer có expiry; acceptance/rejection theo model hoặc replay được hiệu chỉnh; xe đã reservation không nhận request khác. Reject/timeout có số attempt tối đa và deadline tổng. Requeue, customer cancellation và arrival của response phải xử lý theo timestamp, có thứ tự ưu tiên khi trùng thời điểm được công bố để tránh double assignment.
+Offers expire. Calibrated acceptance/rejection or replay governs responses;
+reserved vehicles cannot take another request. Bound attempts and overall deadlines.
+Handle requeue/cancellation/responses in timestamp order with declared tie-breaking.
 
-Pickup và service time có phân bố theo OD/giờ/service phù hợp. ETA hiển thị, ETA dispatch và actual pickup được lưu riêng. Cancel trước pickup có thể tạo quãng đường/chi phí đã phát sinh; completed trip mới tạo fare ledger theo quy tắc, không tính tất cả booking là doanh thu.
+Pickup/service distributions follow OD/time/service. Keep displayed ETA, dispatch
+ETA, and actual pickup separate. Prepickup cancellations may incur travel/costs.
+Completion generates fare ledgers according to rules; bookings alone are not revenue.
 
-### 8.4 Sạc và năng lượng
+### 8.4 Charging and energy
 
-SOC giảm theo quãng đường/điều kiện trong `EnergyModel`. Xe chỉ nhận chuyến nếu đủ năng lượng cho pickup, service và reserve; nếu không đủ thì điều phối tới trạm/không đủ điều kiện. Charge queue và charger là tài nguyên có capacity; session lưu queue/plug/start/end, kWh, chi phí và SOC.
+`EnergyModel` reduces SOC by distance/conditions. Admission requires energy for
+pickup/service/reserve; otherwise route to charging or mark ineligible. Station
+queues/chargers have finite capacity. Record queue/plug/start/end, kWh, cost, SOC.
 
-Trong bản đầu có thể dùng định mức kWh/km và công suất sạc cố định có cap, với giả định được công bố. Trước khi diễn giải trên GSM, phải hiệu chỉnh telemetry/charging logs; không gọi một curve tự đặt là thông số đo. SOC phải trong $[0, 1]$, không tạo năng lượng âm hoặc nhiều điện hơn dung lượng sau clipping che lỗi.
+Initial kWh/km and capped fixed charging power are declared assumptions. Calibrate
+telemetry/logs before interpreting GSM results. Enforce SOC in [0,1], capacity,
+and energy conservation without clipping away errors.
 
-### 8.5 Ranh giới cụm và trạng thái carryover
+### 8.5 Boundaries and carryover
 
-Đón trong cụm, trả ngoài cụm được giữ. Thiết kế dùng vùng đệm hoặc boundary model cho thời gian xe ra/vào; loại nào được chọn phải xuất trong model card. Một bản `closed_cluster` chỉ dùng kiểm chứng C. Relocation, sạc và chuyến đang chạy kéo dài qua khung tạo carryover cần giữ trong trajectory và đưa vào thiết kế thử nghiệm.
+Keep trips picked up inside and dropped off outside. Use monitored buffer zones
+or a declared boundary entry/return model. `closed_cluster` is C validation only.
+Relocation, charging, and ongoing trips create carryover preserved in trajectories
+and considered in experiment design.
 
-### 8.6 Tổng hợp vận hành và đối soát
+### 8.6 Accounting
 
-Trong horizon có độ dài $L$ giờ:
-
-$$
-H_{\text{serv}} = H_{\text{idle}} + H_{\text{dispatch}} + H_{\text{pickup}} + H_{\text{on\_trip}}, \qquad
-\overline{V}_{\text{idle}} = H_{\text{idle}} / L.
-$$
-
-$H_{\text{dispatch}}$ là thời gian xe được reservation trong lúc offer/accept chưa chuyển sang đi đón. Các state không chồng lấn; giờ charging, queue charging, nghỉ, offline và ineligible được báo riêng theo cùng population/time coverage. `available_vehicle_count(t)` là count idle đủ điều kiện tại thời điểm $t$, khác $H_{\text{serv}}$ tổng.
-
-Request accounting phải thỏa:
-
-$$
-N_{\text{open,start}} + N_{\text{created}} = N_{\text{completed}} + N_{\text{canceled}} + N_{\text{expired}} + N_{\text{open,end}}.
-$$
-
-$N_{\text{open}}$ gồm mọi request chưa terminal: queued, đang assignment, pickup hoặc `on_trip`. $N_{\text{open,start}}$ giữ request chuyển tiếp từ snapshot đầu kỳ; các terminal counts ở vế phải là sự kiện trong horizon. Báo cohort request tạo trong horizon riêng với carry-in để xác định đúng mẫu số cancel/wait. Horizon-end censoring được xuất, không gộp thành cancel. Wait/cancel rate giữ mẫu số và quantile method. Chênh $D_j$ với capacity tính bằng chuyến/giờ chỉ là proxy chẩn đoán; số xe nhàn rỗi chính thức lấy từ state-time accounting, không bằng $D - S$ khi khác đơn vị.
-
-## 9. Hiệu chỉnh và đánh giá nền
-
-`BaselineCalibrator` ước lượng arrival/OD mix, pickup/service time, patience/cancel, acceptance, return flow, trạng thái ca, energy/charging và các chi phí vận hành từ dữ liệu nền. Quy tắc chi trả lấy từ versioned business rules, không suy ngược chỉ từ tỷ lệ tiền trung bình.
-
-Tách ba cửa sổ theo thời gian: fit/hiệu chỉnh, chọn cấu hình, và kiểm tra baseline cuối. Simulator không được tune lại trên cửa sổ baseline cuối sau khi xem kết quả. Dữ liệu dùng nhận diện policy và baseline calibration có lineage riêng; không dùng thông tin tương lai hoặc số đo sau can thiệp để tạo confounder trước can thiệp.
-
-Đối chiếu baseline về completed trips, wait p50/p90, cancel/no-driver, utilization, $H_{\text{idle}}$, charging và earnings. Báo sai số theo vùng/giờ, không chỉ tổng cụm. Một tổng count khớp do tăng arrival để bù matching sai không đủ; phải kiểm tra funnel, time distributions và stock-flow đồng thời.
-
-Threshold chất lượng và runtime được chốt sau khảo sát tuần 1, trước mở final holdout. Thiếu log của metric nào thì ghi `not_calibrated` ở metric và output phụ thuộc; không tạo số quan sát để đạt gate. Chế độ synthetic có baseline truth riêng, không thay thế calibration GSM.
-
-## 10. Solver cân bằng thu nhập–cung
-
-### 10.1 Hệ phương trình
-
-Cho policy $\pi$, trạng thái nền $S_0$ và income expectation $E$, supply model tạo kế hoạch giờ/ca. Simulator trả trips, sử dụng xe và earnings ledger. `CompensationModel` và bộ tổng hợp tính income expectation implied cho dân số/horizon quyết định:
+For a horizon of $L$ hours:
 
 $$
-H^* = \text{Supply}(E, \pi, W), \qquad
-O = \text{Simulate}(\text{Demand}(\pi, W), H^*, S_0, \pi), \qquad
-E^* = \text{IncomeSummary}(O, \pi).
+H_{\text{serv}}=H_{\text{idle}}+H_{\text{dispatch}}+H_{\text{pickup}}+H_{\text{on\_trip}},
+\qquad \overline{V}_{\text{idle}}=H_{\text{idle}}/L.
 $$
 
-Điểm cố định yêu cầu $E$ gần $E^*$ và supply/state summaries ổn định. Thu nhập bình quân phải có mẫu số đúng theo contract, gồm người có zero trips nếu thuộc dân số; không chỉ lấy earnings của người đã có chuyến. Nếu denominator giờ bằng 0, $E^*$ undefined và solver trả lỗi/không hoạt động có nghĩa, không gán zero như một điểm cân bằng.
-
-Nếu cung không phản ứng với $E$ trong contract được chốt, solver có thể chạy một lượt và báo `fixed_supply`, thay vì dựng vòng lặp giả. Trong mode ETA feedback được nhận diện riêng, solver bổ sung phương trình choice/ETA và kiểm tra các residual tương ứng.
-
-### 10.2 Thuật toán có damping và giới hạn
-
-Chọn fixed-point iteration có damping cho bản đầu:
+Dispatch hours cover reservations before pickup. States do not overlap.
+Report charging/queue/break/offline/ineligible separately over the same population
+and coverage. `available_vehicle_count(t)` is eligible idle stock at time $t$.
 
 $$
-E^{(k+1)} = (1 - \alpha) E^{(k)} + \alpha E^{*,(k)}, \qquad 0 < \alpha \le 1.
+N_{\text{open,start}}+N_{\text{created}}=
+N_{\text{completed}}+N_{\text{canceled}}+N_{\text{expired}}+N_{\text{open,end}}.
+$$
+
+Open requests include queued/assigned/pickup/on-trip states and snapshot carry-in.
+Terminal counts are events within the horizon. Separate created-request cohorts
+from carry-in when defining wait/cancel denominators. Export end-horizon censoring;
+never count it as cancellation. Declare quantile methods. Request-capacity gaps
+in trips/hour are diagnostic proxies, not idle vehicles or hours.
+
+## 9. Baseline calibration
+
+Calibrate arrivals/OD mix, pickup/service times, patience/cancel, acceptance,
+returns, shifts, energy/charging, and applicable operating costs. Compensation
+comes from versioned business rules, not average payment ratios.
+
+Separate chronological fit/calibration, validation, and final baseline holdout.
+Do not retune after inspecting final holdout. Policy identification and baseline
+calibration retain separate lineage; future/post-treatment measurements cannot
+become pretreatment confounders.
+
+Assess completed trips, wait p50/p90, cancel/no-driver, utilization, idle hours,
+charging, and earnings by zone/time. Matching total counts by inflating arrivals
+cannot substitute for funnel, timing, and stock-flow checks.
+
+Freeze quality/runtime thresholds after week-1 inspection and before holdout.
+Missing logs leave dependent outputs `not_calibrated`. Synthetic truth validates
+synthetic calibration only.
+
+## 10. Income-supply equilibrium
+
+### 10.1 Equations
+
+For policy $\pi$, initial state $S_0$, and expected income $E$:
+
+$$
+H^*=\text{Supply}(E,\pi,W),\qquad
+O=\text{Simulate}(\text{Demand}(\pi,W),H^*,S_0,\pi),\qquad
+E^*=\text{IncomeSummary}(O,\pi).
+$$
+
+Require income and supply/state summaries to agree within tolerance. Include
+eligible zero-trip drivers in denominators. A zero-hour denominator makes implied
+income undefined; return meaningful failure/inactivity rather than fabricated zero.
+
+Fixed supply takes one pass with `fixed_supply`. Separately identified ETA feedback
+may add choice/ETA equations and residuals.
+
+### 10.2 Bounded damped iteration
+
+$$
+E^{(k+1)}=(1-\alpha)E^{(k)}+\alpha E^{*,(k)},\qquad 0<\alpha\le1.
 $$
 
 ```text
-solve(policy, baseline_snapshot, model_version, seed_plan, limits):
-    kiểm tra support, compatibility, snapshot và điều kiện chi trả
-    E = expectation nền hợp lệ
-    với k từ 1 tới max_iterations:
-        plan = SupplyResponse(E, policy)
-        trajectory = Simulate từ cùng snapshot đầu horizon
-        E_star = IncomeSummary(trajectory, decision_population)
-        ghi residual E, hours, uncertainty và capacity gap
-        nếu E_star undefined hoặc trajectory vi phạm bất biến: trả failure
-        nếu residual và độ nhiễu đạt gate qua các vòng liên tiếp:
-            chạy xác nhận với seed độc lập; nếu đạt thì trả converged
-        nếu deadline hoặc event/iteration budget hết: trả not_converged
-        E = damp(E, E_star)
-    trả not_converged cùng diagnostics
+solve_equilibrium(policy, baseline_snapshot, model_version, seed_plan, limits):
+    validate support, compatibility, snapshot, compensation
+    expected_income = valid baseline expectation
+    for iteration in bounded iteration range:
+        plan = predict_supply(expected_income, policy)
+        trajectory = simulate_marketplace(plan, same initial snapshot)
+        implied_income = summarize_income(trajectory, decision_population)
+        record income/hour residuals, uncertainty, capacity gaps
+        if income is undefined or trajectory violates invariants: return failure
+        if residual/noise gates pass for consecutive iterations:
+            confirm with independent seeds; return convergence if valid
+        if deadline/event/iteration budget is exhausted: return not_converged
+        expected_income = damp(expected_income, implied_income)
+    return not_converged with diagnostics
 ```
 
-Các iteration là thử các candidate equilibrium, nên mỗi iteration bắt đầu lại từ $S_0$ và cùng horizon; không nối thời gian của iteration như thể vận hành đã qua thêm một ngày. Bên trong một trajectory, state chuyển tiếp liên tục giữa các khung.
+Every candidate starts from the same $S_0$ and horizon. Iterations are equilibrium
+trials, not additional operating time. State evolves continuously within each trajectory.
 
-### 10.3 Tiêu chuẩn và xử lý không hội tụ
+### 10.3 Convergence and failures
 
-Residual tương đối dùng scale dương được cấu hình theo đơn vị, kết hợp absolute tolerance; không chia trực tiếp cho mức nền zero. Kiểm tra cả $E$ và $H_{\text{serv}}$, tính theo nhóm và toàn cụm, cùng độ nhiễu Monte Carlo. Tránh tuyên bố hội tụ chỉ vì damping làm bước cập nhật nhỏ khi residual $E^* - E$ vẫn lớn.
+Use positive unit-specific scales for relative residuals plus absolute tolerances;
+never divide by zero baselines. Check income/hours by group and cluster with Monte
+Carlo noise. Small damped updates do not establish small fixed-point residuals.
 
-Giá trị phát triển đề xuất: $\alpha = 0{,}3$; tối đa 50 iteration; yêu cầu ba iteration liên tiếp đạt tolerance; tối đa 600 giây toàn job và budget event cấu hình. Relative tolerance 1% là điểm bắt đầu để kiểm chứng sensitivity, chưa là threshold nghiệm thu. Số trajectory replicate, absolute tolerance, max events và scale từng biến phải chốt trước batch; không đặt vô hạn hoặc tự tăng ngân sách khi chưa được phép.
+Development defaults: $\alpha=0.3$, at most 50 iterations, three consecutive passes,
+600 seconds/job, finite event budgets. Relative tolerance 1% is a sensitivity
+starting point, not acceptance. Freeze replicates, absolute tolerances, events,
+and scales before batches; never silently expand budgets.
 
-Dùng cùng seed plan giữa candidate trong solve để giảm nhiễu, rồi xác nhận bằng seed độc lập. Không hội tụ, oscillation, saturation, thiếu support hoặc vượt budget phải giữ diagnostics và trace; point cuối chỉ là diagnostic, không xuất như equilibrium chính thức. Có thể chạy nhiều initialization có giới hạn để phát hiện nghiệm phụ thuộc khởi tạo; không khẳng định nghiệm duy nhất từ một lần hội tụ.
+Use common seeds across candidates and independent confirmation seeds. Preserve
+oscillation/saturation/support/budget failures, traces, and diagnostics. The last
+nonconverged point is diagnostic only. Bounded multiple starts can assess dependence
+on initialization; a single converged run does not prove uniqueness.
 
-## 11. So sánh chính sách và engine kinh tế
+## 11. Policy comparison and economics
 
-Baseline và target phải được **giải riêng** với cùng horizon, initial snapshot, điều kiện ngoại sinh và paired seed plan. Baseline không lấy trực tiếp observed totals còn target lấy simulator rồi trừ, vì khác measurement process. Observed totals dùng kiểm chứng baseline; comparison chính dùng hai trajectory mô phỏng có phương pháp nhất quán.
+Solve baseline and target separately with common horizon, initial snapshot,
+exogenous conditions, and paired seeds. Compare two simulated measurements;
+observed totals validate baseline rather than serve as an incompatible comparator.
 
-Price, promotion và bonus đi theo version của từng quote/offer. `EconomicEvaluator` tạo ledger entry khi sự kiện phát sinh: payment/refund, driver pay, incentive, điện, phí thanh toán và các variable cost được thống nhất. Cancel có thể có khoản thu/chi theo rule, không mặc định zero. Khoản fixed salary chỉ thay đổi theo policy nếu số ca hoặc cost allocation được định nghĩa như vậy.
+Version prices/promotions/bonuses by quote/offer. Create ledger entries for
+payments/refunds, driver pay, incentives, electricity, fees, and agreed variable
+costs. Cancellation costs/revenue follow rules. Fixed salaries change only through
+defined shifts or allocation.
 
 $$
-\text{CM}(\pi) = R_{\text{GSM}}(\pi) - C_{\text{variable}}(\pi), \qquad
-\Delta \text{CM} = \text{CM}(\pi_1) - \text{CM}(\pi_0).
+\text{CM}(\pi)=R_{\text{GSM}}(\pi)-C_{\text{variable}}(\pi),\qquad
+\Delta\text{CM}=\text{CM}(\pi_1)-\text{CM}(\pi_0).
 $$
 
-$R_{\text{GSM}}$ là ledger measure được tài chính xác nhận, không tự coi gross customer payment là revenue GSM. Các khoản thuế/toll/refund/subsidy/funder và driver pay phải hạch toán tránh đếm hai lần. Thiếu cost component cần cho $\text{CM}$ thì $\text{CM}$ unavailable; vẫn có thể báo vận hành hoặc revenue nếu đủ nguồn riêng.
-
-Theo định nghĩa ROI lợi ích ròng tăng thêm chia chi phí ưu đãi tăng thêm của proposal:
+Finance confirms revenue definitions; gross customer payment is not automatically
+GSM revenue. Reconcile taxes/tolls/refunds/subsidies/funders/driver pay without
+double counting. Missing required costs leave CM unavailable; independently
+supported operations/revenue may still be reported.
 
 $$
-\text{ROI} = \Delta \text{CM} / \Delta C_{\text{incentive}}, \qquad \Delta C_{\text{incentive}} > 0.
+\text{ROI}=\Delta\text{CM}/\Delta C_{\text{incentive}},\qquad
+\Delta C_{\text{incentive}}>0.
 $$
 
-$\text{CM}$ trong công thức đã bao gồm incremental incentive cost; numerator không trừ incentive thêm lần nữa. Báo riêng baseline/target cost và denominator. Denominator không dương hoặc cost thiếu dẫn tới `roi_unavailable`. Metric toy dùng giá/cost giả định phải mang đơn vị và nhãn simulated; không đổi thành hiệu quả thực tế GSM.
+CM already subtracts incentives; do not subtract again from the numerator.
+Report baseline/target costs and denominators. Missing/nonpositive denominators
+leave ROI unavailable. Assumed-price toy metrics remain explicitly simulated.
 
-## 12. Bất định và phân tích độ nhạy
+## 12. Uncertainty and sensitivity
 
-### 12.1 Ba nguồn phải phân biệt
+### 12.1 Separate sources
 
-| Nguồn | Cách xử lý | Nhãn đầu ra |
+| Source | Handling | Output label |
 |---|---|---|
-| Sai số ước lượng từ dữ liệu | Resample theo đơn vị phụ thuộc/assignment và refit các thành phần learned trong scope | Parameter / forecast uncertainty |
-| Ngẫu nhiên vận hành simulator | Lặp trajectory với seed độc lập; paired baseline–target | Simulation variability và Monte Carlo error |
-| Giả định chưa xác nhận | Các cấu hình cấu trúc có chủ đích: supply, patience, boundary, charging, transfer | Sensitivity range; không gọi là confidence interval |
+| Estimation error | Resample assignment/dependence units; refit learned components in scope | Parameter/forecast uncertainty |
+| Simulator randomness | Independent repeated trajectories, paired baseline/target | Simulation variability and Monte Carlo error |
+| Unconfirmed assumptions | Deliberate supply/patience/boundary/charging/transfer variants | Sensitivity range, not confidence interval |
 
-Đơn vị resampling phải theo thiết kế dữ liệu: cluster/time blocks có độ dài đủ cho phụ thuộc; driver lặp lại và di chuyển có thể cần grouping bổ sung. Không mặc định bootstrap từng session hoặc một ngày luôn đủ cho mọi GSM dataset. Bản sao cùng đơn vị gốc không được tách qua hai phía cross-fit.
+Resampling units follow assignment and dependence. Repeated/moving drivers may
+need extra grouping. Sessions or single days are not universally sufficient.
+Keep copies of each original unit on the same side of cross-fitting.
 
-### 12.2 Refit và chạy simulator trong từng draw
+### 12.2 Refit and simulation per draw
 
-Mỗi bootstrap draw refit response parameters, baseline models và các thành phần calibration learned thuộc target bất định đã chọn; business rules cố định không refit. Với mỗi draw, giải baseline và target rồi tính paired differences. Cùng driver/vehicle roster, initial snapshot hoặc context được giữ cố định khi target là dự báo có điều kiện; resampling chúng phải dùng target khác và nhãn rõ.
+Refit responses, baselines, and learned calibration components relevant to the
+uncertainty target; fixed business rules remain fixed. Solve baseline/target in
+each draw. Conditional forecasts keep roster/snapshot/context fixed; resampling
+these requires another declared target.
 
-Nếu target là chênh lệch kỳ vọng, với bootstrap draw $b$ chạy $R$ cặp trajectory và lấy trung bình $\delta_b = \frac{1}{R}\sum_{r=1}^R (\text{metric}_{\text{target},b,r} - \text{metric}_{\text{baseline},b,r})$; percentile theo $b$ tạo khoảng của dự báo kỳ vọng. $R$ phải đủ để Monte Carlo error không chi phối độ rộng khoảng. Nếu target là kết quả một lần vận hành tương lai, cần phân bố dự báo kết hợp randomness trajectory và parameter uncertainty với nhãn predictive interval riêng. Không dùng một trajectory mỗi draw rồi gọi khoảng thu được là chỉ có sai số tham số.
+For an expected difference, run $R$ pairs per bootstrap draw:
 
-Seed độc lập giữa bootstrap draw; baseline–target trong một draw dùng random streams ghép theo entity/event khi có thể. Ghi mọi draw failure, nonconvergence, invalid probabilities và support loss. Không âm thầm bỏ draw lỗi rồi công bố khoảng từ một tập chọn lọc; quality gate và tỷ lệ failure quyết định interval có được xuất hay không.
+$$
+\delta_b=\frac{1}{R}\sum_{r=1}^{R}
+(\text{metric}_{\text{target},b,r}-\text{metric}_{\text{baseline},b,r}).
+$$
 
-Số draw là cấu hình có budget; phát triển dùng batch nhỏ có nhãn, nghiệm thu dùng số lượng được chốt sau benchmark runtime và sensitivity độ rộng. Intervals riêng/simultaneous phải được phân biệt; nếu cần quyết định đồng thời nhiều vùng/metric, thiết kế phương pháp multiplicity phù hợp trước test. Tăng số draw không tự sửa thiếu identification hoặc domain shift.
+Percentiles across $b$ describe uncertainty in expected forecasts. Choose $R$ so
+simulation error does not dominate interval width. Future realized outcomes need
+predictive intervals combining parameter and trajectory randomness. One trajectory
+per draw cannot be described as parameter-only uncertainty.
 
-### 12.3 Bằng chứng toàn chuỗi
+Use independent seeds across draws and paired entity/event random streams within
+baseline/target where possible. Record failures, nonconvergence, invalid probabilities,
+and lost support. Never silently remove failed draws; quality/failure gates control
+interval publication.
 
-Mỗi effect có A/B/C, mỗi calibration component có nguồn và chất lượng. Forecast tổng hợp phải liệt kê dependency: cầu A kết hợp supply giả định C và simulator chưa hiệu chỉnh không tạo forecast “A”. Nhãn tổng hợp `mixed_evidence` giữ chi tiết theo module; không nâng ROI lên A chỉ vì một elasticity có thử nghiệm.
+Draw counts have finite budgets and declared development/reporting profiles.
+Distinguish individual/simultaneous intervals; select multiplicity handling before
+final evaluation. More draws cannot repair identification or domain shift.
 
-## 13. Hợp đồng ScenarioRunner và kết quả
+### 12.3 Full-chain evidence
 
-### 13.1 Yêu cầu kịch bản
+Record A/B/C for effects and source/quality for calibration. Demand A plus assumed
+supply C and uncalibrated simulation is not an A forecast. `mixed_evidence` preserves
+module dependencies; one experimental elasticity does not make ROI evidence A.
 
-`ScenarioSpec` gồm market/model/snapshot IDs, vùng/khung/horizon, policy nền và target, hai lịch giá, bonus/eligibility, subscription treatment nếu có, demand mode, seed plan, limits và uncertainty config. Mọi giả định được truyền rõ, không lấy một giá trị global ẩn.
+## 13. ScenarioRunner contract
 
-Yêu cầu tối thiểu phải xác định được:
+### 13.1 Scenario request
 
-| Nhóm | Trường logic |
+`ScenarioSpec` carries market/model/snapshot IDs, scope/horizon, baseline/target
+policies, both price schedules, bonus/eligibility, subscription treatment where
+available, demand mode, seeds, budgets, and uncertainty. Pass assumptions explicitly.
+
+| Group | Logical fields |
 |---|---|
-| Danh tính | `scenario_id`, `market_id`, `model_version`, `baseline_snapshot_id` |
-| Scope | `zone_ids`, services, start/end, timezone, horizon và warm-up |
+| Identity | `scenario_id`, `market_id`, `model_version`, `baseline_snapshot_id` |
+| Scope | `zone_ids`, services, start/end, timezone, horizon, warm-up |
 | Policy | `baseline_policy_id`, `target_price_schedule`, `bonus_rule`, `effective_price_definition` |
-| Assumptions | `demand_mode`, `compensation_mode`, `boundary_mode`, state initialization |
-| Compute | `seed_plan_id`, `max_iterations`, `max_events`, `wall_time_budget`, replicate/draw budget |
-| Evaluation | `interval_target`, level, support policy và `sensitivity_only` |
+| Assumptions | `demand_mode`, `compensation_mode`, `boundary_mode`, initialization |
+| Compute | `seed_plan_id`, `max_iterations`, `max_events`, `wall_time_budget`, replicate/draw budgets |
+| Evaluation | `interval_target`, level, support policy, `sensitivity_only` |
 
-Giá +10% là multiplier trên giá hiệu dụng nền đúng dịch vụ/nhóm, không 10% trên fare bình quân sau lựa chọn. Thưởng mới từ zero nhận amount treatment. Schedule phải nêu thời điểm công bố, hiệu lực và horizon quyết định ca, không chỉ thời điểm thanh toán.
++10% applies to baseline effective price for the correct service/group, not
+post-selection average fares. Zero-base bonuses use amounts. Schedules specify
+announcement/effectiveness and shift-decision horizon, not payment time alone.
 
-### 13.2 Thứ tự thực thi
+### 13.2 Execution
 
-1. Validate schema, scope, unit, policy, version compatibility và compute budget.
-2. Kiểm tra identification/support của effect cần dùng và quality của baseline/calibration.
-3. Tính dòng request; dựng lịch/điều kiện supply; giải baseline và target.
-4. Đối soát request, vehicle hours, SOC và ledger trong từng trajectory.
-5. Tính vận hành/kinh tế và paired differences.
-6. Chạy uncertainty/sensitivity theo budget; giữ toàn bộ trạng thái draw.
-7. Ghi artifact nguyên tử, manifest và kết quả; chỉ công bố forecast qua các gate.
+1. Validate schema, scope, units, policy, version compatibility, and budgets.
+2. Check required identification/support and calibration quality.
+3. Produce request flows, construct supply schedules, solve baseline/target.
+4. Reconcile requests, vehicle-hours, SOC, and ledgers in each trajectory.
+5. Compute operations/economics and paired differences.
+6. Run bounded uncertainty/sensitivity, retaining every draw's status.
+7. Atomically publish artifacts/manifests; expose forecasts only after gates pass.
 
-### 13.3 Schema kết quả
+### 13.3 Results and status
 
-`ScenarioResult` phải có baseline, target, absolute change, relative change khi denominator hợp lệ, unit, population, evidence, interval, support và status **cho từng metric**. Core outputs bắt buộc là `demand_X/Y/total`, `serviceable/idle hours`, choice changes, completed trips, wait, cancel và charging. Revenue/CM/ROI có thể unavailable với reason nếu thiếu dữ liệu.
+`scenario_result` includes baseline/target/delta, unit/population/denominator,
+source/evidence/support/status per metric, with separate interval status. Outputs:
+demand X/Y/total, net choices, serviceable/idle hours, completed trips, wait/cancel,
+charging. Week 3 validates operations at C; week 4 adds full-chain uncertainty and
+supported economics. Missing revenue/CM/ROI retain reasons.
 
-Trạng thái cấp run và cấp module/metric tách riêng:
+Stage execution: `pending/running/succeeded/failed`. Module/metric behavior:
 
-| Trạng thái | Hành vi |
+| Status | Behavior |
 |---|---|
-| `valid` | Qua gate của scope đã xác định; vẫn kèm evidence/assumptions |
-| `partial` | Một số output hợp lệ, số khác unavailable với dependency rõ |
-| `not_identified` / `insufficient_support` | Không dự báo chính thức phần effect bị ảnh hưởng |
-| `invalid_state` / `invalid_probability` | Chặn forecast phụ thuộc; giữ diagnostics |
-| `not_calibrated` | Chỉ cho sensitivity C khi mode đó được chọn rõ |
-| `not_converged` / `budget_exceeded` | Không xuất trạng thái cuối như cân bằng |
-| `interval_unavailable` | Point hợp lệ có thể xuất, không tạo khoảng giả |
-| `sensitivity_only` | Kết quả giả định, tách khỏi forecast được hỗ trợ |
+| `ok` | Scope gates pass; retain evidence/assumptions |
+| `partial` | Supported outputs coexist with unavailable dependencies |
+| `not_identified` / `insufficient_support` / `out_of_support` | Withhold affected official forecasts |
+| `invalid_state` / `invalid_probability` | Block dependent forecasts; retain diagnostics |
+| `not_calibrated` | Allow only explicitly chosen C sensitivity mode |
+| `not_converged` / `budget_exceeded` | Never publish final state as equilibrium |
+| `not_evaluated` | No data/result to evaluate the GSM metric/effect |
+| `interval_unstable` / `interval_unavailable` | Separate interval status; valid points may remain available |
+| `sensitivity_only` | Assumption-based results separate from supported forecasts |
 
-Một target cần đủ cả hai cột nhưng chỉ nhận diện một cột thì không tự gán cột còn lại 0. Module failure không biến metric missing thành zero. Dashboard phải hiển thị các cờ ngay cạnh số liệu và giữ cùng thông tin trong CSV/JSON.
+If an action needs two matrix columns but only one is identified, never fill the
+other with zero. Module failures do not turn missing metrics into zero. Display
+flags alongside results and preserve them in CSV/JSON.
 
-## 14. Giao diện module và artifact được đề xuất
+## 14. Proposed module and artifact interfaces
 
-Các chữ ký dưới đây là hợp đồng chức năng để triển khai, không là API hiện hữu:
+These are implementation contracts, not existing APIs:
 
 ```text
-prepare_sources(source_refs, mapping, quality_contract) -> ResearchDataset
-fit_responses(dataset, estimand_specs, split_plan) -> ResponseBundle
+prepare_data(source_refs, mapping, quality_contract) -> ResearchDataset
+fit_demand_choice(dataset, estimand_specs, split_plan) -> DemandChoiceBundle
+validate_benchmarks(models, benchmark_spec, observed_data, evaluator_inputs) -> BenchmarkReport
+fit_supply(dataset, compensation_spec, estimand_spec, split_plan) -> SupplyBundle
 calibrate_baseline(dataset, calibration_spec, split_plan) -> BaselineModel
 check_support(model_version, scenario_spec) -> SupportReport
 predict_demand(response_bundle, scenario_context, policy) -> DemandPlan
 predict_supply(response_bundle, expectations, policy, roster) -> AdmissionPlan
-simulate(demand_plan, admission_plan, initial_state, policy, seed_plan, limits) -> Trajectory
+simulate_marketplace(demand_plan, admission_plan, initial_state, policy, seed_plan, limits) -> Trajectory
 solve_equilibrium(model_version, snapshot, policy, seed_plan, limits) -> EquilibriumResult
 evaluate_economics(trajectory, accounting_rules) -> EconomicLedger
-run_scenario(model_version, snapshot, scenario_spec) -> ScenarioResult
+compare_scenarios(model_version, snapshot, scenario_spec) -> ScenarioResult
+design_switchback(market_spec, experiment_inputs, limits) -> ExperimentSpec
 freeze_prediction(scenario_result, experiment_spec) -> PredictionRecord
 reconcile_experiment(prediction_record, observed_outcomes, analysis_spec) -> Reconciliation
+handoff(artifact_refs, acceptance_spec) -> DeliveryManifest
 ```
 
-`ModelVersion` đóng gói response bundle, baseline/calibration models, taxonomy, support, compensation/accounting rules, state/boundary conventions và model cards. Không chỉ lưu file DML rồi coi đã có đầy đủ market model. Version change của vùng, service, currency, target horizon hoặc causal convention phải được kiểm tra compatibility.
+`ModelVersion` combines responses, baseline/calibration, taxonomy, support,
+compensation/accounting, state/boundary conventions, and model cards. Check
+compatibility when zones/services/currency/horizon/causal conventions change.
+A DML file alone is insufficient.
 
-Parquet lưu bảng, JSON lưu spec/metadata, CSV/JSON phục vụ bên nhận. `EffectRecord` dùng cho Mobility Assistant phải có outcome/treatment, unit, own/cross, resolution, horizon, interval, support và evidence. `SupplyCurve` cho nhóm vận hành/xe phải giữ compensation context, pin/sạc, eligibility và đơn vị giờ xe.
+Tables/draws/trajectories use Parquet; specs/manifests/diagnostics JSON; models
+implementation bundles (`.joblib` in the PoC); handoff CSV/JSON. Mobility Assistant
+`effects.csv` retains outcome/treatment/unit/resolution/horizon, baseline denominator,
+interval/support/evidence. Supply outputs retain compensation, eligibility,
+battery/charging, and vehicle-hours.
 
-ArtifactStore giữ source hashes, revision, dependency lock/environment, effective config, split plan, seeds, stages/timings và checksum. Reuse phải khớp dependencies và output integrity; output tạm chỉ thành artifact sau khi hoàn thành. UI đọc dữ liệu đã kiểm tra, không nhận arbitrary serialized model từ upload.
+`ArtifactStore` records source hashes, revision, lock/environment, effective config,
+splits, seeds, stage timings, and checksums. Reuse requires compatible dependencies
+and intact outputs. Publish only completed artifacts; UI reads validated artifacts
+and does not deserialize arbitrary uploaded models.
 
-## 15. Switchback và sổ đối chiếu dự báo–thực tế
+## 15. Switchback and forecast reconciliation
 
-### 15.1 Thiết kế assignment
+### 15.1 Assignment design
 
-Assignment unit là cụm địa lý × block thời gian được xác định sau đo movement/carryover. Cụm có thể gộp các vùng di chuyển mạnh để giảm contamination; vùng đệm/neighbor outcomes vẫn được theo dõi. Block/washout dựa trên duration chuyến, charging/shift response và tác động kéo dài, không mặc định bằng khung dashboard 30 phút. Carryover là phần thiết kế và inference của switchback. [Bojinov, Simchi-Levi và Zhao](https://arxiv.org/abs/2009.00148).
+Choose geographic cluster x time block from movement/carryover measurements.
+Combine connected zones when needed; monitor buffers/neighbors. Block/washout
+reflect trip, charging, shift, and lingering effects, independently of dashboard
+aggregation. [Bojinov, Simchi-Levi, and Zhao](https://arxiv.org/abs/2009.00148).
 
-Lịch phân bổ phải tách được giá X và giá Y, cùng giá × thưởng khi muốn nhận diện tương tác. Chọn action grid có power và safety khả thi; không cố chạy tất cả tổ hợp nếu không đủ đơn vị độc lập. Seed, strata, assignment probability, announced/effective, exposure, applied/override được lưu.
+Identify X/Y prices separately and price x incentive interactions when required.
+Use feasible supported actions with adequate power/safety, not every combination.
+Store seeds, strata, probabilities, announcement/effectiveness, exposure,
+applied policy, and overrides.
 
-Primary analysis là intention-to-treat theo assigned policy. Phân tích applied/exposure là phụ, cần giả định riêng nếu noncompliance. Randomization inference hoặc clustered inference phải khớp assignment/carryover design; không dùng session IID standard errors cho toàn thị trường.
+Primary analysis is intention-to-treat. Applied/exposure analyses require separate
+noncompliance assumptions. Randomization or clustered inference matches assignment
+and carryover; marketplace-wide inference cannot use session-IID errors.
 
-### 15.2 Trình tự A/A và pilot
+### 15.2 A/A and pilot
 
-Chốt estimands, minimum detectable/worthwhile effect, primary metric, guardrails, block/washout, analysis schedule, stopping rule và sample size trước khi xem treatment outcomes. Primary business metric theo exposure cố định như revenue/assigned block-hour có thể bổ sung revenue/quote; denominator quote có thể chịu tác động giá, nên phải báo cả traffic và conversion.
+Freeze estimands, detectable/worthwhile effects, primary metric, guardrails,
+block/washout, analysis/stopping rules, and sample size before treatment outcomes.
+A fixed-exposure metric such as revenue/assigned block-hour may accompany
+revenue/quote. Quotes can be affected by price, so report traffic and conversion.
 
-A/A kiểm tra lịch/log, balance, missing exposure, overrides, metric reconstruction và inference dưới null. Pilot chỉ chạy khi đủ điều kiện và được GSM phê duyệt. Safety monitoring có thể liên tục theo ngưỡng đã chốt; kết luận hiệu quả theo lịch phân tích, không dừng tùy lúc thấy uplift thuận lợi.
+A/A checks schedules/logs, balance, missing exposure, overrides, metric
+reconstruction, and null inference. Pilot requires conditions and GSM approval.
+Continuous guardrail monitoring follows agreed thresholds; efficacy conclusions
+follow the analysis schedule rather than favorable uplift peeking.
 
 ### 15.3 Prediction ledger
 
-Trước mỗi lượt, lưu `PredictionRecord` bất biến: model/snapshot/policy versions, scope, assignment schedule, forecast point/interval, assumptions, evidence, support, timestamp chốt và analysis plan. Sau lượt, tạo bản observed/estimated causal impact, uncertainty, prediction error và các issue; không ghi đè dự báo ban đầu.
+Freeze immutable `prediction_record`: model/snapshot/policy versions, scope,
+assignment, point/interval forecast, assumptions, evidence, support, freeze time,
+and analysis plan. Append observed/estimated causal impacts, uncertainty,
+prediction errors, and issues after execution; never overwrite the forecast.
 
-So forecast **target trừ baseline** với effect thực nghiệm cùng estimand/horizon. Không lấy raw post totals trừ forecast baseline nếu vẫn còn confounding/time changes. Dự báo tại horizon khác hoặc policy bị override phải được đánh dấu không so sánh trực tiếp. Cập nhật model sau reconciliation thành version mới; mức A chỉ áp cho phần thực nghiệm đã hợp lệ trong scope được kiểm chứng.
+Compare target-minus-baseline forecast with causal effects at the same estimand
+and horizon. Raw post totals minus predicted baseline remain confounded when
+time changes are unaccounted for. Flag changed horizons/overrides as not directly
+comparable. Reconciliation creates a new model version; A applies only to valid
+experimental components within validated scope.
 
-## 16. Chuyển khu vực và dữ liệu kiểm chứng công khai
+## 16. Market transfer and public validation
 
-MarketDefinition, adapters, baseline snapshots và response parameters phải tách khỏi code simulator. Engine tái sử dụng cấu trúc; mỗi thị trường cần dữ liệu/quy tắc địa phương để hiệu chỉnh. Không mặc định $\theta$ từ New York áp cho Việt Nam, hoặc từ Hà Nội áp cho TP.HCM.
+Separate market definitions, adapters, snapshots, and response parameters from
+simulator code. Reuse structure; calibrate each market locally. New York coefficients
+do not automatically transfer to Vietnam, nor Hanoi coefficients to Ho Chi Minh City.
 
-Nếu chuyển thị trường bằng giả định cơ chế invariant, phải ghi effect modifiers, overlap và phương pháp hiệu chỉnh phân bố đích. Nếu cơ chế/choice set/compensation khác, cần fit/identification mới. Không tự mapping vùng hoặc đổi USD thành VND để chuyển hành vi. Bài toán transportability cần giả định về điểm chung và khác giữa môi trường, ngoài việc chọn estimator. [Pearl và Bareinboim](https://arxiv.org/abs/1503.01603).
+If assuming invariant mechanisms, declare effect modifiers, overlap, and target
+adjustment. Changed choice sets/compensation/mechanisms require new identification.
+Currency conversion or automatic zone mapping does not transfer behavior.
+[Pearl and Bareinboim](https://arxiv.org/abs/1503.01603).
 
-TLC dùng kiểm chứng schema, vận hành và context chuyến hoàn thành. Swissmetro dùng kiểm chứng module lựa chọn theo mục tiêu riêng. Dữ liệu tổng hợp kiểm chứng response/simulator với truth đã công bố. Các nguồn này chạy tách riêng, không nối bản ghi hoặc coi là hiệu ứng GSM. Toàn bộ hệ thống có thể triển khai và kiểm tra ở mode C khi chưa có GSM; forecast/calibration/economic impact thật cần nguồn tương ứng.
+TLC validates completed-trip schemas/context/operations; Swissmetro is a separate
+choice benchmark; synthetic truth validates response/simulator behavior. Never
+join these into one market or label them GSM effects. C development can proceed
+without GSM; real forecasts/calibration/economics require corresponding sources.
 
-## 17. Kế hoạch kiểm chứng và tiêu chí nghiệm thu
+## 17. Validation and acceptance
 
-### 17.1 Kiểm thử bất biến
+### 17.1 Invariants
 
-| Nhóm | Assertion bắt buộc |
+| Group | Required assertions |
 |---|---|
-| Data | Grain/key/cardinality, timezone và reconciliation đúng; unknown không đổi thành zero |
-| Choice | X/Y/`NONE` bảo toàn; unavailable alternative không được chọn; log ratio đúng |
-| Identification | Giá đồng tuyến không tách cột; effect chưa nhận diện không dùng cho scenario |
-| Leakage | Oracle/outcome tương lai không vào fit; split/fold giữ đơn vị gốc |
-| Supply | Relocation không tạo giờ mới; shared fleet không đếm hai lần; charging không trừ hai lần |
-| Simulator | Không double assignment; request partition đúng; horizon censoring được giữ |
-| Energy | SOC, kWh, station capacity và eligibility nhất quán |
-| Solver | Zero denominator, oscillation, budget và nonconvergence có trạng thái đúng |
-| Finance | Ledger cân đối; refund/driver pay/incentive không đếm trùng; ROI denominator đúng |
-| Artifact | Version/checksum, atomic completion và tái lập cùng seed/config |
+| Data | Grain/keys/cardinality/timezones/reconciliation; unknown differs from zero |
+| Choice | X/Y/NONE conservation, availability respected, correct log ratios |
+| Identification | Reject collinear full matrices and unidentified scenario effects |
+| Leakage | No oracle/future outcomes in fitting; original units preserved in splits/folds |
+| Supply | Relocation adds no hours; shared fleet/charging counted once |
+| Simulator | No double assignment; correct request partition; retain censoring |
+| Energy | Consistent SOC/kWh/station capacity/eligibility |
+| Solver | Explicit zero-denominator, oscillation, budget, nonconvergence handling |
+| Finance | Reconciled ledgers; no duplicate refunds/pay/incentives; valid ROI denominator |
+| Artifacts | Versions/checksums, atomic completion, seeded reproducibility |
 
-### 17.2 Benchmark phương pháp và simulator
+### 17.2 Benchmarks
 
-Controlled benchmark phải có randomized, observed/hidden confounding, null, collinear prices, dị biệt vùng, supply zero response, bonus nền zero, fixed/variable compensation, shared fleet, relocation, charging bottleneck và carryover. Mỗi DGP ghi truth và assumption; giữ những trường hợp không nhận diện hoặc không hội tụ trong mẫu số.
+Controlled cases include randomized, observed/hidden confounding, null, collinear
+prices, zone heterogeneity, zero supply response, zero-base bonuses, fixed/variable
+compensation, shared fleet, relocation, charging bottlenecks, and carryover.
+Declare truths/assumptions and retain identification/convergence failures in counts.
 
-Báo bias/RMSE từng effect, forecast error từng output, coverage có binomial uncertainty, null false positives, frequency failures và runtime. Chọn seeds/thresholds trước final evaluation; baseline đơn giản có thể thắng. Tách kiểm tra toán giải tích/stock-flow khỏi kiểm tra fit thống kê và kiểm chứng vận hành thực.
+Report per-effect bias/RMSE, per-output forecast error, coverage with binomial
+uncertainty, null false positives, failures, and runtime. Freeze seeds/thresholds
+before final evaluation. A simple baseline may win. Keep analytic/stock-flow,
+statistical fitting, and real operational validation distinct.
 
-Policy-value benchmark, nếu thực hiện, học/chọn action trên train/validation và chấm policy đóng băng bằng oracle test độc lập hoặc evaluator real-data hợp lệ. Baseline unchanged luôn có, giữ cả uplift zero/negative; không đánh giá chính sách chỉ bằng model đã chọn nó.
+Policy benchmarks select on train/validation and score frozen policies using
+independent oracle tests or valid real-data evaluators. Include unchanged policy
+and zero/negative uplift. Selection models cannot grade their own policies.
 
-### 17.3 Gate theo proposal
+### 17.3 Acceptance gates
 
-| Gate | Điều kiện thiết kế để nghiệm thu |
+| Gate | Requirement |
 |---|---|
-| Tái lập | Cùng version/data/config/seed cho kết quả trong tolerance công bố |
-| Đầy đủ đầu ra | Kịch bản +10% giá X và tăng thưởng đi trọn demand → supply → simulator → equilibrium → metrics |
-| Minh bạch | Evidence, interval, support và dependency hiển thị/xuất cùng metric |
-| Ước lượng | Parameter recovery và coverage qua nhiều lần lặp trong DGP được kiểm chứng |
-| Simulator | Sai số baseline trên holdout ở trong threshold chốt trước; hoặc ghi chưa thể đánh giá trên GSM |
-| Phản thực tế | So với effect thử nghiệm/lịch sử có nhận diện cùng estimand; nếu chưa có thì chưa thể đánh giá |
-| Tài nguyên | Job hữu hạn, checkpoint/resume và runtime trong ngân sách được chốt |
+| Reproducibility | Same versions/data/config/seeds agree within declared tolerance |
+| Complete outputs | +10% price X and increased incentives traverse demand/supply/simulation/equilibrium/metrics |
+| Transparency | Evidence/interval/support/dependencies displayed and exported per metric |
+| Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
+| Simulator | Holdout errors meet frozen thresholds, or remain unevaluated on GSM |
+| Counterfactual | Reconcile identified experimental/historical effects at the same estimand |
+| Resources | Finite jobs, checkpoint/resume, declared runtime budgets |
 
-Ngưỡng kinh doanh, sai số vận hành, coverage acceptance và runtime phải có `AcceptanceSpec` ký trước final holdout. Không lấy các số đạt được sau chạy làm threshold ngược. Gate có thể nghiệm thu kỹ thuật bằng synthetic; không chuyển thành kết luận business GSM khi chưa đo.
+Freeze `AcceptanceSpec` for business, operational error, coverage, and runtime
+before final holdout. Never derive thresholds retroactively from achieved results.
+Synthetic technical acceptance is not measured GSM business impact.
 
-## 18. Trình tự triển khai theo năm tuần của proposal
+## 18. Five-week sequence
 
-Đây là kế hoạch phụ thuộc để xây engine, không phải bảng tiến độ hiện tại.
+This is a dependency plan, not a completion record. Stage I/O follows the contract.
 
-| Tuần theo proposal | Trọng tâm thiết kế/triển khai | Deliverable và điều kiện chuyển bước |
+| Week/stages | Input | Output/downstream gate |
 |---|---|---|
-| 1: 28/09–04/10 | Chốt thị trường, compensation/accounting, dữ liệu, estimands/DAG, assignment và acceptance spec | MarketDefinition, DataMapping, EstimandSpecs, baseline/split plan, thử nghiệm sơ bộ |
-| 2: 05–11/10 | Pipeline, Demand/ChoiceResponse, OLS/DML hoặc DiD thích hợp, controlled parameter recovery | ResponseBundle với ma trận/partial matrix, support/evidence và uncertainty plan |
-| 3: 12–18/10 | SupplyResponse, schedule/fleet, matcher/service/cancel/charging, calibration và solver | Kịch bản giá/thưởng trọn luồng, equilibrium diagnostics, baseline error report theo nguồn có được |
-| 4: 19–25/10 | End-to-end uncertainty, carryover/power, switchback schedule, dashboard/export | Acceptance checks, ScenarioResult, PredictionRecord, ExperimentSpec |
-| 5: 26/10–01/11 | Tích hợp, run tái lập, handoff; A/A/pilot có điều kiện | Versioned package, hướng dẫn, gate status, reconciliation và kế hoạch pilot |
+| 1 - `prepare_data` | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands | Research tables, quality/manifest, split/acceptance; valid keys/grain/units/totals |
+| 2 - `fit_demand_choice`, `validate_benchmarks` | Choice/assignment or controlled blocks; separate Swissmetro, independent evaluator | Demand/choice bundle, pooled/partial matrix, baseline/support/interval, method/choice/policy reports; no leakage |
+| 3 - `fit_supply`, `calibrate_baseline`, `simulate_marketplace`, `solve_equilibrium` | Demand bundle, offers/states/operations or synthetic truth, roster/rules/snapshot/budgets | Supply/calibration bundles, plans/trajectories, equilibrium status, price/incentive scenarios, baseline-error report; correct accounting |
+| 4 - `compare_scenarios`, `design_switchback` | Full model/snapshot, accounting/uncertainty, movement/carryover/power | Full-chain intervals, supported economics, dashboard/export, experiment spec, frozen forecast |
+| 5 - `reconcile_experiment`, `handoff` | Completed artifacts/acceptance; actual experiment logs if available | Reproducible package, instructions, gate status; conditional A/A/pilot/reconciliation |
 
-Không có GSM thì vẫn xây các module, synthetic benchmark, interface và thiết kế switchback. Calibration GSM, causal effects GSM và ROI ghi chưa thể đánh giá. Pilot tuần 5 ưu tiên kiểm tra quy trình; thời gian kết luận hiệu quả có thể kéo dài theo power analysis.
+Without GSM, build modules, synthetic benchmarks, interfaces, and experiment
+design. GSM calibration/effects/ROI remain unevaluated. Week-5 pilot prioritizes
+process checks; impact evaluation may extend according to power analysis.
 
-## 19. Cấu hình và các quyết định nghiệp vụ phải chốt
+## 19. Configuration and business decisions
 
-Các giá trị cần explicit trong `EngineConfig`: taxonomy/timezone, horizon/warm-up, demand mode, effect resolution, support policy, compensation/accounting rules, roster/state initialization, matching deadlines, patience/acceptance models, energy/charging/boundary, solver limits/tolerance, uncertainty target và budgets. Chỉ giá trị phát triển có lý do mới có default; không default unknown observation hoặc business rule thành zero.
+`EngineConfig` explicitly declares taxonomy/timezone, horizon/warm-up, demand
+mode, effect resolution/support, compensation/accounting, roster/initialization,
+matching deadlines, patience/acceptance, energy/charging/boundaries, solver limits,
+uncertainty targets, and budgets. Defaults require documented development reasons;
+unknown observations/business rules cannot default to zero.
 
-| Quyết định | Vì sao ảnh hưởng tính đúng | Đầu ra cần chốt |
+| Decision | Correctness dependency | Frozen spec |
 |---|---|---|
-| Hai dịch vụ và dân số | Quyết định alternatives, eligibility và ownership ledger | MarketDefinition |
-| Quote vs request estimand | Quyết định có dự báo traffic hay chỉ conversion | DemandModeSpec |
-| Thuê bao/khuyến mại | Quyết định giá khách thấy, funder và causal treatment | EffectivePriceRule |
-| Contract tài xế | Quyết định cung có thể phản ứng thế nào và $E$ đo theo gì | CompensationSpec |
-| Vùng đệm và shared fleet | Quyết định relocation, capacity và interference | Boundary/FleetSpec |
-| State/charging coverage | Quyết định calibration và output nào được hỗ trợ | OperationalQualitySpec |
-| Revenue/cost/ROI | Quyết định ledger và denominator nhất quán | AccountingSpec |
-| Safety, action support và power | Quyết định kịch bản/pilot nào được chạy | Acceptance/ExperimentSpec |
+| Services/population | Alternatives, eligibility, ledger ownership | MarketDefinition |
+| Quote versus request estimand | Traffic forecast versus conditional conversion | DemandModeSpec |
+| Subscription/promotion | Displayed price, funder, treatment | EffectivePriceRule |
+| Driver contracts | Feasible response and expected-income basis | CompensationSpec |
+| Buffers/shared fleet | Relocation, capacity, interference | Boundary/FleetSpec |
+| State/charging coverage | Supported calibration/outputs | OperationalQualitySpec |
+| Revenue/cost/ROI | Consistent ledgers and denominators | AccountingSpec |
+| Safety/action support/power | Feasible scenarios/pilots | Acceptance/ExperimentSpec |
 
-Các quyết định này được lưu thành cấu hình/version để triển khai. Khi chưa có xác nhận, synthetic mode dùng giả định được công bố; real-data forecast không được âm thầm mượn giá trị synthetic.
+Version these decisions. Synthetic assumptions remain declared; real forecasts
+cannot silently inherit unconfirmed synthetic values.
 
-## 20. Tài liệu nền và nguyên tắc sử dụng thiết kế
+## 20. References and use
 
-- [Proposal GSM Causal Marketplace](GSM_Causal_Marketplace_Proposal.md): nguồn yêu cầu, phạm vi và lộ trình.
-- [GSM data contract](../GSM_DATA_CONTRACT.md): nguồn và nguyên tắc dữ liệu; tên bảng nghiên cứu không là yêu cầu schema GSM.
-- [Benchmark protocol](../BENCHMARK.md): phân biệt parameter recovery, policy value và business impact.
+- [GSM proposal](GSM_Causal_Marketplace_Proposal.md): scope and roadmap.
+- [Data contract](../GSM_DATA_CONTRACT.md): sources, interfaces, units, and stage I/O.
+- [Benchmark protocol](../BENCHMARK.md): recovery, policy value, and business impact.
 
-Thiết kế này cụ thể hóa đích hệ thống của proposal. Việc chọn công thức, module hoặc một giá trị cấu hình không chứng minh đã triển khai, đã đo hay đã đạt nghiệm thu. Khi triển khai, mọi thay đổi estimand, dạng hàm, convention hoặc scope phải cập nhật thiết kế/model card và kiểm chứng trên điều kiện tương ứng trước khi diễn giải đầu ra.
+This design specifies the target system. Choosing formulas/modules/configuration
+does not prove implementation, measurement, or acceptance. Changes to estimands,
+functional forms, conventions, or scope require updated design/model cards and
+validation under the corresponding conditions before interpretation.

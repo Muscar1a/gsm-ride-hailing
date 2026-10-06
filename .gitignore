@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 data/
 runs/
+/docs/task/
 *.egg-info/
 build/
 dist/

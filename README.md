@@ -1,7 +1,8 @@
 # GSM Causal Marketplace PoC
 
-A runnable implementation of the first two weeks in the GSM proposal and
-[detailed design](docs/GSM_PoC_Hai_Tuan_Dau_Thiet_Ke_Cuoi.md). It builds operational
+A runnable implementation of the first two weeks in the
+[GSM proposal](docs/general/GSM_Causal_Marketplace_Proposal.md), following the
+[shared data contract](docs/GSM_DATA_CONTRACT.md). It builds operational
 TLC marts, generates controlled X/Y/NONE choices, compares OLS and DML, evaluates
 known effects, and exposes supported price scenarios in Streamlit.
 
@@ -21,7 +22,7 @@ uv run streamlit run src/gsm_poc/app.py
 ```
 
 The offline demo needs no raw-data download. It uses explicit synthetic contexts,
-1,860 policy blocks and 93,000 quote sessions, all January dates, three estimators,
+1,860 policy blocks and 93,000 quote sessions, three estimators,
 10 bootstrap draws and three seeds per configured DGP. The small intervals are
 labeled unstable. The dashboard shows the most recent completed model run; choose
 another in the sidebar or launch with `-- --run-id <id>`.
@@ -32,14 +33,14 @@ To use the public TLC data:
 uv run python -m gsm_poc run-all --config configs/tlc_quick.toml
 ```
 
-This downloads the immutable January 2024 source (~451 MiB) plus zone lookup,
-processes the five pickup zones for the month, fits context on January 1–20, and
+This downloads the pinned TLC source (~451 MiB) plus zone lookup,
+processes the five pickup zones for the month, fits context on the first 20 days, and
 shows the first seven days in the operational dashboard. Simulation uses 7,440
 blocks / 372,000 sessions and 30 day-bootstrap draws. Dropoffs outside the cluster
 are retained. Downloads are bounded and checked by size, schema and SHA-256.
 
-The v0 TLC adapter covers January 2024 only: January 1 inclusive through February 1
-exclusive. TLC ingest and builds reject date scopes outside that source coverage.
+The v0 TLC adapter covers only the pinned source month recorded in configuration
+and manifests. TLC ingest and builds reject scopes outside that source coverage.
 Synthetic simulations can use other date scopes without claiming observed TLC coverage.
 
 `configs/default.toml` uses all 31 days for operations and targets 100 seeds across
@@ -47,8 +48,8 @@ five DGPs and 199 bootstrap draws. This is an expensive reporting configuration.
 Measure a bounded run first; the profile is not a claim that this evaluation has
 been completed. See [actual validation](docs/VALIDATION.md).
 
-The verified TLC-context example is `20261003T130951-df24a7e4`: 199 valid bootstrap
-draws per estimator and a supported scenario with intervals. The full-month
+The verified TLC-context example recorded in [validation](docs/VALIDATION.md) has
+199 valid bootstrap draws per estimator and a supported scenario with intervals. The full-month
 data build also completed. See the validation record for exact counts, measured
 errors and the remaining 100-seed evaluation.
 
@@ -136,13 +137,13 @@ See [architecture](docs/ARCHITECTURE.md), [implementation plan](docs/IMPLEMENTAT
 and [GSM data contract](docs/GSM_DATA_CONTRACT.md).
 Supply, matching/charging simulation, DiD and field switchback are next-phase work.
 
-The supplied [data requirements](<docs/GSM Causal Marketplace - Data Requirements.pdf>)
-request eight raw source groups over the latest 12 months. They also specify a
-separate Swissmetro choice benchmark, which is not yet implemented in this PoC.
+The [shared data contract](docs/GSM_DATA_CONTRACT.md) requests eight raw source
+groups over the latest 12 months and defines formats and stage inputs/outputs.
+The separate Swissmetro choice benchmark is not yet implemented in this PoC.
 
 ## Current PoC submission
 
-The [04 October submission documents](docs/submission_20261004/README.md) include
+The [PoC submission documents](docs/submission_20261004/README.md) include
 a technical report PDF, a short progress update and a solo contributor's work plan.
 The documents compare current progress with the
 [full initial proposal](docs/general/GSM_Causal_Marketplace_Proposal.md).
