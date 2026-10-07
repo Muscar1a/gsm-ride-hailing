@@ -1,357 +1,510 @@
-# Báo cáo PoC GSM Causal Marketplace — Week 2
-
-## 1. Thông tin báo cáo
-
-**Người thực hiện: Nguyễn Thành An · 26ai.annt@vinuni.edu.vn**
-
-**Chốt tiến độ chạy:** 07/10/2026 **10:41:19, Asia/Bangkok (UTC+07)**. Week 2 đạt một phần, chưa nghiệm thu đầy đủ.
-
-Bản này tổng hợp kết quả PoC đã nộp và phần bổ sung hiện tại. Kết quả đo ngày
-03/10 giữ nguyên nguồn run; không được coi là đã chạy lại trên mã mới.
-[Báo cáo tiến độ](progress_update.md) là tài liệu ngắn đi kèm.
-
-## 2. Tóm tắt PoC đã thực hiện
-
-PoC ước lượng tác động giá trực tiếp/chéo lên lựa chọn **X, Y hoặc không đặt
-(NONE)** trong phiên xem báo giá. Đã có pipeline TLC, năm bộ sinh hành vi có
-đáp án thật, naive/adjusted OLS và DML, bootstrap theo ngày, kịch bản giá,
-xuất CSV/JSON và dashboard ba màn hình. Luồng xử lý là **TLC → Bronze →
-Silver/cờ chất lượng → Mart/context train-only → lựa chọn mô phỏng →
-OLS/DML → bootstrap/kịch bản → artifact/dashboard**; oracle chỉ vào bộ đánh giá.
-
-Bổ sung so với bản đã nộp: củng cố kiểm tra dữ liệu/nhận dạng/tái lập, triển khai
-baseline Swissmetro có holdout theo người, policy-value với evaluator test độc
-lập và coverage đầy đủ theo batch/checkpoint. Swissmetro và policy benchmark
-development hoàn tất; coverage còn đang chạy. Kết quả hành vi
-thuộc **evidence C**: TLC là bối cảnh chuyến hoàn thành, lựa chọn và tác động giá
-là mô phỏng; Swissmetro là khảo sát lựa chọn giả định. Chưa có dữ liệu hành vi
-GSM hoặc kết luận về elasticity, tác động nhân quả, doanh thu/biên đóng góp/ROI GSM.
-
-## 3. Phạm vi hoàn thành và tiến độ so với proposal
-
-| Phần việc | Đã có trong hồ sơ 04/10 | Bổ sung đến kỳ này / phần còn thiếu |
-|---|---|---|
-| Dữ liệu và cầu/thay thế chéo | TLC đối soát; OLS/DML, bootstrap, benchmark 20 seed/DGP | Củng cố kiểm chứng; coverage 100 seed/DGP đang chạy. Vẫn dùng ma trận chung và quần thể quote cố định |
-| Baseline lựa chọn độc lập | Swissmetro chưa triển khai | Đã chạy MNL so với intercept-only; bổ sung căn cứ EPFL cho sử dụng nghiên cứu/giáo dục, giới hạn phạm vi sử dụng ở mục 5.3 |
-| Kịch bản và demo | Kiểm tra hỗ trợ/xác suất; CSV/JSON; dashboard dữ liệu, phương pháp, giá | Củng cố trạng thái lỗi, kiểm tra artifact và phạm vi kịch bản; chưa có dự báo vận hành/kinh tế GSM |
-| Phản ứng cung; simulator một cụm | Chưa triển khai | Chưa có cung, matching/sạc, cân bằng hoặc nguồn cung nhàn rỗi |
-| Policy-value và thử nghiệm GSM | Chưa có benchmark policy độc lập, switchback chi tiết, sổ đối chiếu/A/A/pilot | Đã chạy policy benchmark development 20 seeds/DGP cho RCT/observed bằng oracle test độc lập; switchback, sổ đối chiếu và A/A/pilot chưa thực hiện |
-
-## 4. Dữ liệu, phương pháp và khả năng tái lập
-
-### TLC và kiểm soát chất lượng
-
-Nguồn HVFHV tháng 01/2024; năm vùng đón **161, 162, 163, 164, 170**, hai platform
-**HV0003/HV0005**; giữ điểm trả ngoài cụm. Timestamp không có timezone được
-xử lý theo giả định `America/New_York`.
-
-| Dữ liệu đã kiểm chứng | Quy mô |
-|---|---:|
-| Tệp chuyến nguồn / bảng vùng | 19.663.930 dòng, 24 trường, 472.757.547 bytes / 265 dòng |
-| Silver hợp lệ về khóa / tổng chuyến mart đối soát | 970.940 / 970.940 chuyến |
-| Mart toàn tháng / demo bảy ngày | 14.880 ô / 3.360 ô, 175.861 chuyến |
-| Giá dương hợp lệ / request-to-pickup hợp lệ | 970.675 / 960.950 dòng |
-| Context train-only | 240 mẫu vùng/giờ/cuối tuần, không cần fallback |
-
-Giữ nguồn bất biến và SHA-256; không deduplicate. Cờ chất lượng độc lập,
-số 0 và thiếu dữ liệu được phân biệt; lỗi một chỉ số không loại số chuyến hoàn
-thành. TLC thiếu quote/nonbookers, phương án không chọn và cơ chế gán chính sách.
-
-### Ước lượng, kịch bản và Swissmetro
-
-Một `choice_block` có **50 phiên**; outcome là tỷ lệ chọn X/Y, treatment là
-log tự nhiên của hệ số giá. Ma trận thật trong các DGP có hiệu ứng là
-`[[-0.60, 0.15], [0.12, -0.50]]` (hàng outcome, cột giá); NULL_EFFECT có ma trận 0.
-Năm DGP kiểm tra giá ngẫu nhiên, nhiễu quan sát được, nhiễu ẩn, hiệu ứng 0 và giá
-đồng tuyến. Naive OLS chỉ dùng giá; adjusted OLS thêm bối cảnh; LinearDML dùng
-random forest/cross-fitting phần dư. Biến ẩn, truth và assignment oracle không
-vào learner. DML không khắc phục nhiễu ẩn.
-
-Train **01–20/01**, validation **21–25/01**, test **26–31/01**; context chỉ fit
-train. Năm folds theo ngày gốc; bootstrap theo ngày và refit toàn bộ mô hình.
-Kịch bản +10% giá X dùng `log(1.1)`, giữ giá Y và quần thể quote cố định.
-Kiểm tra hỗ trợ chung trong miền **0,90–1,10** và xác suất ở từng context;
-giá không hỗ trợ/không nhận dạng không trả forecast; khoảng kịch bản không
-được xuất nếu có draw xác suất không hợp lệ. Khoảng chưa ổn định được gắn trạng
-thái rõ ràng. Dashboard chỉ đọc artifact đã hoàn tất, checksum hợp lệ,
-không fit/bootstrap trong giao diện.
-
-Swissmetro chạy riêng: nguồn EPFL **10.728 dòng/1.192 người**, bỏ **9 dòng
-`CHOICE=0`**, giữ **10.719 dòng/1.191 người** và mọi mục đích chuyến đi (`SP=1`).
-Mười dòng thuộc nhóm trùng thuộc tính được giữ như nhiệm vụ khảo sát riêng.
-Seed **31001** chia theo người: train **833/7.497** người/dòng, validation và test
-**179/1.611** mỗi tập, không trùng người. MNL có hai constants Train/Car,
-Swissmetro làm mốc, hệ số time/cost chung; baseline chỉ có constants, cả hai
-xét availability và fit train. Time là phút/100, cost CHF/100; GA holders có
-chi phí tăng thêm Train/Swissmetro bằng 0. Không chọn/tune mô hình trên test.
-
-## 5. Kết quả kiểm chứng
-
-### 5.1. Benchmark 20 seed/DGP — kết quả đã nộp
-
-Run `20261003T135730-1ae94396`, seeds **10001–10020**, năm DGP: **100 jobs**, không
-job lỗi, **66,59 giây**. Profile tổng hợp development: **1.860 blocks/93.000
-sessions**, 20 trees/forest, **0 bootstrap draws**. Bảng là RMSE lớn nhất trong
-bốn ô hệ số qua 20 seeds (đơn vị probability/log-price); cột cuối là RMSE xác
-suất kịch bản DML trên test (+10% giá X, giữ Y).
-
-| DGP | Naive OLS | Adjusted OLS | DML | RMSE xác suất DML |
-|---|---:|---:|---:|---:|
-| RCT_SYN | 0,028020 | 0,025927 | 0,025527 | 0,007564 |
-| OBSERVED_CONFOUNDING | 0,101744 | 0,030885 | 0,032944 | 0,008325 |
-| HIDDEN_CONFOUNDING | 0,108117 | 0,036286 | 0,040800 | 0,015712 |
-| NULL_EFFECT | 0,027939 | 0,025774 | 0,025640 | 0,007600 |
-| COLLINEAR_PRICE | Không nhận dạng | Không nhận dạng | Không nhận dạng | N/A |
-
-Ngưỡng kỹ thuật RCT **RMSE hệ số ≤ 0,10; RMSE xác suất ≤ 0,02** đạt trong
-profile này. Điều chỉnh giảm lỗi khi nhiễu quan sát được; adjusted OLS hơi tốt
-hơn DML ở trường hợp đó. Cả **60 fits đồng tuyến** trả `not_identified`.
-Coverage và null false positives chưa được đo trong run này vì không có bootstrap.
-
-### 5.2. TLC-context bootstrap và kịch bản — kết quả đã nộp
-
-Run `20261003T130951-df24a7e4`, RCT seed **42**: **7.440 blocks/372.000 sessions**;
-train **4.800 blocks/20 ngày**, test **1.440 blocks**. Ba estimators hoàn tất
-**199/199 refits mỗi estimator**, không fit lỗi; fit/bootstrap **516,21 giây**.
-DML ước lượng `[[-0.590036, 0.169760], [0.101347, -0.498596]]`; RMSE xác suất
-oracle **0,003678**. Ba trong bốn khoảng hệ số chứa truth; một run không xác lập
-coverage thực nghiệm.
-
-Kịch bản +10% giá X, giữ Y, **10.000 phiên giả định**; support/interval `ok`,
-**199 draws xác suất hợp lệ**, không draw không hợp lệ:
-
-| Lựa chọn | Trước (%) | Sau (%) | Thay đổi (điểm %) |
-|---|---:|---:|---:|
-| X | 31,2280 | 25,6044 | −5,6236 |
-| Y | 25,9856 | 26,9516 | +0,9659 |
-| NONE | 42,7864 | 47,4441 | +4,6577 |
-
-Lựa chọn đặt xe kỳ vọng giảm **465,77**, khoảng bootstrap cá biệt 95%
-**[−488,62; −439,38]**. Đây là lựa chọn mô phỏng, chưa phải số chuyến hoàn thành
-hay doanh thu. Không gộp run này với run 20 seed để tuyên bố calibration.
-
-### 5.3. Swissmetro — kết quả bổ sung
-
-Run `week2-swissmetro-final-31001`; log loss là nats/task (thấp hơn tốt hơn),
-accuracy là tỷ lệ 0–1. Hai mô hình dùng cùng mẫu số: train **7.497 dòng**;
-validation/test **1.611 dòng mỗi tập**.
-
-| Mô hình | Train log loss | Validation log loss | Test log loss | Test accuracy |
-|---|---:|---:|---:|---:|
-| Intercept-only | 0,880078 | 0,903043 | 0,881660 | 0,574798 |
-| MNL time/cost | 0,815995 | 0,807700 | 0,781474 | 0,669770 |
-
-Test log loss giảm **0,100186 nats/task**. Cả hai optimizer hội tụ, rank đủ
-**2 và 4**; xác suất tổng bằng 1, không vi phạm availability. Năm artifact được
-xác minh checksum; lệnh chạy lại dùng lại đầu ra đã xác minh. Khoảng tin cậy cho
-log loss/accuracy **N/A — chưa tính**.
-
-**Rà soát nguồn ngày 07/10/2026:**
-[EPFL/Biogeme, mục Data](https://biogeme.epfl.ch/) nêu các bộ dữ liệu, gồm
-Swissmetro, có thể dùng cho nghiên cứu và giáo dục. Cùng nguồn tải, dictionary,
-SHA-256 và split đã lưu, đây là căn cứ nghiệm thu provenance cho phạm vi PoC
-học thuật. Giấy phép riêng và quyền tái phân phối/sử dụng thương mại chưa được
-xác nhận; không suy ra từ giấy phép phần mềm. Bổ sung này không sửa source
-manifest/artifacts đã đóng băng. Swissmetro đạt
-kiểm tra kỹ thuật và đủ căn cứ sử dụng trong phạm vi trên; không chuyển hệ số
-sang TLC/GSM.
-
-Chạy lại trên mã nguồn cuối của kỳ này dưới ID `week2-swissmetro-closeout-31001`:
-cả sáu dòng metrics và toàn bộ predictions trùng bản trên; năm artifact được
-kiểm tra checksum, rồi lệnh dùng lại outputs đạt. Source hash của run mới trùng
-policy benchmark cuối; run `week2-swissmetro-final-31001` giữ nguyên lịch sử.
-
-### 5.4. Coverage đầy đủ và kiểm tra mã nguồn — tiến độ bổ sung
-
-Reporting protocol: **100 seeds/DGP × 5 DGP = 500 jobs**, seeds **20001–20100**,
-199 day-bootstrap draws/estimator được nhận dạng, cùng ba estimators; DML 50
-trees/5 folds. Probe **19001** chỉ đo runtime (**510,53 giây**), loại khỏi báo cáo.
-Snapshot đóng băng revision `574cf501304a777827c2e04704d96a1ab563e1b2`,
-context build `214dd5a1184bd3705e66`. Batch tối đa năm seeds, timeout ba giờ,
-khóa một runner; checkpoint được kiểm tra checksum khi resume.
-
-Tại thời điểm chốt: **69/500 jobs thành công** (RCT seeds **20001–20069**),
-**1 đang chạy** (20070), **0 thất bại**, **430 chưa bắt đầu**. Có **207 estimator
-fits**, mỗi fit **199 draws yêu cầu/199 thành công**; **828 dòng coefficient
-metrics** có status/interval `ok`. Các DGP khác chưa bắt đầu. Đã hoàn tất
-**13/100 batches**; bảng tổng hợp hiện gồm **65 seed RCT**, còn bốn seed đã xong
-trong batch đang chạy được giữ ở checkpoint và chưa vào bảng tổng hợp.
-
-**Đã có kết quả thực nghiệm tạm** từ 65 seed RCT, mẫu số **65/100 seeds yêu cầu
-cho từng estimator/ô hệ số**. RMSE dưới đây lấy giá trị lớn nhất trong bốn ô hệ
-số; coverage min–max là khoảng giữa bốn tỷ lệ theo ô, không phải khoảng tin cậy.
-
-| Estimator | Max theta RMSE | Scenario probability RMSE | Coverage theo ô (%; min–max) |
-|---|---:|---:|---:|
-| Naive OLS | 0,013108 | 0,003661 | 87,69–96,92 |
-| Adjusted OLS | 0,011551 | 0,003613 | 86,15–93,85 |
-| DML | 0,011807 | 0,003620 | 86,15–93,85 |
-
-Point RMSE hiện thấp hơn mục tiêu RCT 0,10/0,02. Coverage cần rà soát: ô Y/Y
-của adjusted OLS và DML hiện **56/65 = 86,15%**, khoảng tin cậy binomial 95%
-**[75,34%; 93,47%]**, không chứa nominal 95%. Đây là dấu hiệu coverage thấp trong
-kết quả tạm; chưa kết luận nghiệm thu thống kê của giao thức đầy đủ. Null false
-positives **N/A — NULL_EFFECT chưa chạy**, không được diễn giải là tỷ lệ 0.
-
-Nguồn: `week2_reporting/evaluation_metrics.csv` đã xác minh checksum;
-checkpoint từng seed và bản đối chiếu `.cache/submission-20261007-results-034119.json`.
-**Chưa chốt coverage/null/RMSE trên toàn bộ profile reporting hoặc nghiệm thu
-thống kê.** Khi đủ giao thức, giữ binomial intervals, mẫu số yêu cầu/hợp lệ/lỗi
-và gắn cờ draw failures >5%; hoàn tất chạy không tự chứng minh calibration.
-
-Runtime trung bình **69 jobs đã xong: 516,41 giây/job (8,61 phút/job)**; đây là
-phép đo của runner tuần tự tại mốc chốt, không phải cam kết thời gian cho DGP
-khác hoặc chạy song song. Tối ưu compute tiếp tục ở chat riêng.
-
-Đợt kiểm tra mã gần nhất ghi nhận **131 tests passed trong 40,95 giây**; Ruff check/format đạt
-(36 files); ty **0.0.82** đạt trên toàn bộ `src/gsm_poc` với `--error-on-warning`.
-Bản 04/10 ghi **42 tests** và **8 browser
-checks** đạt, gồm ba tab, từ chối giá ngoài hỗ trợ và các độ rộng
-320/375/414/768 px. Các kết quả browser này là lịch sử; chưa xác minh CI từ xa
-cho bản bổ sung. Lỗi khởi động runner do thư mục `coverage` che optional import
-đã sửa thành `week2_reporting`, có regression test; log cũ được giữ, không có
-seed hoàn tất trong lần khởi động lỗi đó.
-
-### 5.5. Policy-value độc lập — benchmark development
-
-Run `week2-policy-final-32001-32020`; seeds **32001–32020**, hai DGP
-**RCT_SYN/OBSERVED_CONFOUNDING**, **40 seed jobs**, **240 dòng policy results**.
-Mỗi seed dùng **7.440 blocks/372.000 quote sessions**, bối cảnh synthetic,
-50 trees/5 original-day folds; **không day-bootstrap**. Giao thức được cố định
-trước đánh giá; độc lập với reporting coverage đang chạy.
-
-X/Y là hai dịch vụ giả định cùng sở hữu; giá cơ sở **1 đơn vị chuẩn hóa mỗi
-dịch vụ**. Policy là một cặp giá cố định trên mọi context, trong chín cặp
-**0,90/1,00/1,10**. Unchanged giữ giá 1/1; simple rule giảm 10% giá X, giữ Y.
-Hỗ trợ cần ít nhất **một training block** cho mỗi joint action và nhóm
-zone/weekend/peak; ngưỡng development chưa xác lập overlap vận hành.
-
-Fit chỉ trên train; chọn policy bằng **giá trị dự báo trên validation** và lưu
-quyết định trước khi đọc oracle test. Evaluator nối truth theo dataset/block,
-áp dụng ma trận DGP, không dùng learner để tự chấm. Oracle reference là giá trị
-lớn nhất trong cùng lớp policy/lưới được hỗ trợ; unchanged luôn là nonintervention/
-fallback. Lỗi khi kiểm tra test giữ giá trị không khả dụng, không chọn lại policy.
-
-Bảng là **mean simulated gross booking value / 1.000 quote sessions**, đơn vị
-giá chuẩn hóa; mẫu số **20 seeds/DGP/policy**. Uplift so với unchanged;
-regret bằng giá trị oracle reference trừ giá trị policy.
-
-| Policy | RCT value | RCT uplift | RCT regret | Observed value | Observed uplift | Observed regret |
-|---|---:|---:|---:|---:|---:|---:|
-| Unchanged | 551,352199 | 0,000000 | 23,569085 | 551,352199 | 0,000000 | 16,075210 |
-| Simple rule | 565,472776 | 14,120577 | 9,448509 | 560,531721 | 9,179522 | 6,895688 |
-| Naive OLS | 574,921284 | 23,569085 | 0,000000 | 521,061057 | −30,291142 | 46,366352 |
-| Adjusted OLS | 574,921284 | 23,569085 | 0,000000 | 567,427409 | 16,075210 | 0,000000 |
-| DML | 574,921284 | 23,569085 | 0,000000 | 567,427409 | 16,075210 | 0,000000 |
-| Oracle reference | 574,921284 | 23,569085 | 0,000000 | 567,427409 | 16,075210 | 0,000000 |
-
-RCT: ba learner cùng chọn 0,90/0,90 ở **20/20 seeds**. Observed: naive OLS
-chọn 1,10/1,10 ở **19/20**, unchanged ở một seed; adjusted OLS và DML chọn
-cùng oracle reference ở **20/20**. Hai phương pháp điều chỉnh hòa nhau;
-không có bảo đảm DML hơn OLS. Lưới được hỗ trợ khác nhau giữa các observed
-seeds; regret 0 chỉ áp dụng trong lưới đó.
-
-**120 fits** hoàn tất, không learning failure; **240/240 giá trị test hợp lệ**,
-không test rejection. Simple rule dùng unchanged fallback ở **7/20 observed
-seeds** vì thiếu hỗ trợ; các learner không fallback. Fallback vẫn trong mẫu số,
-không tính thành fit failure.
-
-Chênh lệch DML trên cùng seed/test contexts, **20 cặp mỗi dòng**; khoảng 95%
-Student-t không hiệu chỉnh đa so sánh, cho mean qua các seed độc lập:
-
-| DGP | So với | Mean difference | Khoảng 95% |
-|---|---|---:|---|
-| RCT | Simple rule | 9,448509 | [9,437913; 9,459104] |
-| RCT | Naive / adjusted OLS | 0,000000 | [0,000000; 0,000000] |
-| Observed | Simple rule | 6,895688 | [3,028157; 10,763219] |
-| Observed | Naive OLS | 46,366352 | [41,431590; 51,301115] |
-| Observed | Adjusted OLS | 0,000000 | [0,000000; 0,000000] |
-
-Các khoảng đo biến động development qua seeds, không thay thế day-bootstrap
-calibration hoặc uncertainty của một policy triển khai. Quần thể quote cố định,
-mọi booking hoàn tất và thanh toán; không capacity, hủy, chi phí hoặc phản ứng
-cung. Đây là **giá trị booking mô phỏng, evidence C**, chưa phải doanh thu/ROI GSM.
-Nguồn: `policy/{frozen_spec,seed_results,summary,paired_differences,report}` và
-run manifest; runtime/checksum cuối ghi ở [bảng rà soát nghiệm thu](acceptance_review.md).
-
-## 6. Phần còn thiếu, kế hoạch và dữ liệu GSM
-
-| Điều kiện nghiệm thu Week 2 | Trạng thái và việc còn lại |
-|---|---|
-| Data | TLC đã đối soát; Swissmetro đã kiểm tra schema/units/splits, bổ sung căn cứ nghiên cứu/giáo dục ở mục 5.3; giữ giới hạn nguồn |
-| Effect | Có recovery trên các run đã nêu; chờ kết luận từng DGP trên profile reporting đầy đủ |
-| Scenario | Đã kiểm chứng trên run ở mục 5.2; cần chốt exports tương thích với bundle/config/scope cuối |
-| Reproducibility | Đã có snapshot/hash/checksum và xác minh dùng lại Swissmetro; cần kiểm tra bộ bàn giao cuối cùng và rerun/resume tương ứng |
-| Statistics | Chờ hoàn tất/rà soát 500 jobs; coverage thấp trong kết quả tạm cần xử lý, NULL_EFFECT chưa có kết quả |
-| Additional benchmarks | Swissmetro hoàn tất trong phạm vi đã nêu; policy-value development đã chạy đủ 40 seed jobs, có evaluator test độc lập và kiểm tra tái lập (mục 5.5) |
-
-**Chưa nghiệm thu đầy đủ Week 2.** Khi chốt, ghi người kiểm tra, ngày kiểm tra
-và kết luận/ngoại lệ thực tế; không đồng nhất nghiệm thu kỹ thuật với thầy đã
-phê duyệt. Đồng bộ báo cáo này và progress update tại cùng mốc số liệu cuối.
-
-| Mốc dự kiến trong proposal | Đầu ra tiếp theo / điều kiện |
-|---|---|
-| Week 2: 05–11/10 | Policy-value development đã chạy; hoàn tất/rà soát coverage, kiểm tra bundle cuối, chốt bảng nghiệm thu và đồng bộ hai báo cáo. Provenance Swissmetro giữ căn cứ nghiên cứu/giáo dục ở mục 5.3 |
-| Week 3: 12–18/10 | Phản ứng cung theo thu nhập/thưởng; simulator matching/hủy/sạc, cân bằng/nhàn rỗi; phát triển trên dữ liệu mô phỏng nếu chưa có GSM |
-| Week 4: 19–25/10 | Dashboard vận hành/kinh tế, thiết kế switchback/carryover/cỡ mẫu và sổ đối chiếu dự báo–thực tế |
-| Week 5: 26/10–01/11 | Tích hợp, kiểm thử và bàn giao; A/A/pilot khi đủ dữ liệu và được GSM chấp thuận |
-
-Chưa có adapter/quote-session GSM, cung, simulator hoặc hiệu chỉnh vận hành thật;
-không suy ra ROI từ chênh lệch tiền khách trả và driver pay. Policy benchmark
-phải giữ cả zero/negative uplift và trường hợp baseline thắng. Lịch là kế hoạch,
-không phải bằng chứng hoàn thành; full week-2 acceptance còn thiếu các gate
-thống kê và bộ bàn giao cuối. [Bảng rà soát nghiệm thu](acceptance_review.md)
-ghi bằng chứng và trạng thái từng gate, chưa phải phê duyệt của người kiểm tra.
-
-Yêu cầu GSM **tám nhóm nguồn gốc trong 12 tháng gần nhất**, gồm vùng lân cận/
-đối chứng: **Booking & Demand; Pricing & Promotion; Driver Supply & Status;
-Driver Earnings & Incentive; Matching & Operations; Customer Choice/Cross-service;
-Policy & Context; Finance & Cost**. Giữ cả không đặt/hủy/timeout/không có xe và
-tài xế không có chuyến. GSM xuất, giả danh hóa nhất quán và giải thích nghiệp vụ;
-Nguyễn Thành An tự ánh xạ schema, nối khóa, kiểm tra và dựng đặc trưng.
-
-Giữ schema/tần suất log gốc; Parquet, CSV UTF-8 hoặc export hiện hữu; kèm dictionary,
-keys, units/timezone/null, schema history và coverage/retention. Không cần dữ
-liệu định danh cá nhân trực tiếp hoặc yêu cầu GSM dựng bảng 30 phút/bộ huấn luyện.
-Khóa session–quote–request–trip và dispatch–driver/vehicle–shift/charging phải
-truy vết được; giá/thưởng trước quyết định tách khỏi khoản thực nhận sau đó.
-Nguồn thiếu ghi Có/Chưa ghi nhận/Không áp dụng, không thay bằng 0. Chi tiết theo
-[data contract](../../../GSM_DATA_CONTRACT.md); kết luận nhân quả/kinh tế và
-A/A/pilot phụ thuộc nhận dạng, chi phí và phê duyệt thử nghiệm phù hợp.
-
-## Phụ lục. Nguồn kiểm chứng và tái lập
-
-- Hồ sơ đã nộp: [báo cáo kỹ thuật 04/10](../20261004/POC_Technical_Report.md),
-  [tiến độ 04/10](../20261004/Progress_Update.md), [phân công cá nhân](../20261004/Team_Allocation.md).
-- Thiết kế và số liệu: [proposal](../../../general/GSM_Causal_Marketplace_Proposal.md),
-  [validation lịch sử](../../../VALIDATION.md), [benchmark](../../../BENCHMARK.md),
-  [run/resume week 2](../../../WEEK_2_BENCHMARKS.md).
-- Các đường dẫn dưới tính từ repo root: `runs/week2-swissmetro-final-31001/manifest.json`
-  và `swissmetro/{source_manifest,splits,report,metrics,predictions}`;
-  `.cache/week2-evaluation-574cf501-20261007/week2_reporting/` và `runs/` trong snapshot;
-  bản đối chiếu kỳ này `.cache/submission-20261007-results-034119.json`;
-  `runs/week2-policy-final-32001-32020/policy/` và
-  `runs/week2-swissmetro-closeout-31001/swissmetro/`.
-- Windows/Python **3.11.9**, uv **0.10.12**, `uv.lock`; NumPy **2.4.6**, pandas **2.3.3**,
-  SciPy **1.17.1**. Manifests lưu effective config, package versions, code/data/lock/output
-  hashes, seeds, runtime và lỗi. Source hash coverage:
-  `8459df189c1da3d4252f1ac2445854ac684c4ee15cecf951d80cbfd5402648a0`;
-  source hash Swissmetro (có mã chưa commit):
-  `84312e859833bfdc254a95cc2589152b266c492e9ca42da856e418771fedca88`.
-  Source hash của policy và Swissmetro chạy lại kỳ này:
-  `68a7a1b7bf19ec6eb2dff47ecb90a0c429c5c34e724232c371c9b3b0535661f3`.
-  Run cũ lưu revision `c2d24a2` và code hash riêng, không gán cho HEAD hiện tại.
-- Repository: [Muscar1a/gsm-ride-hailing](https://github.com/Muscar1a/gsm-ride-hailing).
-  Demo chạy cục bộ; chưa có URL demo công khai. Dữ liệu/run lớn không đưa vào Git.
-
-```powershell
-uv sync --locked
-uv run python -m gsm_poc run-all --config configs/demo.toml
-uv run streamlit run src/gsm_poc/app.py
-.venv/Scripts/python.exe -m gsm_poc.swissmetro --seed 31001 --run-id week2-swissmetro-closeout-31001
-.venv/Scripts/python.exe -m gsm_poc.policy_benchmark --config configs/policy_development.toml --run-id week2-policy-final-32001-32020
+# Báo cáo PoC GSM Causal Marketplace
+
+**Người thực hiện:** Nguyễn Thành An · 26ai.annt@vinuni.edu.vn
+
+## 1. Problem
+
+Bài toán của PoC là ước lượng sự thay đổi trong lựa chọn của khách hàng khi
+giá dịch vụ thay đổi. Trong mô phỏng, **X và Y là hai dịch vụ giả định**;
+**NONE** nghĩa là không đặt dịch vụ nào trong hai dịch vụ. Nếu giá X tăng,
+một phần khách có thể chọn Y, còn một phần có thể không đặt xe. Phân biệt
+hai phản ứng này là cơ sở để đánh giá một
+phương án giá, bởi lượng đặt xe tăng ở Y chưa chắc bù được lượng giảm ở X.
+Đây là phần mô hình cầu và lựa chọn trong đề xuất.
+
+Khó khăn chính là giá và nhu cầu thường cùng chịu ảnh hưởng của giờ cao điểm,
+khu vực hoặc các yếu tố khác. Khi số chuyến và giá cùng tăng, chưa thể kết
+luận tăng giá làm tăng nhu cầu. Dữ liệu chuyến đã hoàn thành cũng không ghi
+nhận đầy đủ những người xem giá rồi không đặt. Nếu bỏ qua các yếu tố này,
+mô hình có thể ước lượng sai tác động của giá và đề xuất một phương án làm
+giảm giá trị đặt xe.
+
+Trong báo cáo này, em thực hiện tập trung vào kiểm tra mô hình trước khi áp dụng
+cho GSM: mô hình có ước lượng đúng tác động giá khi biết đáp án, có chuyển
+kết quả đó thành kịch bản lựa chọn và có chỉ ra những trường hợp chưa thể
+kết luận hay không. Phạm vi này chưa bao gồm phản ứng của tài xế, ghép chuyến,
+hủy chuyến, sạc xe và cân bằng cung–cầu. Dự báo doanh thu thực thu, biên đóng
+góp và ROI còn cần dữ liệu kinh tế cùng các bước đánh giá trên GSM.
+
+## 2. Approach
+
+Hiện chưa có dữ liệu về các phiên xem báo giá của GSM. Vì vậy, PoC dùng dữ
+liệu TLC để tạo bối cảnh theo vùng và thời gian, sau đó sinh giá và lựa chọn
+với tác động đã biết trước. Cách làm này cho phép so sánh kết quả ước lượng
+với đáp án, đồng thời chủ động tạo các trường hợp giá ngẫu nhiên, có nhiễu
+hoặc không đủ thông tin để tách tác động.
+
+Để kiểm tra thêm khả năng dự báo lựa chọn trên một nguồn độc lập, PoC sử dụng
+Swissmetro. Mô hình có thời gian và chi phí được so sánh với mô hình chỉ có
+hằng số, trên những người chưa xuất hiện trong tập huấn luyện. Thực nghiệm
+này bổ sung kiểm tra dự báo bên cạnh kiểm tra tác động giá của bộ dữ liệu mô phỏng.
+
+Cuối cùng, các mô hình được dùng để chọn giá trên tập validation và đánh giá
+phương án đã chọn trên tập test. Bộ đánh giá dùng đáp án của mô phỏng, không
+dùng dự báo của mô hình để tự chấm. Nhờ đó, có thể xem sai số ước lượng có
+dẫn đến quyết định giá kém hơn phương án giữ nguyên giá hay không.
+
+Các thực nghiệm trên chạy riêng, không ghép bản ghi hoặc chuyển hệ số giữa
+TLC, Swissmetro và GSM. Đáp án cùng cơ chế gán giá không được đưa vào mô hình
+học; biến ẩn chỉ dùng để sinh dữ liệu và đánh giá. Kết quả hành vi hiện thuộc
+**mức bằng chứng C**: lựa chọn trên bối cảnh TLC là bán tổng hợp, thực nghiệm
+chọn giá dùng dữ liệu tổng hợp, còn Swissmetro là khảo sát lựa chọn giả định.
+
+Hệ thống đã triển khai luồng xử lý sau:
+
+```text
+TLC → dữ liệu gốc → kiểm tra chất lượng → bảng tổng hợp/bối cảnh huấn luyện
+    → sinh lựa chọn X/Y/NONE → OLS/DML → bootstrap theo ngày
+    → kịch bản giá → lưu kết quả → xuất CSV / JSON
 ```
 
-Lệnh demo không thay thế reporting protocol; resume coverage theo runbook với
-snapshot/config/seeds nguyên trạng. Sửa tài liệu không tính là chạy lại các
-benchmark, tests hoặc browser checks đã ghi ở trên.
+Các kịch bản giữ cố định số phiên xem báo giá để đánh giá riêng sự thay đổi
+trong lựa chọn của khách hàng. Việc áp dụng cho GSM còn cần dữ liệu thực tế
+và kiểm chứng độ tin cậy của mô hình.
+
+## 3. Method
+
+### 3.1. Mô hình tác động giá
+
+Mỗi đơn vị quan sát là một nhóm gồm **50 phiên xem báo giá**. Mô hình ước lượng
+tỷ lệ chọn từng dịch vụ theo log tự nhiên của hệ số giá. Nhóm quan sát này
+được gọi là **block** trong dữ liệu kết quả. Các ký hiệu trong mô hình được
+hiểu như sau:
+
+| Ký hiệu | Ý nghĩa |
+|---|---|
+| `W` | Bối cảnh có trước quyết định giá: vùng, giờ, thứ, cuối tuần, cao điểm và khoảng cách. |
+| `T` | Cặp log tự nhiên của hai hệ số giá. Mỗi hệ số giá (`price_multiplier_X`, `price_multiplier_Y`) là tỷ số giữa giá áp dụng và giá cơ sở của dịch vụ tương ứng. |
+| `p(W, T)` | Cặp xác suất chọn X và chọn Y trong bộ sinh dữ liệu, ký hiệu là `p_X` và `p_Y`. Xác suất không đặt là `p_NONE = 1 − p_X − p_Y`. |
+| `b(W)` | Cặp xác suất cơ sở khi giữ nguyên cả hai giá; khi đó hệ số giá bằng 1 và `T` bằng 0. |
+| `theta` | Ma trận tác động giá: hàng là dịch vụ được chọn, cột là dịch vụ thay đổi giá. |
+
+Với các ký hiệu trên, cơ chế cơ sở của bộ sinh dữ liệu có dạng:
+
+```text
+p(W, T) = b(W) + theta × T
+T = [log(price_multiplier_X), log(price_multiplier_Y)]
+theta = [[-0.60, 0.15], [0.12, -0.50]]
+```
+
+Các phần tử đường chéo của theta thể hiện tác động giá riêng; hai phần tử
+còn lại thể hiện tác động chéo. Chẳng hạn, hệ số −0,60 ở hàng X, cột X cho
+biết xác suất chọn X giảm khi log giá X tăng. Hệ số 0,12 ở hàng Y, cột X
+cho biết xác suất chọn Y tăng khi log giá X tăng. Theta có đơn vị
+**thay đổi xác suất trên một đơn vị log giá** (probability/log-price).
+Để tính độ co giãn tương ứng, cần chia hệ số cho xác suất lựa chọn ban đầu
+đủ lớn.
+
+Trong các bảng sau, **X/X, X/Y, Y/X và Y/Y** dùng cùng quy ước hàng/cột:
+phần trước là dịch vụ được chọn, phần sau là dịch vụ thay đổi giá; dấu `/`
+không phải phép chia. Ví dụ, Y/Y là tác động của giá Y lên xác suất chọn Y.
+Ma trận trên là đáp án dùng để kiểm chứng, không phải đầu vào của mô hình
+học. Mô hình học từ tỷ lệ lựa chọn quan sát được trong mỗi nhóm 50 phiên.
+Trường hợp không có tác động giá dùng theta bằng 0; trường hợp nhiễu ẩn
+bổ sung biến `U` ảnh hưởng đồng thời đến giá và lựa chọn, nên có thêm thành
+phần ngoài công thức cơ sở trên. U chỉ dùng để sinh dữ liệu và đánh giá.
+
+Ba phương pháp được so sánh gồm **OLS** (Ordinary Least Squares, hồi quy
+bình phương tối thiểu) và **DML** (Double/Debiased Machine Learning, dùng
+học máy để điều chỉnh bối cảnh trước khi ước lượng tác động):
+
+| Phương pháp | Cách ước lượng | Vai trò trong so sánh |
+|---|---|---|
+| OLS không điều chỉnh (Naive OLS; mã `naive_ols`) | Hồi quy tỷ lệ lựa chọn theo log giá X và Y | Mô hình đối chiếu khi không điều chỉnh bối cảnh |
+| OLS điều chỉnh (Adjusted OLS; mã `adjusted_ols`) | Bổ sung vùng, giờ, thứ, cuối tuần, cao điểm và khoảng cách | Phương pháp đơn giản, phù hợp cấu trúc cộng của bộ sinh hiện tại |
+| DML (LinearDML; mã `dml`) | Dùng rừng ngẫu nhiên (random forest) dự báo tỷ lệ lựa chọn và log giá từ bối cảnh, sau đó hồi quy phần dư với cross-fitting | Kiểm tra khả năng điều chỉnh bối cảnh bằng học máy |
+
+DML loại phần biến thiên được bối cảnh giải thích khỏi giá và lựa chọn
+(orthogonalization), rồi ước lượng tác động trên phần dư. Cross-fitting
+chia dữ liệu thành các nhóm: các mô hình dự báo tỷ lệ lựa chọn và log giá
+từ bối cảnh được học trên những nhóm khác trước khi tính phần dư cho nhóm
+đang xét. Cách này hạn chế việc dùng cùng một quan sát để vừa học mô hình
+phụ vừa tính phần dư. Phương pháp dựa trên
+[Chernozhukov và cộng sự](https://arxiv.org/abs/1608.00060), triển khai bằng
+[EconML LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html).
+Để diễn giải hệ số như tác động nhân quả, dữ liệu vẫn cần chứa đủ các yếu tố
+gây nhiễu và có biến thiên giá phù hợp. Biến ẩn, đáp án và thông tin từ cơ chế
+gán giá không được dùng làm đặc trưng học. DML cũng không giải quyết được
+nhiễu do những yếu tố chưa quan sát.
+
+### 3.2. Thiết kế thực nghiệm và khoảng tin cậy
+
+**DGP** là viết tắt của *Data Generating Process*, tức cơ chế sinh dữ liệu.
+Mỗi mã dưới đây là tên của một tình huống mô phỏng dùng để kiểm chứng mô
+hình. **Yếu tố gây nhiễu** là yếu tố ảnh hưởng đồng thời đến giá và lựa
+chọn, có thể làm sai lệch tác động giá nếu không được điều chỉnh.
+
+| Trường hợp mô phỏng | Mã trong dữ liệu | Cơ chế và mục đích kiểm tra |
+|---|---|---|
+| Giá ngẫu nhiên | `RCT_SYN` | RCT là *Randomized Controlled Trial*; SYN chỉ dữ liệu tổng hợp. Giá được gán ngẫu nhiên, độc lập với bối cảnh gây nhiễu, để kiểm tra khả năng ước lượng lại tác động đã biết. Đây là mô phỏng điều kiện thí nghiệm ngẫu nhiên, chưa phải thí nghiệm trên GSM. |
+| Nhiễu quan sát được | `OBSERVED_CONFOUNDING` | Các yếu tố có trong dữ liệu, như vùng và thời gian, cùng ảnh hưởng đến giá và lựa chọn. Kiểm tra việc điều chỉnh các yếu tố này có giúp giảm sai lệch so với OLS không điều chỉnh hay không. |
+| Nhiễu ẩn | `HIDDEN_CONFOUNDING` | Biến U cùng ảnh hưởng đến giá và lựa chọn nhưng không được đưa vào mô hình học. Kiểm tra giới hạn của phương pháp khi thiếu yếu tố gây nhiễu. |
+| Không có tác động giá | `NULL_EFFECT` | Tác động thật của cả hai giá bằng 0. Kiểm tra mô hình có kết luận sai rằng giá làm thay đổi lựa chọn hay không. |
+| Giá đồng tuyến | `COLLINEAR_PRICE` | Hai giá biến động hoàn toàn cùng nhau, nên không thể tách tác động riêng của từng giá. Kiểm tra mô hình có từ chối ước lượng khi dữ liệu không đủ thông tin hay không. |
+
+Với bối cảnh TLC, các ngày **01–20/01** dùng để huấn luyện, **21–25/01** để
+chọn phương án (validation) và **26–31/01** để đánh giá cuối (test). Các mẫu
+bối cảnh chỉ được xây từ tập huấn luyện. Cross-fitting chia thành năm nhóm
+theo ngày gốc.
+Bootstrap lấy lại mẫu theo ngày và huấn luyện lại toàn bộ mô hình; các bản
+sao của cùng một ngày luôn thuộc cùng nhóm.
+
+**Seed** là giá trị khởi tạo bộ sinh số ngẫu nhiên, giúp tạo và tái lập một
+phép lặp mô phỏng. Lượt đánh giá đầy đủ giữ cấu hình **100 seed cho mỗi
+trường hợp × 5 trường hợp**, dùng các seed **20001–20100**. Mỗi cặp trường
+hợp–seed tạo một bộ dữ liệu để ba phương pháp cùng đánh giá, tương ứng một
+job trong lượt chạy. Seed khác với lượt bootstrap: bootstrap lấy lại mẫu
+từ bộ dữ liệu của một seed để tính khoảng tin cậy.
+
+DML dùng **50 cây/5 nhóm cross-fitting (folds)**; mỗi phương pháp có hệ số
+hợp lệ chạy **199 lần lấy mẫu bootstrap**. Seed 19001 dùng cho thử nghiệm thời gian chạy trước đó,
+không nằm trong kết quả báo cáo. Giao thức được cố định và giữ nguyên sau khi
+xem kết quả.
+
+**Bias** đo sai lệch trung bình so với đáp án; **RMSE** (*Root Mean Squared
+Error*, căn trung bình bình phương sai số) đo độ lớn sai số, với trọng số
+lớn hơn cho sai số lớn. Hai chỉ số được tính riêng cho từng ô hệ số qua các
+seed. RMSE xác suất
+kịch bản được tổng hợp bằng căn trung bình bình phương của RMSE từng seed,
+trên cùng tập bối cảnh test đã cố định.
+
+Tỷ lệ bao phủ (coverage) là tỷ lệ khoảng tin cậy chứa hệ số thật. Trong
+trường hợp không có tác động giá, một kết quả dương tính giả xảy ra khi
+khoảng tin cậy không chứa 0 dù tác động thật bằng 0. Cả hai tỷ lệ được báo
+cáo cùng khoảng tin cậy theo phân phối nhị thức (binomial) cho từng ô.
+Bốn hệ số và ba phương pháp trên cùng một seed không
+được xem như các quan sát độc lập.
+
+Ngưỡng kỹ thuật được đặt trước cho trường hợp giá ngẫu nhiên là **RMSE hệ số
+≤0,10 mỗi ô** và **RMSE xác suất kịch bản ≤0,02**. Nếu hơn 5% lượt bootstrap thất bại, kết quả
+phải được đánh dấu. Độ chính xác của hệ số và độ tin cậy của khoảng ước lượng
+được đánh giá riêng. Giao thức dùng khoảng 95% và báo cáo khoảng binomial,
+nhưng chưa đặt một biên sai lệch chấp nhận được cho tỷ lệ bao phủ.
+
+Kịch bản tăng 10% giá X dùng **log(1.1)** và giữ nguyên giá Y. Trước khi dự
+báo, hệ thống kiểm tra dữ liệu có hỗ trợ cặp giá trong miền **0,90–1,10** và
+các xác suất có hợp lệ tại từng bối cảnh hay không. Trường hợp thiếu hỗ trợ
+hoặc không tách được tác động giá sẽ bị từ chối. Khoảng kịch bản không được
+xuất nếu có lượt bootstrap cho xác suất không hợp lệ; khoảng chưa ổn định
+được ghi trạng thái riêng.
+
+### 3.3. Mô hình lựa chọn Swissmetro và đánh giá phương án giá
+
+Swissmetro được chia **theo người**, với seed 31001, để một người không xuất
+hiện ở nhiều tập. Mô hình logit đa thức (MNL) có hai hằng số cho Train/Car,
+lấy Swissmetro làm mốc và dùng hệ số thời gian/chi phí chung. Mô hình đối
+chiếu chỉ có các hằng số. Cả hai xét phương án nào khả dụng và chỉ huấn
+luyện trên tập train. Thời gian được quy đổi bằng phút/100, chi phí bằng
+CHF/100; người có thẻ GA được tính chi phí tăng thêm của Train/Swissmetro
+bằng 0. Tập test không được dùng để chọn hoặc điều chỉnh mô hình.
+
+Thực nghiệm chọn giá ở giai đoạn phát triển dùng **20 seed mỗi trường hợp**
+cho giá ngẫu nhiên và nhiễu quan sát được, seeds 32001–32020. Mỗi seed có
+**7.440 blocks/372.000 phiên**, dùng 50 cây/5 nhóm cross-fitting và không
+chạy bootstrap theo ngày. X/Y giả định
+cùng thuộc một đơn vị, với giá cơ sở mỗi dịch vụ là 1 đơn vị chuẩn hóa.
+Mô hình chọn một cặp giá cố định từ chín cặp tạo bởi các mức
+**0,90/1,00/1,10**. Việc chọn dựa trên dự báo ở tập validation và được lưu
+trước khi đánh giá trên test.
+
+Hai phương án đối chiếu là giữ giá 1/1 (Unchanged) và giảm 10% giá X, giữ Y
+(Simple rule). Một cặp giá chỉ được xét khi có ít nhất một block huấn luyện
+cho cặp đó trong mỗi nhóm vùng–cuối tuần–cao điểm. Nếu thiếu hỗ trợ, phương
+án quay về giữ nguyên giá. Đây là ngưỡng dùng cho thực nghiệm phát triển,
+chưa chứng minh dữ liệu GSM đủ hỗ trợ những phương án tương tự.
+
+Chỉ số đánh giá là tổng giá trị đặt xe mô phỏng trên 1.000 phiên xem báo giá.
+**Uplift** là chênh lệch so với giữ nguyên giá; **regret** là phần giá trị
+thấp hơn phương án tốt nhất theo đáp án mô phỏng, trong cùng tập giá được
+hỗ trợ. Bộ đánh giá độc lập với mô hình chọn giá. Nếu đánh giá test bị lỗi,
+kết quả được ghi không khả dụng, thay vì chọn lại giá dựa trên test.
+
+## 4. Current data
+
+| Dữ liệu | Quy mô và xử lý hiện tại | Vai trò trong PoC |
+|---|---|---|
+| TLC HVFHV 01/2024 | Tệp gốc 19.663.930 dòng, 24 trường, 472.757.547 bytes; bảng vùng 265 dòng | Cung cấp bối cảnh vận hành; thiếu phiên không đặt và cơ chế gán giá |
+| TLC trong phạm vi | 970.940 chuyến hoàn tất; vùng đón 161/162/163/164/170, nền tảng HV0003/HV0005, giữ trả ngoài cụm | Dữ liệu sau kiểm tra và bảng tổng hợp cùng ghi nhận 970.940 chuyến; chưa đo chuyển đổi hoặc độ co giãn GSM |
+| Mart và chất lượng | 14.880 ô vùng × 30 phút × platform; 970.675 dòng giá dương, 960.950 dòng request-to-pickup hợp lệ | Kiểm soát chất lượng theo chỉ số; không loại số chuyến khi một chỉ số lỗi |
+| Bối cảnh / demo | 240 mẫu vùng/giờ/cuối tuần chỉ từ tập train, không cần mẫu thay thế; demo bảy ngày 3.360 ô/175.861 chuyến | Dùng cho huấn luyện và dashboard, không lấy thông tin từ test |
+| Dữ liệu bán tổng hợp cho đánh giá đầy đủ | 7.440 blocks/372.000 phiên mỗi seed; train 4.800 blocks/20 ngày, test 1.440 blocks/72.000 phiên | Tác động và lựa chọn được sinh với đáp án đã biết để kiểm tra phương pháp |
+| Swissmetro | 10.728 dòng/1.192 người gốc; bỏ 9 CHOICE=0, giữ 10.719 nhiệm vụ/1.191 người | Khảo sát lựa chọn giả định độc lập; giữ mọi mục đích chuyến đi SP=1 |
+| Phân chia Swissmetro | Train 833 người/7.497 nhiệm vụ; validation và test mỗi tập 179 người/1.611 nhiệm vụ | Kiểm tra dự báo trên người chưa có trong tập huấn luyện |
+| GSM | Chưa có dữ liệu gốc hoặc bộ chuyển đổi dữ liệu phiên xem báo giá | Chưa thể đánh giá phương án giá trên GSM hoặc dự báo kết quả kinh tế thực tế |
+
+Nguồn TLC từ [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+Thời gian nguồn không kèm múi giờ nên được xử lý theo giả định
+`America/New_York`. Dữ liệu gốc và checksum được giữ nguyên, không tự loại
+bản ghi trùng. Giá trị 0 được phân biệt với dữ liệu thiếu; các phân vị không
+đủ dữ liệu vẫn ghi là thiếu. Swissmetro giữ mười dòng có thuộc tính trùng
+nhau vì chúng là các nhiệm vụ khảo sát riêng.
+[EPFL/Biogeme, mục Data](https://biogeme.epfl.ch/) nêu phạm vi sử dụng cho
+nghiên cứu và giáo dục; quyền tái phân phối hoặc sử dụng thương mại chưa
+được xác nhận.
+
+Để tiếp tục với GSM, cần **tám nhóm nguồn gốc trong 12 tháng gần nhất**, gồm
+vùng lân cận/đối chứng: Booking & Demand; Pricing & Promotion; Driver Supply &
+Status; Driver Earnings & Incentive; Matching & Operations; Customer
+Choice/Cross-service; Policy & Context; Finance & Cost. Giữ cả không đặt/hủy/
+timeout/không có xe và tài xế không có chuyến. Dữ liệu cần giữ cấu trúc log
+gốc, được giả danh hóa nhất quán, kèm từ điển trường, khóa nối, đơn vị, múi
+giờ và lịch sử thay đổi cấu trúc. Người thực hiện sẽ tự ánh xạ, nối và kiểm
+tra theo [data contract](../../../GSM_DATA_CONTRACT.md).
+Khóa session–quote–request–trip và driver/vehicle–dispatch–shift/charging cần
+truy vết; giá/thưởng trước quyết định tách khỏi khoản thực nhận sau đó.
+
+## 5. Experiment
+
+### 5.1. Độ đầy đủ của đợt đánh giá
+
+Kết quả gồm **6.000 dòng hệ số, tương ứng 60 ô thống kê**. Có 1.200 lượt
+ước lượng cho hệ số hợp lệ và **238.800/238.800 lượt bootstrap thành công**.
+Trong các lượt hợp lệ, không có lần nào cho xác suất ban đầu hoặc xác suất
+kịch bản không hợp lệ. Còn 300 lượt thuộc trường hợp đồng tuyến bị từ chối;
+1.200 dòng hệ số của nhóm này được giữ với giá trị N/A. Chúng được tính vào
+tổng số lượt đã thực hiện, nhưng không vào mẫu số của RMSE hay tỷ lệ bao phủ.
+
+Checksum của 500 checkpoint JSON/parquet và các dòng trong bảng tổng hợp đã
+được đối chiếu. Các chỉ số của 60 ô cũng được tính lại và cho kết quả khớp.
+Như vậy, mỗi DGP có đủ 100 phép lặp, bao gồm cả những trường hợp mô hình
+không thể ước lượng. Đây là cơ sở để xem xét sai số và độ tin cậy ở các phần
+tiếp theo. Mỗi lần ước lượng cho bốn hệ số, nên 199 lượt bootstrap được tính
+một lần, không nhân thêm với số hệ số.
+
+### 5.2. Khả năng ước lượng đúng tác động giá
+
+Mỗi dòng trong bảng được tổng hợp từ 100 seed. Bảng lấy bias tuyệt đối lớn
+nhất và RMSE lớn nhất qua bốn ô của ma trận; RMSE kịch bản đánh giá sai số xác suất
+khi tăng 10% giá X và giữ giá Y.
+
+| Trường hợp mô phỏng | Phương pháp | Bias tuyệt đối lớn nhất | RMSE hệ số lớn nhất | RMSE xác suất kịch bản |
+|---|---|---:|---:|---:|
+| Giá ngẫu nhiên | OLS không điều chỉnh | 0,001489 | 0,012475 | 0,003637 |
+| Giá ngẫu nhiên | OLS điều chỉnh | 0,001300 | 0,012603 | 0,003591 |
+| Giá ngẫu nhiên | DML | 0,001695 | 0,012680 | 0,003602 |
+| Nhiễu quan sát được | OLS không điều chỉnh | 0,129793 | 0,130368 | 0,016680 |
+| Nhiễu quan sát được | OLS điều chỉnh | 0,001727 | 0,012319 | 0,003758 |
+| Nhiễu quan sát được | DML | 0,003463 | 0,012798 | 0,003777 |
+
+Khi giá được gán ngẫu nhiên, cả ba phương pháp đều ước lượng khá sát tác
+động đã biết. RMSE lớn nhất của các hệ số nằm trong khoảng 0,0125–0,0127,
+thấp hơn ngưỡng 0,10. Sai số xác suất kịch bản khoảng 0,0036, tương đương
+**0,36 điểm phần trăm**, dưới ngưỡng 2 điểm phần trăm đã đặt ra.
+
+Khi giá phụ thuộc vào bối cảnh gây nhiễu, sai số lớn nhất của OLS không điều chỉnh lên
+đến 0,130368. OLS điều chỉnh và DML đưa mức này xuống 0,012319 và 0,012798.
+Kết quả cho thấy việc đưa bối cảnh trước chính sách vào mô hình giúp ước
+lượng đúng tác động giá trong điều kiện đã thử. OLS điều chỉnh còn có RMSE
+hơi thấp hơn DML ở trường hợp này, nên chưa có cơ sở ưu tiên DML chỉ vì đây
+là phương pháp phức tạp hơn.
+
+Bản đã nộp ghi nhận lượt kiểm tra ban đầu `20261003T135730-1ae94396`, gồm
+**20 seed mỗi trường hợp, 100 jobs, 0 lỗi**, chạy trong 66,59 giây. Cấu hình dùng 1.860
+blocks/93.000 phiên, 20 cây và 0 lượt bootstrap. RMSE lớn nhất của
+OLS không điều chỉnh/OLS điều chỉnh/DML lần lượt là: giá ngẫu nhiên
+**0,028020/0,025927/0,025527**, nhiễu quan sát được
+**0,101744/0,030885/0,032944**, nhiễu ẩn **0,108117/0,036286/0,040800**,
+không có tác động giá **0,027939/0,025774/0,025640**; 60 lượt ước lượng
+trong trường hợp giá đồng tuyến bị từ chối.
+Lượt đánh giá đầy đủ khác lượt ban đầu cả về dữ liệu, số cây và bootstrap.
+Vì vậy, chênh lệch RMSE giữa hai lượt không thể quy riêng cho việc tăng số
+seed. Bảng lịch sử được giữ tại
+[hồ sơ 04/10](../20261004/POC_Technical_Report.md).
+
+### 5.3. Độ tin cậy của khoảng ước lượng
+
+| Phương pháp khi giá ngẫu nhiên | Tỷ lệ bao phủ qua bốn ô | Số lần bao phủ ở Y/Y | Khoảng binomial 95% của Y/Y |
+|---|---:|---:|---|
+| OLS không điều chỉnh | 90–96% | 90/100 | [82,38%; 95,10%] |
+| OLS điều chỉnh | 86–95% | **86/100** | **[77,63%; 92,13%]** |
+| DML | 86–94% | **86/100** | **[77,63%; 92,13%]** |
+
+Sai số của hệ số nhỏ chưa bảo đảm khoảng tin cậy đạt mức danh nghĩa. Với
+hệ số Y/Y khi giá ngẫu nhiên, khoảng 95% của OLS điều chỉnh và DML chỉ chứa tác động
+thật ở 86 trong 100 lần đánh giá, tức bỏ sót ở 14/100 seed. Khoảng binomial
+95% cho tỷ lệ này là [77,63%; 92,13%], không chứa mức 95%. Vì vậy, phần ước
+lượng điểm đã đạt ngưỡng kỹ thuật, nhưng **độ bao phủ của khoảng tin cậy vẫn
+là hạn chế cần xử lý trước khi nghiệm thu thống kê đầy đủ**.
+
+Trạng thái `interval_status=ok` chỉ xác nhận đủ lượt bootstrap và đạt các
+kiểm tra kỹ thuật. Kiểm tra bổ sung bằng binomial một phía, hiệu chỉnh Holm
+trên 36 ô thuộc ba trường hợp giá ngẫu nhiên, nhiễu quan sát được và không
+có tác động giá, cho giá trị p hiệu chỉnh 0,014825 ở hai ô Y/Y. Đây là
+phân tích sau khi có kết quả, không phải tiêu chí nghiệm thu định trước;
+phép hiệu chỉnh cũng chưa xử lý việc xem tiến độ nhiều lần trước đó.
+
+Thực nghiệm không có tác động giá kiểm tra mô hình có báo tác động khác 0 khi tác động
+thật bằng 0 hay không:
+
+| Phương pháp | Dương tính giả X/X | X/Y | Y/X | Y/Y |
+|---|---:|---:|---:|---:|
+| OLS điều chỉnh | 6/100 | 8/100 | 8/100 | 8/100 |
+| DML | 7/100 | 7/100 | 5/100 | 8/100 |
+| OLS không điều chỉnh | 8/100 | 7/100 | 7/100 | 5/100 |
+
+Các phương pháp báo tác động khác 0 ở 5–8 trong 100 lần đánh giá, tùy hệ số.
+Khoảng binomial 95% cho 5/100 là [1,64%; 11,28%], cho 8/100 là
+[3,52%; 15,16%]. Các khoảng đều chứa mức 5%. Với số lần lặp hiện tại, chưa
+có bằng chứng mạnh rằng tỷ lệ dương tính giả vượt mức danh nghĩa; đồng thời
+cũng chưa đủ để khẳng định hai tỷ lệ tương đương. Tỷ lệ này tính riêng từng
+ô, khác với tỷ lệ cả ma trận có ít nhất một kết luận sai. Chi tiết các chỉ
+số và khoảng tin cậy của 60 ô nằm trong
+[rà soát thống kê](statistical_review.md).
+
+### 5.4. Nhiễu ẩn và giới hạn nhận dạng
+
+| Phương pháp khi có nhiễu ẩn, 100 seed | Bias tuyệt đối lớn nhất | RMSE hệ số lớn nhất | Tỷ lệ bao phủ theo ô |
+|---|---:|---:|---:|
+| OLS không điều chỉnh | 0,130073 | 0,130618 | 0% |
+| OLS điều chỉnh | 0,025143 | 0,027836 | 41–67% |
+| DML | 0,025052 | 0,027878 | 43–67% |
+
+Khi thiếu yếu tố gây nhiễu, OLS điều chỉnh và DML vẫn còn sai lệch dù đã đưa
+bối cảnh quan sát được vào mô hình. Tỷ lệ bao phủ chỉ đạt 41–67% và 43–67%.
+RMSE xác suất kịch bản của hai phương pháp là 0,013850/0,013877, nhưng sai
+số dự báo này không đủ để bảo đảm hệ số có ý nghĩa nhân quả. Ngưỡng đã đặt
+cho giá ngẫu nhiên không được dùng để kết luận trường hợp nhiễu ẩn đạt yêu cầu.
+
+Với giá đồng tuyến, hai giá biến động hoàn toàn cùng nhau, nên dữ liệu
+không cho phép tách tác động của từng giá. Cả ba phương pháp đều từ chối ở
+100/100 seed: tổng 300 lượt trả trạng thái không nhận dạng được tác động
+(`not_identified`) và không chạy bootstrap
+(0 lượt). Hệ số, kịch bản và tỷ lệ bao phủ được ghi N/A, với mẫu số hợp lệ
+bằng 0. Kết quả này cho thấy cơ chế kiểm tra nhận dạng đã hoạt động như
+mong đợi, tránh xuất hệ số khi dữ liệu không đủ thông tin.
+
+### 5.5. Kịch bản tăng giá X
+
+Kịch bản dưới đây được giữ từ bản đã nộp, thuộc lượt chạy
+`20261003T130951-df24a7e4`, trường hợp giá ngẫu nhiên, seed 42. Dữ liệu gồm 7.440 blocks/372.000
+phiên; mỗi phương pháp hoàn tất 199/199 lượt bootstrap. Thời gian huấn
+luyện và bootstrap là 516,21 giây. DML ước lượng ma trận
+`[[-0.590036, 0.169760], [0.101347, -0.498596]]`, với RMSE xác suất kịch bản
+so với đáp án bằng 0,003678. Khi tăng 10% giá X, giữ giá Y và xét 10.000
+phiên giả định, kết quả như sau:
+
+| Lựa chọn | Trước | Sau | Thay đổi, điểm phần trăm |
+|---|---:|---:|---:|
+| Chọn dịch vụ X | 31,2280% | 25,6044% | −5,6236 |
+| Chọn dịch vụ Y | 25,9856% | 26,9516% | +0,9659 |
+| Không đặt (NONE) | 42,7864% | 47,4441% | +4,6577 |
+
+Tỷ lệ chọn Y tăng ít hơn mức giảm ở X, trong khi tỷ lệ không đặt tăng
+4,6577 điểm phần trăm. Tổng số lượt đặt xe kỳ vọng vì vậy giảm
+**465,77 trên 10.000 phiên**. Kết quả cho thấy chỉ theo dõi sự thay thế giữa
+X và Y sẽ bỏ qua phần nhu cầu rời cả hai dịch vụ. Các con số thể hiện thay
+đổi ròng của xác suất, chưa xác định được từng khách đã chuyển từ X sang Y.
+
+Kiểm tra phạm vi giá và khoảng ước lượng ở lượt chạy này có trạng thái
+`ok`; cả 199 lượt bootstrap cho xác suất hợp lệ. Khoảng tin cậy 95% riêng cho
+thay đổi số lượt đặt là [−488,62; −439,38]. Tuy nhiên, một seed chưa đủ để
+đánh giá độ bao phủ của khoảng tin cậy; ở lượt này, ba trong bốn khoảng hệ
+số chứa tác động thật. Đây vẫn là lựa chọn mô phỏng với số phiên xem giá
+cố định, chưa dự báo số chuyến hoàn thành hoặc doanh thu GSM. Kết quả giữ
+nguyên từ lượt cũ, chưa chạy lại trên mã hiện tại.
+
+### 5.6. Dự báo lựa chọn trên Swissmetro
+
+Hai mô hình được đánh giá trên cùng cách chia dữ liệu. Tập test có 1.611
+nhiệm vụ của 179 người; log loss tính bằng nats/nhiệm vụ, giá trị thấp hơn
+thể hiện dự báo tốt hơn. Lượt chạy `week2-swissmetro-final-31001` cho kết quả:
+
+| Mô hình | Log loss train | Log loss validation | Log loss test | Độ chính xác test |
+|---|---:|---:|---:|---:|
+| Chỉ có hằng số (Intercept-only) | 0,880078 | 0,903043 | 0,881660 | 57,4798% |
+| MNL có thời gian và chi phí | 0,815995 | 0,807700 | 0,781474 | 66,9770% |
+
+Khi thêm thời gian và chi phí, log loss test giảm 0,100186 nats/nhiệm vụ
+và độ chính xác tăng 9,4972 điểm phần trăm. Cải thiện này xuất hiện trên
+những người chưa có trong tập huấn luyện, cho thấy các thuộc tính phương
+án bổ sung thông tin dự báo so với mô hình chỉ có hằng số và điều kiện
+khả dụng. Cả hai phép tối ưu đều hội tụ; các ma trận thiết kế có hạng lần
+lượt là 2 và 4. Tổng xác suất bằng 1 và không vi phạm điều kiện khả dụng.
+
+Chưa tính khoảng tin cậy cho log loss và độ chính xác. Swissmetro cũng là
+khảo sát lựa chọn giả định, nên kết quả này kiểm chứng khả năng dự báo,
+chưa xác lập tác động nhân quả của giá hoặc khả năng áp dụng cho GSM.
+Lượt kiểm tra lại `week2-swissmetro-closeout-31001` trên mã cuối kỳ giữ
+nguyên cả sáu dòng chỉ số và các dự báo. Năm tệp kết quả được kiểm tra
+checksum trước khi dùng lại; thông tin nguồn của hai lượt được lưu riêng.
+
+### 5.7. Ảnh hưởng của sai số ước lượng đến quyết định giá
+
+Thực nghiệm `week2-policy-final-32001-32020` gồm 40 job, với 20 seed cho mỗi
+trường hợp giá ngẫu nhiên và nhiễu quan sát được. Mọi phương án được đánh
+giá trên cùng dữ liệu của từng seed. Bảng trình bày giá trị đặt xe mô phỏng trung bình trên
+1.000 phiên xem báo giá, tính theo giá chuẩn hóa. Uplift so với giữ nguyên
+giá; regret so với phương án tốt nhất theo đáp án trong tập giá được hỗ trợ.
+
+| Phương án giá | Giá ngẫu nhiên: giá trị | Giá ngẫu nhiên: uplift | Giá ngẫu nhiên: regret | Nhiễu quan sát được: giá trị | Nhiễu quan sát được: uplift | Nhiễu quan sát được: regret |
+|---|---:|---:|---:|---:|---:|---:|
+| Giữ nguyên giá | 551,352199 | 0,000000 | 23,569085 | 551,352199 | 0,000000 | 16,075210 |
+| Giảm 10% giá X, giữ giá Y | 565,472776 | 14,120577 | 9,448509 | 560,531721 | 9,179522 | 6,895688 |
+| OLS không điều chỉnh | 574,921284 | 23,569085 | 0,000000 | 521,061057 | −30,291142 | 46,366352 |
+| OLS điều chỉnh | 574,921284 | 23,569085 | 0,000000 | 567,427409 | +16,075210 | 0,000000 |
+| DML | 574,921284 | 23,569085 | 0,000000 | 567,427409 | +16,075210 | 0,000000 |
+| Tốt nhất theo đáp án mô phỏng (Oracle) | 574,921284 | 23,569085 | 0,000000 | 567,427409 | +16,075210 | 0,000000 |
+
+Trong trường hợp có nhiễu quan sát được, OLS không điều chỉnh chọn tăng cả hai giá lên
+1,10 ở 19/20 seed và giữ nguyên giá ở một seed. Phương án này làm giá trị
+đặt xe mô phỏng giảm trung bình 30,291142 so với giữ nguyên giá. OLS điều chỉnh
+và DML chọn cùng phương án tốt nhất theo đáp án ở 20/20 seed, đạt mức
+tăng 16,075210. Như vậy, sai lệch ước lượng có thể dẫn đến một quyết định
+giá bất lợi, còn việc điều chỉnh bối cảnh giúp tránh lỗi này trong các
+điều kiện đã thử.
+
+Khi giá ngẫu nhiên, cả ba mô hình cùng chọn cặp giá 0,90/0,90 ở 20/20 seed.
+DML và OLS điều chỉnh cho giá trị bằng nhau. Regret bằng 0 chỉ có nghĩa là đạt
+phương án tốt nhất trong tập giá được hỗ trợ, chưa bảo đảm tối ưu ở mọi
+mức giá hoặc bối cảnh.
+
+Bảng sau so sánh DML với các phương án khác trên cùng seed và bối cảnh
+test. Mỗi dòng có 20 cặp; khoảng 95% Student-t dành cho chênh lệch trung
+bình qua seed, chưa hiệu chỉnh đa so sánh:
+
+| Trường hợp mô phỏng | So với | Chênh lệch trung bình | Khoảng 95% |
+|---|---|---:|---|
+| Giá ngẫu nhiên | Giảm 10% giá X, giữ giá Y | 9,448509 | [9,437913; 9,459104] |
+| Nhiễu quan sát được | Giảm 10% giá X, giữ giá Y | 6,895688 | [3,028157; 10,763219] |
+| Nhiễu quan sát được | OLS không điều chỉnh | 46,366352 | [41,431590; 51,301115] |
+
+Chênh lệch giữa DML và OLS điều chỉnh bằng 0 ở cả hai trường hợp; khi giá
+ngẫu nhiên, chênh lệch giữa DML và OLS không điều chỉnh cũng bằng 0, với
+khoảng [0; 0]. Tổng cộng 120 lượt ước lượng
+hoàn tất và 240/240 giá trị test hợp lệ, không có lỗi huấn luyện hay đánh
+giá. Quy tắc giảm 10% giá X quay về giữ nguyên giá ở 7/20 seed có nhiễu quan sát
+được do thiếu hỗ trợ; các trường hợp này vẫn nằm trong mẫu số. Bộ đánh
+giá chạy trong 191,50 giây, toàn bộ bước mất 195,03 giây. Hai lượt dùng
+cùng giao thức cho giá trị và lựa chọn giá giống nhau; kết quả cuối được
+dùng lại sau khi đối chiếu checksum.
+
+Các khoảng chênh lệch phản ánh biến động qua seed ở giai đoạn phát triển,
+không thay cho kiểm tra độ bao phủ của day-bootstrap. Thực nghiệm giữ
+cố định số phiên xem giá và giả định mọi lượt đặt đều hoàn tất, được
+thanh toán. Chưa xét giới hạn công suất, hủy chuyến, chi phí hay phản ứng
+cung. Vì vậy, mức tăng trong bảng là giá trị đặt xe mô phỏng, chưa phải
+doanh thu thực thu hoặc ROI của GSM.
+
+### 5.8. Mức độ hoàn thành và công việc còn lại
+
+PoC đã có một luồng xử lý từ dữ liệu đến mô hình và kịch
+bản giá. Các thực nghiệm cho thấy điều chỉnh bối cảnh giúp ước lượng đúng
+hơn và chọn giá tốt hơn OLS không điều chỉnh trong trường hợp có nhiễu quan sát được.
+Kịch bản X/Y/NONE đã thể hiện được phần nhu cầu chuyển sang dịch vụ còn
+lại và phần rời cả hai. Swissmetro bổ sung kiểm tra dự báo trên dữ liệu
+lựa chọn độc lập. OLS điều chỉnh vẫn là phương pháp đối chiếu cần giữ cạnh DML.
+
+Hai giới hạn còn rõ là nhiễu ẩn làm mất bảo đảm nhân quả và tỷ lệ bao phủ
+của hệ số Y/Y khi giá ngẫu nhiên chỉ đạt 86/100. Trong trường hợp đồng tuyến, 300 lượt từ chối đã
+cho thấy cơ chế kiểm tra nhận dạng hoạt động. Các kết quả của 500 checkpoint
+đã được đối chiếu, nhưng bộ mô hình cầu/lựa chọn bàn giao cuối cùng và lần
+chạy lại tương ứng vẫn cần hoàn thiện. Vì vậy, **Week 2 đạt một phần, chưa
+nghiệm thu đầy đủ**. Hạn chế về khoảng tin cậy cần được ghi nhận và chốt
+với người nghiệm thu; tập seed đánh giá cuối không được dùng để điều chỉnh
+phương pháp nhằm nâng kết quả.
+
+Theo kế hoạch Week 3–5, các bước sau gồm mô hình cung, mô phỏng vận hành,
+dashboard kinh tế, thiết kế switchback và sổ đối chiếu dự báo–thực tế.
+A/A hoặc pilot chỉ thực hiện khi có dữ liệu phù hợp và được GSM chấp thuận.
+Hạn nộp thực tế, người kiểm tra, ngày nghiệm thu và các ngoại lệ được chấp
+nhận hiện chưa được xác nhận.

@@ -1,0 +1,148 @@
+{
+  "reviewed_at_utc": "2026-10-07T11:01:12.579482+00:00",
+  "evaluation_finished_at_utc": "2026-10-07T10:13:28.287558+00:00",
+  "review_git_revision": "354fc04e8d612de55a410c50b8bfdc2d00827829",
+  "review_script_sha256": "4145ff9cd266c6d9264b0d09f999a84f528297deef297838e40ee90dcc9ed9ef",
+  "environment": {
+    "python": "3.11.9",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scipy": "1.17.1"
+  },
+  "source_checksums_verified": {
+    "evaluation_metrics.csv": "9cee52901c25189b7808266f649ff49088a5965b16b570d5399ba8b24b5801dc",
+    "execution.json": "e3974ee7083f64bcac97774c7a7363a56303346192b9c812dffd045cb73a9b9c",
+    "frozen_spec.json": "8fda615108bc06365320bdbf41fa5ded3e19423630efd360a6767c2c61e61af1",
+    "manifest.json": "34aab9599aed5803a82dabc053b91713c69d5bf6063df75a619a4d6ac77bd316",
+    "README.md": "a9526f7dd50335a34311423118ee992102b35d64ef4d76d52275db4b128b971f",
+    "recovery_audit/after_resume.json": "7c733695ffbcfcb41e1824179644c2f8d2123bde82aa84c5b26bbac6353d5f30",
+    "recovery_audit/before_execution.json": "204ee1d548c9277901f1a94e3cc6a7522eaf8704bcaa82a692561dea30d374e4",
+    "recovery_audit/before_resume.json": "9f71d76c33dbcd75c02498e702fc3e5979f51ff94af7ee82c7b71c5dd5eacc8e",
+    "recovery_audit/before_status.json": "b83927960c211c0a5230912e4110bd8c6466a62969e110ddc967d3e329fc1fc7",
+    "recovery_audit/launch.json": "88f379399777588af26ee21ccd62756e27b155467aa047dafcc08278e0d9d60e",
+    "reproducibility.zip": "c01d120ef173d302aa8c48892c7eaacd68a113241c2dc52ef892bcca4143c726",
+    "seed_metrics.parquet": "37b603a12e432d075be30d2048eb4c90d52a29cfe11b439314a4bfa3100f3916",
+    "status.json": "dfbaa9a2a75162252257e2c8e31a42657ccb1f89739c43e105be92261f2fa64b"
+  },
+  "frozen_revision": "574cf501304a777827c2e04704d96a1ab563e1b2",
+  "frozen_source_sha256": "8459df189c1da3d4252f1ac2445854ac684c4ee15cecf951d80cbfd5402648a0",
+  "protocol_fingerprint": "f2f405f8ca5d4a2962628f4487224ea003c1bb9c01fc6abb679910d8e9747715",
+  "checks": {
+    "source_hashes": "passed",
+    "all_500_checkpoint_hashes": "passed",
+    "all_checkpoint_rows_equal_pool": "passed",
+    "row_keys_and_denominators": "passed",
+    "finite_values_and_flags": "passed",
+    "all_60_numeric_summary_cells": "passed",
+    "binomial_intervals_independent_beta_quantiles": "passed"
+  },
+  "counts": {
+    "seed_jobs": 500,
+    "failed_seed_jobs": 0,
+    "summary_cells": 60,
+    "coefficient_rows": 6000,
+    "identified_fits": 1200,
+    "rejected_collinear_fits": 300,
+    "requested_bootstrap_refits": 238800,
+    "successful_bootstrap_refits": 238800,
+    "invalid_baseline_draws": 0,
+    "invalid_scenarios": 0
+  },
+  "diagnostic_method": "Post-hoc one-sided exact binomial p<0.95, Holm over 36 cells; not a preregistered acceptance rule or sequential-monitoring adjustment",
+  "undercoverage_holm_below_0_05": [
+    {
+      "dgp_id": "OBSERVED_CONFOUNDING",
+      "estimator": "naive_ols",
+      "outcome": "X",
+      "treatment": "X",
+      "covered_seeds": 0,
+      "coverage_denominator": 100,
+      "undercoverage_p_holm_36": 2.8398992587958953e-129
+    },
+    {
+      "dgp_id": "OBSERVED_CONFOUNDING",
+      "estimator": "naive_ols",
+      "outcome": "X",
+      "treatment": "Y",
+      "covered_seeds": 0,
+      "coverage_denominator": 100,
+      "undercoverage_p_holm_36": 2.8398992587958953e-129
+    },
+    {
+      "dgp_id": "OBSERVED_CONFOUNDING",
+      "estimator": "naive_ols",
+      "outcome": "Y",
+      "treatment": "X",
+      "covered_seeds": 0,
+      "coverage_denominator": 100,
+      "undercoverage_p_holm_36": 2.8398992587958953e-129
+    },
+    {
+      "dgp_id": "OBSERVED_CONFOUNDING",
+      "estimator": "naive_ols",
+      "outcome": "Y",
+      "treatment": "Y",
+      "covered_seeds": 4,
+      "coverage_denominator": 100,
+      "undercoverage_p_holm_36": 1.3331948192480401e-117
+    },
+    {
+      "dgp_id": "RCT_SYN",
+      "estimator": "adjusted_ols",
+      "outcome": "Y",
+      "treatment": "Y",
+      "covered_seeds": 86,
+      "coverage_denominator": 100,
+      "undercoverage_p_holm_36": 0.01482474826252228
+    },
+    {
+      "dgp_id": "RCT_SYN",
+      "estimator": "dml",
+      "outcome": "Y",
+      "treatment": "Y",
+      "covered_seeds": 86,
+      "coverage_denominator": 100,
+      "undercoverage_p_holm_36": 0.01482474826252228
+    }
+  ],
+  "rct_point_accuracy": true,
+  "interval_calibration": "undercoverage limitation; no unconditional statistical acceptance",
+  "checkpoint_runtime_seconds_by_dgp": {
+    "COLLINEAR_PRICE": {
+      "count": 100,
+      "mean": 1.24096422700095,
+      "min": 0.8968737000104738,
+      "max": 2.3656695000099717,
+      "sum": 124.09642270009499
+    },
+    "HIDDEN_CONFOUNDING": {
+      "count": 100,
+      "mean": 979.3270103789994,
+      "min": 512.6824950000009,
+      "max": 1342.4557712999958,
+      "sum": 97932.70103789994
+    },
+    "NULL_EFFECT": {
+      "count": 100,
+      "mean": 1092.8732389180002,
+      "min": 877.4564638000011,
+      "max": 1372.7186454000039,
+      "sum": 109287.32389180001
+    },
+    "OBSERVED_CONFOUNDING": {
+      "count": 100,
+      "mean": 1109.053890794,
+      "min": 916.8220787000027,
+      "max": 1295.9490031999885,
+      "sum": 110905.38907939999
+    },
+    "RCT_SYN": {
+      "count": 100,
+      "mean": 647.2503032679996,
+      "min": 502.65508689999115,
+      "max": 1294.161076999997,
+      "sum": 64725.030326799955
+    }
+  },
+  "runtime_note": "Per-job recorded durations; sums are not parallel wall-clock elapsed time"
+}

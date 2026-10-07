@@ -1,6 +1,7 @@
 # Rà soát nghiệm thu Week 2 — 07/10/2026
 
-**Mốc bằng chứng: 10:41:19, Asia/Bangkok (UTC+07).**
+**Mốc dữ liệu cuối: 17:13:28 ngày 07/10/2026, Asia/Bangkok (UTC+07).**
+Rà soát thống kê ngày 07/10; thời điểm chi tiết lưu trong audit JSON.
 
 Tài liệu đối chiếu nội bộ của [báo cáo PoC](weekly_report.md) và
 [bản tiến độ](progress_update.md). Đây là rà soát kỹ thuật, chưa phải xác nhận
@@ -9,53 +10,48 @@ của người nghiệm thu. **Week 2 đạt một phần; chưa đóng đầy �
 | Gate | Kết luận tại mốc chốt | Bằng chứng / phần còn lại |
 |---|---|---|
 | Data | Đạt kỹ thuật trong phạm vi public/synthetic | TLC đối soát và train-only context; Swissmetro schema/units/person holdout/checksums. EPFL nêu dùng nghiên cứu/giáo dục; giữ giới hạn tái phân phối/thương mại |
-| Effect | Đạt development; chờ reporting đầy đủ | Recovery các run đã nêu và RCT tạm; các DGP khác chưa có kết quả reporting. Không coi nhiễu ẩn là được nhận dạng |
+| Effect | RCT point accuracy đạt; recovery observed đã có kết quả reporting | Đủ 100 seed/DGP; giữ hidden-confounding bias và 300 collinear rejections. Không coi nhiễu ẩn là được nhận dạng |
 | Scenario | Đã kiểm chứng run lịch sử; chờ chốt bundle cuối | Run `20261003T130951-df24a7e4`, support/probability/199-draw checks; không gán nguồn code cũ cho run mới |
-| Reproducibility | Đạt đối chiếu hiện có; chờ bộ bàn giao cuối | Snapshot nguyên trạng; checksum 69 checkpoints, 13 batch manifests, 205 policy artifacts, 5 Swissmetro closeout artifacts và 31 artifacts của model lịch sử. Policy/Swissmetro dùng lại outputs đã xác minh |
-| Statistics | Chờ; có dấu hiệu coverage thấp | Chưa đủ 100 seeds × 5 DGP; NULL_EFFECT chưa chạy. RMSE RCT tạm đạt, coverage chưa đủ căn cứ nghiệm thu |
+| Reproducibility | Reporting đã đối chiếu; chờ bộ demand/choice bàn giao cuối | 500 checkpoint hashes/rows khớp pool, 60 summary cells tính lại khớp; snapshot nguyên trạng. Policy/Swissmetro và model lịch sử giữ bằng chứng riêng |
+| Statistics | Rà soát hoàn tất; chưa nghiệm thu calibration vô điều kiện | RCT Y/Y adjusted OLS/DML coverage 86/100, binomial 95% [77,63%; 92,13%]; NULL_EFFECT 5–8% theo ô. Draw failures 0/238.800 |
 | Additional benchmarks | Đạt phạm vi development đã định | Swissmetro và policy-value 40/40 seed jobs; evaluator test độc lập, uplift âm/ties/fallbacks được giữ; không phải GSM revenue |
 
 Nguồn provenance: [EPFL/Biogeme, mục Data](https://biogeme.epfl.ch/) công bố
 Swissmetro trong nhóm dữ liệu dùng cho nghiên cứu/giáo dục. Nguồn này bổ sung
 cho source manifest; không sửa manifest cũ hoặc suy ra quyền thương mại/tái phân phối.
 
-## Coverage và mẫu số
+## Thống kê cuối và mẫu số
 
-**69/500 jobs** thành công, **1 đang chạy** (job 70, RCT seed 20070),
-**0 thất bại**, **430 chưa bắt đầu**. Chỉ RCT đã bắt đầu; reporting seeds
-20001–20100, probe 19001 bị loại. 69 successful checkpoints có 828 coefficient
-rows, 207 fits, mỗi fit 199/199 draws; tổng 41.193 refits. Runtime trung bình
-516,41 giây/job. Mọi con số là snapshot tại mốc chốt.
+**500/500 jobs** thành công, **0 lỗi cuối**, **0 còn lại**, **100/100 batches**;
+100 seed mỗi DGP. Reporting seeds 20001–20100, loại probe 19001. Có **6.000
+coefficient rows**, **1.200 fits được nhận dạng**, mỗi fit 199/199 draws; tổng
+**238.800 refits**, 0 thất bại. **300 fits collinear bị từ chối** giữ trong mẫu
+số và 1.200 rows N/A; không tính thành lỗi compute. Invalid baseline draws và
+invalid scenarios ở fits hợp lệ đều bằng 0.
 
-Bảng chính thức của 13 batches gồm **65 RCT seeds**, 780 coefficient rows,
-195 fits/38.805 refits; bốn successful seeds của batch đang chạy chưa vào pool.
-Không cộng số draws lặp lại trên bốn ô hệ số thành bốn lần số refits.
+Đã xác minh 13 hashes của bản lưu, 500 checkpoint JSON/parquet và toàn bộ rows;
+tính lại bias/RMSE/coverage/null/binomial intervals của 60 ô khớp bảng tổng hợp.
+Không cộng draws lặp trên bốn coefficient rows thành bốn lần số refits.
 
-Bảng dưới lấy trực tiếp pooled metrics đã kiểm tra checksum. Mỗi dòng có
-**65/100 seeds yêu cầu**, 65 estimates/intervals hợp lệ, 0 fit/interval failure;
-12.935 requested/successful draws **của estimator**. Bias/RMSE có đơn vị
-probability/log-price; coverage là individual 95% interval coverage.
+| RCT estimator | Max theta RMSE | Scenario RMSE | Coverage theo ô |
+|---|---:|---:|---:|
+| naive_ols | 0,012475 | 0,003637 | 90–96% |
+| adjusted_ols | 0,012603 | 0,003591 | 86–95% |
+| dml | 0,012680 | 0,003602 | 86–94% |
 
-| Estimator | Outcome/price | Bias | RMSE | Coverage | Binomial 95% |
-|---|---|---:|---:|---:|---|
-| adjusted_ols | X/X | 0,000377 | 0,011222 | 86,15% | [75,34%; 93,47%] |
-| adjusted_ols | X/Y | -0,000227 | 0,011385 | 93,85% | [84,99%; 98,30%] |
-| adjusted_ols | Y/X | 0,001338 | 0,009942 | 93,85% | [84,99%; 98,30%] |
-| adjusted_ols | Y/Y | 0,000591 | 0,011551 | 86,15% | [75,34%; 93,47%] |
-| dml | X/X | 0,000118 | 0,011470 | 87,69% | [77,18%; 94,53%] |
-| dml | X/Y | -0,000551 | 0,011807 | 93,85% | [84,99%; 98,30%] |
-| dml | Y/X | 0,001531 | 0,010224 | 93,85% | [84,99%; 98,30%] |
-| dml | Y/Y | 0,001139 | 0,011647 | 86,15% | [75,34%; 93,47%] |
-| naive_ols | X/X | 0,000265 | 0,013108 | 87,69% | [77,18%; 94,53%] |
-| naive_ols | X/Y | 0,000275 | 0,012186 | 93,85% | [84,99%; 98,30%] |
-| naive_ols | Y/X | 0,001148 | 0,010824 | 96,92% | [89,32%; 99,63%] |
-| naive_ols | Y/Y | 0,001014 | 0,011632 | 90,77% | [80,98%; 96,54%] |
+Point accuracy RCT đạt ngưỡng 0,10/0,02. Y/Y adjusted OLS và DML có **86/100**
+coverage, Clopper–Pearson hai phía 95% **[77,63%; 92,13%]**. Chẩn đoán hậu kiểm
+binomial một phía/Holm trên 36 ô RCT/observed/null cho p hiệu chỉnh **0,014825**;
+đây không phải acceptance rule đăng ký trước hoặc hiệu chỉnh theo dõi tiến độ.
+Coverage của khoảng 95% còn hạn chế; không đổi phương pháp/seeds để nâng kết quả.
 
-Các khoảng binomial trên là mô tả theo ô, chưa hiệu chỉnh việc xem tiến độ
-lặp lại/đa so sánh. Y/Y của adjusted OLS và DML có 56/65 coverage; khoảng
-[75,34%; 93,47%] chưa chứa nominal 95%. Không đổi phương pháp/seeds để đạt
-gate sau khi thấy kết quả tạm. Null false positives **N/A**, denominator 0;
-không xem là tỷ lệ 0. Các DGP chưa chạy chưa có bias/RMSE/coverage reporting.
+NULL_EFFECT false positives **5–8/100 theo ô**; các khoảng exact binomial 95%
+đều chứa mức 5%, chưa chứng minh tương đương 5%. Hidden confounding giữ bias
+và coverage thấp, không nhận dạng nhân quả; collinear từ chối đúng kiểm tra
+giới hạn. Đầy đủ 60 ô và diễn giải tại [rà soát thống kê](statistical_review.md),
+[audit JSON](results/week2/statistical_review/audit.json) và
+[kết quả cuối](results/week2/README.md). Scenario RMSE tổng hợp là RMS của các
+per-seed RMSE, không phải trung bình số học; các ô không được xem là độc lập.
 
 ## Policy-value và tái lập
 
@@ -71,7 +67,8 @@ mã giữa hai lượt là khai báo kiểu và metadata lỗi, không tuning. B
 metrics và predictions trùng run `week2-swissmetro-final-31001`, rồi dùng lại
 outputs thành công. Hai run cuối có cùng source hash; coverage snapshot riêng.
 
-**131 tests passed, 40,95 giây**; Ruff check/format đạt (36 files), ty 0.0.82
+Kiểm tra mã policy/Swissmetro trước lượt compute: **131 tests passed, 40,95 giây**;
+Ruff check/format đạt (36 files), ty 0.0.82
 đạt toàn bộ `src/gsm_poc` với `--error-on-warning`. Browser QA là bằng chứng
 lịch sử; chưa kiểm tra lại browser/CI từ xa trong đợt này. Không thêm dependency.
 
@@ -84,30 +81,33 @@ ignored. Các hash dưới định danh bằng chứng, không đồng nhất c�
 |---|---|
 | Bản đối chiếu `.cache/submission-20261007-results-034119.json` | `ad2cf2d58479dfdd5b1d6d6f09a1f957423dfc5f2a2d542bc62f21de745a21d4` |
 | Coverage frozen spec | `8fda615108bc06365320bdbf41fa5ded3e19423630efd360a6767c2c61e61af1` |
-| Pooled seed_metrics.parquet (65 seeds) | `e0b916e51b0f0ef8d07fce976e1d533fefa554bfacda9abf5f4eab6dfe417132` |
-| Pooled evaluation_metrics.csv | `68125acf4666680591e0d2c055ebb2090f0fd7387b8e8feaf6c71c85ca2fa5ad` |
+| Pooled seed_metrics.parquet lịch sử (65 seeds) | `e0b916e51b0f0ef8d07fce976e1d533fefa554bfacda9abf5f4eab6dfe417132` |
+| Pooled evaluation_metrics.csv lịch sử (65 seeds) | `68125acf4666680591e0d2c055ebb2090f0fd7387b8e8feaf6c71c85ca2fa5ad` |
+| Final seed_metrics.parquet (500 jobs) | `37b603a12e432d075be30d2048eb4c90d52a29cfe11b439314a4bfa3100f3916` |
+| Final evaluation_metrics.csv (60 cells) | `9cee52901c25189b7808266f649ff49088a5965b16b570d5399ba8b24b5801dc` |
 | Coverage source | `8459df189c1da3d4252f1ac2445854ac684c4ee15cecf951d80cbfd5402648a0` |
 | Policy/Swissmetro closeout source | `68a7a1b7bf19ec6eb2dff47ecb90a0c429c5c34e724232c371c9b3b0535661f3` |
 | Lock | `e619cacb8a04c36d2970a268d8ebbb983f0c1c31dc66a6c918331bd7691b6b1c` |
 | Policy manifest `runs/week2-policy-final-32001-32020/manifest.json` | `ce9c99bbeecc8ff1fec175daae53311f022c2f6a695c64d1b9bd238f57e614cc` |
 | Swissmetro manifest `runs/week2-swissmetro-closeout-31001/manifest.json` | `95c13b8941da5a9b527ee8e893f2d8327d10b23998350beffcc50a4b0e6903b7` |
 
-Revision nền `574cf501304a777827c2e04704d96a1ab563e1b2`; các module policy/
-Swissmetro có thay đổi chưa commit, nhận diện bằng source hash riêng. Audit
-giữ từng checkpoint/hash, summary đúng mẫu số và kiểm tra bytes context/lock/
-source/runner. CSV kèm audit giữ pooled metrics đúng mốc, kể cả khi runner cập nhật.
+Revision frozen coverage `574cf501304a777827c2e04704d96a1ab563e1b2`; policy/
+Swissmetro nhận diện bằng source hash ở thời điểm chạy. Revision và script hash
+của rà soát mới ghi riêng trong audit JSON. Gói kết quả gốc được giữ nguyên,
+kể cả metadata `pending review` ở thời điểm xuất; kết luận mới nằm trong hồ
+sơ rà soát. Báo cáo không gán các outputs lịch sử cho HEAD hiện tại.
 
 ## Điều kiện còn lại để đóng Week 2
 
-1. Đủ giao thức 500 jobs; pool per-seed rows với khóa/denominator/hashes hợp lệ.
-2. Rà soát bias/RMSE, coverage/null/binomial intervals và draw failures >5%;
-   giữ hidden-confounding/collinear stress cases và không tự coi completion là pass.
-3. Chốt bộ demand/choice bàn giao và exports tương thích với manifest/config/
+1. Chốt cách nghiệm thu hạn chế interval calibration: ghi nhận kết quả hoặc
+   ngoại lệ được người nghiệm thu chấp nhận; chưa có xác nhận này. Nếu cải thiện
+   phương pháp, dùng development/holdout mới theo protocol đóng băng trước.
+2. Chốt bộ demand/choice bàn giao và exports tương thích với manifest/config/
    scope/code; kiểm tra rerun/resume tương ứng. Model lịch sử đã xác minh là
    bằng chứng riêng, chưa gọi là bộ bàn giao mới.
-4. Cập nhật hai báo cáo cùng mốc cuối, ghi người kiểm tra/ngày/kết luận hoặc
-   ngoại lệ thực tế. Các trường này hiện **chưa xác nhận**; hạn nộp thực tế
+3. Hai báo cáo đã đồng bộ mốc kết quả cuối. Còn ghi người kiểm tra/ngày/kết luận
+   hoặc ngoại lệ thực tế. Các trường này hiện **chưa xác nhận**; hạn nộp thực tế
    cũng chưa được cung cấp.
 
-Tối ưu compute tiếp tục ở chat riêng. Các kết luận hiện chỉ áp dụng public/
+Compute và rà soát số liệu đã hoàn tất. Các kết luận hiện chỉ áp dụng public/
 synthetic, evidence C; mô hình cung, simulator và thử nghiệm/ROI GSM thuộc bước sau.

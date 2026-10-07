@@ -1,51 +1,71 @@
-# Cập nhật tiến độ PoC GSM — Week 2
+# Cập nhật tiến độ PoC GSM
 
-**Nguyễn Thành An · 26ai.annt@vinuni.edu.vn · 07/10/2026**
+**Người thực hiện:** Nguyễn Thành An · 26ai.annt@vinuni.edu.vn
 
-**Chốt số liệu:** 10:41:19, Asia/Bangkok (UTC+07). Chi tiết:
-[báo cáo PoC](weekly_report.md).
+**Ngày cập nhật:** 07/10/2026 · So với bản đã nộp ngày 04/10/2026
 
-**Phần đã thực hiện.** PoC có pipeline TLC, kiểm tra chất lượng/đối soát,
-sinh lựa chọn mô phỏng, OLS/DML, bootstrap theo ngày, kịch bản giá, CSV/JSON và
-dashboard ba màn hình. Phạm vi TLC tháng 01/2024 gồm **970.940 chuyến hoàn tất**.
-Kết quả đã nộp được giữ nguyên: benchmark **20 seed/DGP × 5 DGP** hoàn tất,
-điều chỉnh giảm sai số so với naive OLS khi nhiễu quan sát được; adjusted OLS
-hơi tốt hơn DML trong trường hợp đó. Một run TLC-context có **199/199 bootstrap
-refits mỗi estimator**. Các kết quả này chưa xác lập coverage hoặc tác động GSM.
+## 1. Tiến độ chung
 
-**Bổ sung từ bản đã nộp.** Các commit 05–06/10 cập nhật thiết kế/contract và
-củng cố dữ liệu, lỗi từng estimator, nhận dạng, bootstrap, artifact và type checks.
-Trong đợt làm việc hiện tại đã triển khai Swissmetro với split theo người:
-test **1.611 nhiệm vụ/179 người**, log loss MNL **0,781474**, baseline **0,881660**;
-kiểm tra hội tụ/availability/checksum đạt. Rà soát nguồn ngày 07/10:
-[EPFL/Biogeme](https://biogeme.epfl.ch/) nêu dữ liệu được dùng
-cho nghiên cứu/giáo dục, đủ căn cứ provenance cho PoC học thuật; quyền tái phân
-phối/sử dụng thương mại chưa được xác nhận. Swissmetro chạy lại trên mã cuối giữ
-nguyên metrics/predictions. **Policy-value development đã hoàn tất 40 seed jobs**
-(20 RCT + 20 observed), chọn trên validation và chấm bằng oracle test độc lập.
-RCT: ba learner hòa nhau; observed: naive OLS uplift **−30,291142**, adjusted
-OLS/DML cùng **+16,075210** đơn vị giá trị booking chuẩn hóa/1.000 quote sessions.
-Simple rule có **7 fallback**, không fit/test failure. Đây chưa phải doanh thu GSM.
-Kiểm tra mã có **131 tests passed**, Ruff đạt, ty đạt trên toàn bộ mã nguồn;
-policy/Swissmetro đã xác minh dùng lại artifact. Phần bổ sung chưa commit.
 
-**Tiến độ và phần còn thiếu.** Coverage đầy đủ **500 seed jobs**, 199 draws mỗi
-estimator được nhận dạng, đã chạy nền theo batch/checkpoint: tại thời điểm chốt
-**69 thành công, 1 đang chạy (job 70/seed 20070), 0 thất bại, 430 chưa bắt đầu**.
-Bảng tổng hợp đã có 65 seed RCT; bốn seed mới còn ở checkpoint. DML max theta
-RMSE **0,011807**, scenario RMSE **0,003620**; coverage theo ô **86,15–93,85%**,
-cần rà soát trước nghiệm thu đầy đủ. NULL_EFFECT chưa chạy; bộ bàn giao cuối
-chưa chốt. So với proposal, đã có
-nền dữ liệu, kiểm chứng cầu/thay thế chéo và demo, nhưng chưa có mô hình cung,
-simulator matching/sạc/cân bằng/nhàn rỗi, kết quả kinh tế/ROI, switchback chi tiết
-hoặc sổ đối chiếu. Tất cả kết quả hành vi hiện là **evidence C**; GSM raw data
-chưa có, không chuyển hệ số public/synthetic sang GSM.
+Bản ngày 04/10 đã có luồng xử lý từ kiểm tra dữ liệu đến mô hình, kịch bản
+giá và xuất kết quả. Phạm vi TLC gồm **970.940 chuyến hoàn tất**, đã được
+đối soát; lượt kiểm tra ban đầu trên dữ liệu tổng hợp hoàn tất 100 lượt
+mô phỏng. TLC cung cấp bối cảnh cho một phần thực nghiệm, còn dữ liệu
+lựa chọn là tổng hợp hoặc bán tổng hợp, chưa phải hành vi quan sát của GSM.
 
-**Kế hoạch tiếp theo.** Hoàn tất/rà soát coverage;
-kiểm tra bundle cuối, chốt bảng nghiệm thu week 2 và đồng bộ hai báo cáo. Tuần 3–5
-phát triển cung/simulator, dashboard vận hành–kinh tế, switchback và bàn giao;
-A/A/pilot chỉ khi đủ điều kiện và được GSM chấp thuận. Đề nghị GSM xuất **tám
-nhóm nguồn gốc trong 12 tháng gần nhất**, gồm vùng lân cận/đối chứng; người thực
-hiện tự ánh xạ/nối/xử lý theo [data contract](../../../GSM_DATA_CONTRACT.md).
-Demo hiện chạy cục bộ. [Bảng rà soát nghiệm thu](acceptance_review.md) ghi bằng
-chứng từng gate. Week 2 **đạt một phần, chưa đóng toàn bộ**; tối ưu compute ở chat riêng.
+## 2. Những phần bổ sung từ bản ngày 04/10
+
+- **Đánh giá trên nhiều phép lặp:** đã hoàn thành **500/500 lượt mô phỏng**,
+  gồm 100 phép lặp cho mỗi trong năm trường hợp mô phỏng, không có lỗi
+  chạy cuối cùng. Số liệu đã được đối chiếu và tính lại. Khi giá ngẫu
+  nhiên, sai số xác suất kịch bản khoảng **0,36 điểm phần trăm**, dưới
+  ngưỡng 2 điểm phần trăm đã đặt ra.
+
+- **Kiểm tra dự báo trên Swissmetro:** bổ sung bộ dữ liệu khảo sát lựa
+  chọn giả định, được đánh giá riêng với TLC. Trên **1.611 nhiệm vụ của
+  179 người** chưa xuất hiện trong tập huấn luyện, mô hình có thời gian
+  và chi phí đạt độ chính xác **66,98%**, so với **57,48%** của mô hình
+  chỉ có hằng số. Các thuộc tính này bổ sung thông tin dự báo lựa chọn.
+
+- **Kiểm tra quyết định giá:** hoàn thành 40 lượt mô phỏng, gồm 20
+  phép lặp khi giá ngẫu nhiên và 20 khi có nhiễu quan sát được. Phương án
+  được chọn và đánh giá trên hai tập riêng. Khi có nhiễu quan sát được,
+  hồi quy không điều chỉnh bối cảnh làm giá trị đặt xe giảm **30,29**,
+  còn hồi quy có điều chỉnh và phương pháp học máy DML cùng làm tăng
+  **16,08** so với giữ nguyên giá. Đơn vị là giá trị chuẩn hóa trên 1.000
+  phiên xem báo giá. Kết quả cho thấy sai lệch ước lượng có thể dẫn đến
+  quyết định giá bất lợi, chưa phải mức thay đổi doanh thu GSM.
+
+Em cũng đã củng cố kiểm tra đầu vào, xử lý lỗi và việc lưu tiến độ để tiếp
+tục các lượt chạy. Kết quả được lưu cùng cấu hình và thông tin nguồn để
+đối chiếu. Số liệu và phương pháp chi tiết nằm trong
+[weekly report](weekly_report.md).
+
+## 3. Vướng mắc và phần còn lại
+
+Trong trường hợp giá ngẫu nhiên, khoảng tin cậy 95% của hồi quy có điều
+chỉnh và DML cho tác động của giá Y lên xác suất chọn Y chỉ chứa tác động
+thật ở **86/100 lần đánh giá**. Vì vậy, sai số ước lượng nhỏ chưa bảo đảm
+độ tin cậy của khoảng ước lượng. Cần ghi nhận hạn chế này và thống nhất
+cách nghiệm thu với người kiểm tra. **Không còn chờ kết quả chạy.**
+
+Bộ mô hình cầu và lựa chọn bàn giao cuối cùng, các tệp kết quả đi kèm và
+lần kiểm tra tái lập tương ứng vẫn cần hoàn thiện. Dữ liệu gốc GSM chưa có,
+nên chưa thể đánh giá tác động giá hoặc kết quả kinh tế thực tế. Mô hình
+cung và mô phỏng vận hành thuộc phần việc tiếp theo.
+
+## 4. Kế hoạch tiếp theo
+
+1. **Chốt tuần 2:** thống nhất cách ghi nhận hạn chế của khoảng tin cậy,
+   hoàn thiện bộ mô hình và kết quả bàn giao, kiểm tra khả năng tái lập.
+   Nếu cải thiện phương pháp, dùng dữ liệu phát triển và tập đánh giá mới.
+
+2. **Tuần 3:** kết nối mô hình cầu với mô phỏng vận hành, bắt đầu bằng
+   đội xe có cung cố định. Kiểm tra phân xe, thời gian chờ, hủy chuyến,
+   nhàn rỗi và sạc trước khi bổ sung phản ứng cung và cân bằng cung–cầu.
+
+3. **Dữ liệu và các bước tuần 3–5:** cần tám nhóm dữ liệu gốc của GSM trong
+   12 tháng gần nhất, gồm vùng lân cận và đối chứng, như nêu trong weekly
+   report. Tiếp tục đánh giá vận hành–kinh tế, thiết kế thử nghiệm luân
+   phiên chính sách theo thời gian và đối chiếu dự báo với thực tế. Thử
+   nghiệm trên GSM chỉ thực hiện khi đủ dữ liệu và được chấp thuận.

@@ -3,8 +3,9 @@
 Mỗi kỳ báo cáo lưu theo ngày tại `docs/submission/days/YYYYMMDD/`, dùng ngày
 chốt theo Asia/Bangkok. Hồ sơ mới gồm **hai tài liệu cần nộp**:
 
-- `weekly_report.md`: báo cáo PoC tổng hợp những gì đã thực hiện,
-  dữ liệu/phương pháp, kết quả kiểm chứng, giới hạn và kế hoạch.
+- `weekly_report.md`: báo cáo PoC theo **Problem, Approach, Method, Current data,
+  Experiment, Reference**. Mỗi nhóm thực nghiệm nêu câu hỏi kiểm chứng,
+  kết quả, ý nghĩa và giới hạn kết luận.
 - `progress_update.md`: cập nhật tiến độ ngắn, phần mới so với kỳ trước,
   vướng mắc và bước tiếp theo; trỏ tới báo cáo PoC để xem số liệu chi tiết.
 
