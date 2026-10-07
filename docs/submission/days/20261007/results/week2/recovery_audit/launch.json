@@ -1,0 +1,12 @@
+{
+  "launched_at": "2026-10-07T10:12:59.8717834Z",
+  "launcher_pid": 73576,
+  "workers": 30,
+  "ram_reserve_gib": 5,
+  "batch_timeout_seconds": 21600,
+  "resume_from_completed": 412,
+  "remaining_seed_jobs": 88,
+  "recovery": "bounded_windows_atomic_replace_retry",
+  "stdout_path": "E:\\AI\\vric\\gsm-ride-hailing\\.cache\\week2-evaluation-574cf501-20261007\\week2_reporting\\parallel_runner_30w_io_recovery_20261007T171259.stdout.log",
+  "stderr_path": "E:\\AI\\vric\\gsm-ride-hailing\\.cache\\week2-evaluation-574cf501-20261007\\week2_reporting\\parallel_runner_30w_io_recovery_20261007T171259.stderr.log"
+}

@@ -139,11 +139,30 @@ Supply, matching/charging simulation, DiD and field switchback are next-phase wo
 
 The [shared data contract](docs/GSM_DATA_CONTRACT.md) requests eight raw source
 groups over the latest 12 months and defines formats and stage inputs/outputs.
-The separate Swissmetro choice benchmark is not yet implemented in this PoC.
+The separate Swissmetro choice benchmark is implemented with person-level
+holdouts, availability-aware multinomial logit and an intercept-only comparator.
+The full repeated-seed coverage protocol has a frozen batch/checkpoint runner.
+The separate development policy benchmark fits on train, selects constant grid
+prices on validation, and scores frozen decisions using independent test truth:
+
+```powershell
+uv run python -m gsm_poc.policy_benchmark --config configs/policy_development.toml --run-id week2-policy-final-32001-32020
+```
+
+It reports normalized simulated gross booking value, uplift, regret and paired
+seed uncertainty. This is evidence C with fixed quote traffic and no capacity or
+cost model; it does not establish GSM revenue or interval calibration.
+See [week-2 execution and resume instructions](docs/WEEK_2_BENCHMARKS.md) and
+[measured results/status](docs/submission/days/20261007/weekly_report.md); full coverage acceptance is pending.
 
 ## Current PoC submission
 
-The [PoC submission documents](docs/submission_20261004/README.md) include
-a technical report PDF, a short progress update and a solo contributor's work plan.
-The documents compare current progress with the
+Submission packages are saved in [docs/submission](docs/submission/README.md)
+under `days/YYYYMMDD/`. The latest package has a
+[Week 2 PoC report](docs/submission/days/20261007/weekly_report.md) and a
+[short progress update](docs/submission/days/20261007/progress_update.md).
+
+The [October 4 submission archive](docs/submission/days/20261004/README.md)
+retains the earlier report, progress update, contributor plan and attachments.
+The reports compare current progress with the
 [full initial proposal](docs/general/GSM_Causal_Marketplace_Proposal.md).

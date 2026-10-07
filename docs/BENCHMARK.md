@@ -9,13 +9,19 @@ It must allow zero uplift, negative uplift and a simpler estimator winning.
 | Layer | What it establishes | Current status |
 |---|---|---|
 | Controlled method benchmark | Recovery of known effects under specified assumptions | Implemented in `evaluate.py`; executed results in `VALIDATION.md` |
-| Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Proposed extension; not implemented or executed |
+| Separate Swissmetro choice baseline | Predictive choice performance on held-out people | Implemented in `swissmetro.py`; MNL versus intercept-only results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
+| Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy_benchmark.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | GSM offline policy evaluation | Estimated value under verified real-data identification and support | Requires GSM logs and a separate evaluator |
 | GSM randomized validation | Incremental realized revenue under the tested deployment | Requires a designed and executed GSM experiment |
 
 Good effect estimates do not by themselves establish revenue uplift. The existing
 scenario engine outputs simulated quote choices with a fixed viewer population;
 it does not output actual revenue, completed trips or profit.
+
+The reporting coverage protocol is now running from a frozen snapshot in batches
+of at most five seeds. It uses seeds 20001–20100; the runtime probe 19001 is not
+included in reporting. See [execution/resume instructions](WEEK_2_BENCHMARKS.md).
+Execution completion and statistical acceptance remain separate statuses.
 
 ## 1. Method benchmark
 
@@ -56,7 +62,52 @@ This fresh-seed run completed as `20261003T135730-1ae94396`: all 100 seed jobs
 finished with no failed jobs. Its measured results and limitations are recorded
 in [VALIDATION.md](VALIDATION.md#fresh-seed-point-accuracy-benchmark).
 
-## 2. Proposed pricing-policy benchmark
+## 2. Controlled pricing-policy benchmark
+
+The initial implementation uses `configs/policy_development.toml`: independent
+seeds **32001–32020**, RCT_SYN and OBSERVED_CONFOUNDING, synthetic contexts,
+7,440 blocks / 372,000 quote sessions per seed, 50-tree nuisance forests,
+five original-day folds and no day-bootstrap refits. This development protocol
+is separate from the frozen 500-job coverage evaluation.
+
+Both X and Y are declared owned hypothetical services, each with a normalized
+baseline fare of 1. The policy class is one constant joint price action for all
+contexts. Every method uses the same nine-action grid. Unchanged prices and a
+prespecified 10% X discount with unchanged Y are the simple comparators. Support
+requires at least one training block per joint action and zone/weekend/peak
+stratum; that development minimum does not establish operational overlap.
+
+Models fit training days only. Each learner selects the highest predicted gross
+booking value on validation, checking each candidate's support and probability
+simplex. Ties prefer unchanged prices, then grid order. Decisions are saved in
+`selected_policies.json` before the evaluator accesses test truth. The evaluator
+joins held-out oracle baselines by dataset/block keys and applies the known DGP
+matrix, independently of the learner. Its upper reference is the best constant
+test action within the same train-supported grid. Unchanged nonintervention is
+always retained as the fallback/reference; a support or learning failure is
+recorded explicitly. Test rejection records an unavailable value and never
+selects a replacement using test results.
+
+Run the fixed development profile:
+
+```powershell
+.venv/Scripts/python.exe -m gsm_poc.policy_benchmark --config configs/policy_development.toml --run-id week2-policy-final-32001-32020
+```
+
+`runs/<run_id>/policy/` contains the frozen protocol, per-seed decisions/results,
+model bundles, `seed_results.csv`, `summary.csv`, `paired_differences.csv` and
+`report.json`. The run manifest records config/code/lock/environment and every
+output checksum. Repeating the command reuses verified completed outputs;
+changing code/config/environment requires a new run ID. An interrupted policy
+stage is recomputed in full; its per-seed files are audit records, unlike the
+resumable coverage checkpoints.
+
+Summary intervals are unadjusted 95% Student-t intervals for means across
+independent seeds, including paired policy differences on common test contexts.
+They describe development variability across seeds, not day-bootstrap calibration
+or uncertainty for one deployed policy. Failed values retain attempted/expected
+denominators; fallback values retain learning failures and reasons. Zero or
+negative uplifts and ties are kept.
 
 ### Freeze the business objective
 

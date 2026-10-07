@@ -10,7 +10,7 @@ Phiên bản này đã triển khai pipeline dữ liệu, bộ sinh hành vi có
 
 Mục tiêu hiện tại là kiểm tra phương pháp và tính tái lập. Giá trị kinh doanh cần đo bằng doanh thu thực thu và biên đóng góp GSM; hiện chưa có dữ liệu hoặc bằng chứng doanh thu GSM.
 
-PoC do một người thực hiện, đồng thời chịu trách nhiệm nộp báo cáo. Báo cáo đối chiếu mục tiêu dự án trong [proposal ban đầu](../general/GSM_Causal_Marketplace_Proposal.md), theo yêu cầu cập nhật ngày 29/9.
+PoC do một người thực hiện, đồng thời chịu trách nhiệm nộp báo cáo. Báo cáo đối chiếu mục tiêu dự án trong [proposal ban đầu](../../../general/GSM_Causal_Marketplace_Proposal.md), theo yêu cầu cập nhật ngày 29/9.
 
 | Mục tiêu trong proposal | Trạng thái PoC hiện tại |
 |---|---|
@@ -40,7 +40,7 @@ Dữ liệu gốc được giữ nguyên và gắn SHA-256; không tự loại b
 
 240 mẫu bối cảnh vùng/giờ/cuối tuần chỉ dùng ngày 01–20/01, không cần fallback. TLC thiếu phiên không đặt, phương án không chọn và cơ chế gán chính sách; không xác định chuyển đổi hay độ co giãn GSM.
 
-[Yêu cầu dữ liệu gốc](<../GSM Causal Marketplace - Data Requirements.pdf>) bổ sung EPFL Swissmetro cho benchmark lựa chọn độc lập. Trong PoC hiện tại, Swissmetro **chưa được tải, chưa có baseline hoặc kết quả kiểm thử**; các thực nghiệm đã báo cáo chỉ dùng TLC và dữ liệu tổng hợp/bán tổng hợp. Số liệu kiểm tra Swissmetro trong PDF nguồn không phải kết quả của phiên bản này. Khi triển khai, hai benchmark public chạy riêng; không nối bản ghi hoặc chuyển hệ số giữa New York, Thụy Sĩ và GSM.
+[Yêu cầu dữ liệu gốc](<../../../GSM Causal Marketplace - Data Requirements.pdf>) bổ sung EPFL Swissmetro cho benchmark lựa chọn độc lập. Trong PoC hiện tại, Swissmetro **chưa được tải, chưa có baseline hoặc kết quả kiểm thử**; các thực nghiệm đã báo cáo chỉ dùng TLC và dữ liệu tổng hợp/bán tổng hợp. Số liệu kiểm tra Swissmetro trong PDF nguồn không phải kết quả của phiên bản này. Khi triển khai, hai benchmark public chạy riêng; không nối bản ghi hoặc chuyển hệ số giữa New York, Thụy Sĩ và GSM.
 
 ## 3. Phương pháp và nhận diện nhân quả
 
@@ -135,7 +135,7 @@ Với GSM, thống nhất doanh thu thực thu và chi phí biến đổi trư�
 
 ## 8. Dữ liệu GSM cần cung cấp và tái lập
 
-Danh mục thống nhất cho toàn bộ proposal theo [GSM Causal Marketplace — Data Requirements](<../GSM Causal Marketplace - Data Requirements.pdf>): **12 tháng gần nhất** của các dịch vụ/khu vực liên quan, gồm vùng lân cận và đối chứng; mở rộng lịch sử nếu cần bao phủ thay đổi chính sách. Nguồn lưu ngắn hơn cung cấp toàn bộ phần hiện có và ghi độ phủ. Giữ cả trường hợp không đặt, hủy, timeout, không có xe và tài xế không có chuyến.
+Danh mục thống nhất cho toàn bộ proposal theo [GSM Causal Marketplace — Data Requirements](<../../../GSM Causal Marketplace - Data Requirements.pdf>): **12 tháng gần nhất** của các dịch vụ/khu vực liên quan, gồm vùng lân cận và đối chứng; mở rộng lịch sử nếu cần bao phủ thay đổi chính sách. Nguồn lưu ngắn hơn cung cấp toàn bộ phần hiện có và ghi độ phủ. Giữ cả trường hợp không đặt, hủy, timeout, không có xe và tài xế không có chuyến.
 
 | Nhóm nguồn dữ liệu gốc | Bảng/log hiện hữu và nội dung chính |
 |---|---|
@@ -166,4 +166,4 @@ Run benchmark 20 seed dùng `evaluate --config configs/demo.toml --seed 10001 --
 
 Manifest hai run ghi revision lúc đo `c2d24a2` và SHA code `8af06450fdbbc7269ad493bc92743e830f5270516e1273ef26f182f1040a4e2e`; SHA code nhận diện nội dung thực nghiệm, không chứng minh nội dung đã được push. SHA tệp TLC: `9897de352aa52cea36b70348cc6721b8d4494327ce39c85f0dba83d86ecaa098`. Run toàn tháng `20261003T131251-0b5e2209` chỉ dựng dữ liệu, không chạy benchmark 100 seed.
 
-Tài liệu đối chiếu trong repo: [proposal ban đầu](../general/GSM_Causal_Marketplace_Proposal.md), `docs/VALIDATION.md`, `docs/IDENTIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/BENCHMARK.md`, `docs/GSM_DATA_CONTRACT.md`. Tham chiếu kỹ thuật: [EconML LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html); nguồn dữ liệu: [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
+Tài liệu đối chiếu trong repo: [proposal ban đầu](../../../general/GSM_Causal_Marketplace_Proposal.md), `docs/VALIDATION.md`, `docs/IDENTIFICATION.md`, `docs/ARCHITECTURE.md`, `docs/BENCHMARK.md`, `docs/GSM_DATA_CONTRACT.md`. Tham chiếu kỹ thuật: [EconML LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html); nguồn dữ liệu: [TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).

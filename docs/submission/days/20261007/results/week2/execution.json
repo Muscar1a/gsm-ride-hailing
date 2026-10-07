@@ -1,0 +1,31 @@
+{
+  "backend": "cpu_parallel",
+  "workers": 30,
+  "started_at": "2026-10-07T10:13:05.115790+00:00",
+  "spec_hash": "f2f405f8ca5d4a2962628f4487224ea003c1bb9c01fc6abb679910d8e9747715",
+  "coordinator_sha256": "4c80b432f393c1651c6724f2fbf88e9689777ced843d11b22ecac5635f95f8db",
+  "initial_completed_seeds": {
+    "RCT_SYN": 100,
+    "OBSERVED_CONFOUNDING": 100,
+    "NULL_EFFECT": 100,
+    "HIDDEN_CONFOUNDING": 100,
+    "COLLINEAR_PRICE": 10
+  },
+  "batch_size": 5,
+  "batch_timeout_seconds": 21600,
+  "native_threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1"
+  },
+  "model_change": false,
+  "checkpoint_io_adapter_sha256": "e2e26af4df936b89771fe509e2b085ff25382d59b813c8dc6b4e572d6853b55d",
+  "checkpoint_replace_attempts": 8,
+  "ram_reserve_gib": 5.0,
+  "dispatch_headroom_gib": 1.0,
+  "startup_reservation_seconds": 10,
+  "memory_wait_timeout_seconds": 600,
+  "finished_at": "2026-10-07T10:13:28.287558+00:00",
+  "process_status": "finished",
+  "minimum_available_ram_gib": 22.893451690673828
+}

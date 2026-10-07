@@ -1,0 +1,21 @@
+[project]
+name = "policy-development"
+context_mode = "synthetic"
+
+[simulation]
+seed = 32001
+slot_minutes = 30
+sessions_per_block = 50
+dgp = "RCT_SYN"
+
+[model]
+estimators = ["naive_ols", "adjusted_ols", "dml"]
+n_trees = 50
+folds = 5
+# Development support rule, declared before evaluation; not production adequacy.
+min_price_cell_count = 1
+
+[evaluation]
+seeds = 20
+bootstrap_draws = 0
+dgps = ["RCT_SYN", "OBSERVED_CONFOUNDING"]

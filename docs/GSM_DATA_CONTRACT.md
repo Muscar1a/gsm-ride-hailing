@@ -139,7 +139,7 @@ a DML model alone is not a full response bundle.
 |---|---|---|
 | NYC TLC HVFHV, version pinned in manifests | Schema, completed-trip marts, context; implemented | Missing quotes/nonbookers/failed requests/driver-online/bonus/SOC; realized fares are not prechoice quotes; platforms are not GSM services |
 | Synthetic/semi-synthetic with truth | Effect recovery; tests for implemented supply/simulator/solver components | Behavior is evidence C; isolate oracle from fitting/scenarios. Supply/simulator/solver remain planned |
-| EPFL Swissmetro | Separate choice baseline; implementation remains pending in validation | Stated preference; `CHOICE=0` is unknown; travel time/headway are not pickup ETA; never join to TLC/GSM |
+| EPFL Swissmetro | Separate choice baseline implemented; person-level holdout and results in validation; [EPFL](https://biogeme.epfl.ch/) lists research/education use | Stated preference; `CHOICE=0` is unknown; travel time/headway are not pickup ETA; never join to TLC/GSM; dataset-specific license and permission beyond research/education remain unconfirmed |
 | GSM | Fit/calibration/economics/experiments when sources qualify | Raw data unavailable; public/synthetic coefficients cannot be transferred directly |
 
 A/B/C describe effect evidence, not raw observations. Synthetic effects are C;

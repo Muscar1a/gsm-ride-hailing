@@ -1,0 +1,29 @@
+{
+  "backend": "cpu_parallel",
+  "workers": 30,
+  "started_at": "2026-10-07T06:09:48.188431+00:00",
+  "spec_hash": "f2f405f8ca5d4a2962628f4487224ea003c1bb9c01fc6abb679910d8e9747715",
+  "coordinator_sha256": "19280043064ab697602f476997957b24ad5029b2edcf2fdba3660529ca9c702e",
+  "initial_completed_seeds": {
+    "RCT_SYN": 80,
+    "OBSERVED_CONFOUNDING": 0,
+    "NULL_EFFECT": 0,
+    "HIDDEN_CONFOUNDING": 0,
+    "COLLINEAR_PRICE": 0
+  },
+  "batch_size": 5,
+  "batch_timeout_seconds": 21600,
+  "native_threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1"
+  },
+  "model_change": false,
+  "ram_reserve_gib": 5.0,
+  "dispatch_headroom_gib": 1.0,
+  "startup_reservation_seconds": 10,
+  "memory_wait_timeout_seconds": 600,
+  "finished_at": "2026-10-07T09:57:44.950783+00:00",
+  "process_status": "failed",
+  "minimum_available_ram_gib": 13.797306060791016
+}

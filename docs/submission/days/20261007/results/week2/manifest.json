@@ -1,0 +1,36 @@
+{
+  "finished_at": "2026-10-07T10:13:28.287558+00:00",
+  "source_snapshot": "E:\\AI\\vric\\gsm-ride-hailing\\.cache\\week2-evaluation-574cf501-20261007",
+  "evidence_level": "C",
+  "completed_seed_jobs": 500,
+  "failed_checkpoint_seeds": 0,
+  "completed_seeds_by_dgp": {
+    "RCT_SYN": 100,
+    "OBSERVED_CONFOUNDING": 100,
+    "NULL_EFFECT": 100,
+    "HIDDEN_CONFOUNDING": 100,
+    "COLLINEAR_PRICE": 100
+  },
+  "reporting_seeds": [
+    20001,
+    20100
+  ],
+  "bootstrap_draws_for_identified_estimators": 199,
+  "spec_hash": "f2f405f8ca5d4a2962628f4487224ea003c1bb9c01fc6abb679910d8e9747715",
+  "original_412_checkpoints_unchanged": true,
+  "statistical_acceptance": "pending review of coverage, NULL_EFFECT and stress cases",
+  "files": {
+    "evaluation_metrics.csv": "9cee52901c25189b7808266f649ff49088a5965b16b570d5399ba8b24b5801dc",
+    "execution.json": "e3974ee7083f64bcac97774c7a7363a56303346192b9c812dffd045cb73a9b9c",
+    "frozen_spec.json": "8fda615108bc06365320bdbf41fa5ded3e19423630efd360a6767c2c61e61af1",
+    "recovery_audit/after_resume.json": "7c733695ffbcfcb41e1824179644c2f8d2123bde82aa84c5b26bbac6353d5f30",
+    "recovery_audit/before_execution.json": "204ee1d548c9277901f1a94e3cc6a7522eaf8704bcaa82a692561dea30d374e4",
+    "recovery_audit/before_resume.json": "9f71d76c33dbcd75c02498e702fc3e5979f51ff94af7ee82c7b71c5dd5eacc8e",
+    "recovery_audit/before_status.json": "b83927960c211c0a5230912e4110bd8c6466a62969e110ddc967d3e329fc1fc7",
+    "recovery_audit/launch.json": "88f379399777588af26ee21ccd62756e27b155467aa047dafcc08278e0d9d60e",
+    "reproducibility.zip": "c01d120ef173d302aa8c48892c7eaacd68a113241c2dc52ef892bcca4143c726",
+    "seed_metrics.parquet": "37b603a12e432d075be30d2048eb4c90d52a29cfe11b439314a4bfa3100f3916",
+    "status.json": "dfbaa9a2a75162252257e2c8e31a42657ccb1f89739c43e105be92261f2fa64b",
+    "README.md": "a9526f7dd50335a34311423118ee992102b35d64ef4d76d52275db4b128b971f"
+  }
+}

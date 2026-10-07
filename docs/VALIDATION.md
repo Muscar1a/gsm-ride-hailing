@@ -1,5 +1,29 @@
 # Executed validation
 
+## Weekly reports
+
+PoC reports and short progress updates are saved in
+`docs/submission/days/YYYYMMDD/`, using the report cutoff date. The latest report is
+[Week 2 — 2026-10-07](submission/days/20261007/weekly_report.md): Swissmetro and the
+independent development policy-value benchmark completed;
+full repeated-seed coverage is running and statistical acceptance remains pending.
+See the [short progress update](submission/days/20261007/progress_update.md).
+See the [weekly report index](submission/README.md).
+
+The October 7 final policy implementation passed **131 tests in 40.95 seconds**,
+Ruff lint/format checks (36 files including scripts), and ty 0.0.82 on all
+`src/gsm_poc` with `--error-on-warning`. The policy run has 40 synthetic seed jobs,
+240 valid policy values and seven recorded simple-rule fallbacks. Final manifests
+and reuse were verified; rerunning Swissmetro produced unchanged metrics and
+predictions. See the [acceptance review](submission/days/20261007/acceptance_review.md)
+for exact run IDs, hashes, cutoff and open gates. These checks do not rerun the
+historical TLC/browser measurements below. Remote CI remains unverified.
+
+## Historical validation — 2026-10-03
+
+The results below retain the October 3 snapshot. Statements about pending work
+refer to that date; later progress is recorded in the weekly reports above.
+
 Verified locally on 2026-10-03, using Windows, Python 3.11.9, uv 0.10.12,
 and the checked-in `uv.lock`. Run manifests record package versions, source code
 hash, lock hash, effective configuration, data hashes, timings and failures.

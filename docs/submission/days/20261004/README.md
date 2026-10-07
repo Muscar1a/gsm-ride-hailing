@@ -1,12 +1,19 @@
+> Bản lưu hồ sơ ngày 04/10/2026 đã nộp theo xác nhận của người thực hiện.
+> Nội dung bên dưới giữ trạng thái tại lúc soạn; các đường dẫn được cập nhật khi đổi thư mục.
+
+Ghi chú lưu trữ: hồ sơ dưới dẫn `GSM Causal Marketplace - Data Requirements.pdf`,
+nhưng tệp nguồn đó không có trong checkout này. Tài liệu yêu cầu dữ liệu hiện
+có trong repo là [GSM_DATA_CONTRACT.md](../../../GSM_DATA_CONTRACT.md).
+
 # Submission documents — 04 October 2026
 
 Prepared in Vietnamese for the current PoC submission by the sole contributor,
 **Nguyễn Thành An** (`26ai.annt@vinuni.edu.vn`).
-The [full initial proposal](../general/GSM_Causal_Marketplace_Proposal.md) supplies the
+The [full initial proposal](../../../general/GSM_Causal_Marketplace_Proposal.md) supplies the
 objectives and five-week plan used to report progress. Current work covers only
 part of that scope; GSM-dependent conditions remain.
 
-The supplied [GSM Causal Marketplace - Data Requirements.pdf](<../GSM Causal Marketplace - Data Requirements.pdf>)
+The supplied [GSM Causal Marketplace - Data Requirements.pdf](<../../../GSM Causal Marketplace - Data Requirements.pdf>)
 is the source for the data request: eight raw source groups, the latest 12 months
 and nearby/control areas. Native schemas and existing log frequency are retained.
 The researcher handles schema mapping, joins and features. The requested
@@ -36,7 +43,7 @@ controlled synthetic/semi-synthetic choices.
 5. The sole contributor submits the package by email to TS. Lê Duy Dũng
    (`dung.ld@vinuni.edu.vn`) by Sunday, **04/10/2026**. No email has been sent.
 
-The technical report uses results recorded in [VALIDATION.md](../VALIDATION.md).
+The technical report uses results recorded in [VALIDATION.md](../../../VALIDATION.md).
 Simulated choices are method-validation evidence; actual GSM revenue uplift,
 policy-value benchmarking and repeated-seed interval calibration remain unmeasured.
 
