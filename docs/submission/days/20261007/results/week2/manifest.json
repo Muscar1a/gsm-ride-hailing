@@ -31,6 +31,27 @@
     "reproducibility.zip": "c01d120ef173d302aa8c48892c7eaacd68a113241c2dc52ef892bcca4143c726",
     "seed_metrics.parquet": "37b603a12e432d075be30d2048eb4c90d52a29cfe11b439314a4bfa3100f3916",
     "status.json": "dfbaa9a2a75162252257e2c8e31a42657ccb1f89739c43e105be92261f2fa64b",
-    "README.md": "a9526f7dd50335a34311423118ee992102b35d64ef4d76d52275db4b128b971f"
+    "README.md": "5e11c80a19616bd903b6379c0f719909a921b5e08048c8fe82a7e3729ce1fdb2"
+  },
+  "documentation_update": {
+    "date": "2026-10-08",
+    "reason": "Remove obsolete redirect and synchronize README navigation and acceptance wording",
+    "changed_files": [
+      "README.md",
+      "checksums.sha256",
+      "manifest.json"
+    ],
+    "original_sha256": {
+      "README.md": "a9526f7dd50335a34311423118ee992102b35d64ef4d76d52275db4b128b971f",
+      "checksums.sha256": "cae8d940d7c6de3e30db5b2ccaf3aa919db5e5c3c24f04f49e345c829f28aed6",
+      "manifest.json": "34aab9599aed5803a82dabc053b91713c69d5bf6063df75a619a4d6ac77bd316"
+    },
+    "original_git_sha256": {
+      "README.md": "a9526f7dd50335a34311423118ee992102b35d64ef4d76d52275db4b128b971f",
+      "checksums.sha256": "90f289ca269a31580c203c61df5d521f97a809f913e0f8645fa29bdda28d851e",
+      "manifest.json": "e88de2d099e380eb754ff409e8d3d26b2a9035346c3c86338a32508cbfef50d8"
+    },
+    "historical_audit": "statistical_review/audit.json",
+    "preserved_artifacts": "All numerical outputs, frozen spec, execution/recovery metadata, reproducibility archive and statistical audit"
   }
 }

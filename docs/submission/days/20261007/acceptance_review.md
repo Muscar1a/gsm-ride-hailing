@@ -93,9 +93,11 @@ ignored. Các hash dưới định danh bằng chứng, không đồng nhất c�
 
 Revision frozen coverage `574cf501304a777827c2e04704d96a1ab563e1b2`; policy/
 Swissmetro nhận diện bằng source hash ở thời điểm chạy. Revision và script hash
-của rà soát mới ghi riêng trong audit JSON. Gói kết quả gốc được giữ nguyên,
-kể cả metadata `pending review` ở thời điểm xuất; kết luận mới nằm trong hồ
-sơ rà soát. Báo cáo không gán các outputs lịch sử cho HEAD hiện tại.
+của rà soát mới ghi riêng trong audit JSON. Kết quả số, frozen source, archive
+tái lập và audit giữ nguyên. Ngày 08/10/2026, README của gói được cập nhật link
+và kết luận sau rà soát; manifest lưu hash gốc, checksum cập nhật phản ánh gói
+hiện hành. Metadata `pending review` và các hash của audit ngày 07/10 giữ đúng
+mốc xuất/rà soát ban đầu. Báo cáo không gán các outputs lịch sử cho HEAD hiện tại.
 
 ## Điều kiện còn lại để đóng Week 2
 

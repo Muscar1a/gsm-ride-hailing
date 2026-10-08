@@ -2,9 +2,9 @@
 
 - Hình thức thực hiện: **Cá nhân**
 - Người thực hiện: **Nguyễn Thành An — 26ai.annt@vinuni.edu.vn**
-- Mục tiêu Phase 3 làm căn cứ kế hoạch (theo [proposal ban đầu](../../../general/GSM_Causal_Marketplace_Proposal.md)): **Ước lượng ba độ co giãn (cầu theo giá, phản ứng cung, thay thế chéo); tích hợp simulator một cụm; bàn giao dashboard kịch bản và thiết kế switchback.** Đánh giá doanh thu, biên đóng góp và ROI khi đủ dữ liệu. PoC hiện tại thực hiện phần đầu của lộ trình năm tuần.
+- Mục tiêu Phase 3 làm căn cứ kế hoạch (theo [proposal ban đầu](../../../reference/GSM_Causal_Marketplace_Proposal.md)): **Ước lượng ba độ co giãn (cầu theo giá, phản ứng cung, thay thế chéo); tích hợp simulator một cụm; bàn giao dashboard kịch bản và thiết kế switchback.** Đánh giá doanh thu, biên đóng góp và ROI khi đủ dữ liệu. PoC hiện tại thực hiện phần đầu của lộ trình năm tuần.
 - Mã nguồn: **[Muscar1a/gsm-ride-hailing](https://github.com/Muscar1a/gsm-ride-hailing)** — công khai. Demo: chạy cục bộ, chưa có URL công khai.
-- Dữ liệu GSM: theo [tài liệu yêu cầu dữ liệu](<../../../GSM Causal Marketplace - Data Requirements.pdf>), tám nhóm nguồn gốc trong 12 tháng gần nhất; giữ schema gốc, bao gồm vùng lân cận/đối chứng.
+- Dữ liệu GSM: theo tài liệu yêu cầu dữ liệu (PDF nguồn không có trong checkout), tám nhóm nguồn gốc trong 12 tháng gần nhất; giữ schema gốc, bao gồm vùng lân cận/đối chứng.
 
 ## Vai trò và phần việc trong PoC hiện tại
 
@@ -12,10 +12,10 @@ Bảng dưới mô tả các phần việc đã có trong PoC cùng bằng chứ
 
 | Vai trò | Phần việc PoC đã hoàn thành | Bằng chứng trong repo |
 |---|---|---|
-| Thiết kế và dữ liệu | Thiết kế phạm vi hai tuần; pipeline TLC, cờ chất lượng, silver và mart; đối soát 970.940 chuyến | `docs/ARCHITECTURE.md`; `docs/VALIDATION.md`; `src/gsm_poc/` |
-| Mô hình và đánh giá | Bộ sinh năm DGP; baseline OLS, DML và bootstrap; benchmark 20 seed mỗi DGP; một run TLC-context với 199 refit mỗi estimator | `docs/IDENTIFICATION.md`; `docs/VALIDATION.md`; manifest các run đã ghi |
+| Thiết kế và dữ liệu | Thiết kế phạm vi hai tuần; pipeline TLC, cờ chất lượng, silver và mart; đối soát 970.940 chuyến | `docs/ARCHITECTURE.md`; `docs/submission/days/20261003/validation.md`; `src/gsm_poc/` |
+| Mô hình và đánh giá | Bộ sinh năm DGP; baseline OLS, DML và bootstrap; benchmark 20 seed mỗi DGP; một run TLC-context với 199 refit mỗi estimator | `docs/IDENTIFICATION.md`; `docs/submission/days/20261003/validation.md`; manifest các run đã ghi |
 | Kịch bản và demo | Kịch bản giá có kiểm tra hỗ trợ; dashboard ba màn hình; xuất CSV/JSON | `src/gsm_poc/scenario.py`; `src/gsm_poc/app.py`; `README.md` |
-| Kiểm chứng và báo cáo | 42 kiểm thử; lint/format; tám kiểm tra browser; báo cáo kỹ thuật, cập nhật tiến độ và đề xuất dữ liệu GSM | `tests/`; `scripts/check_dashboard.py`; `docs/VALIDATION.md`; hồ sơ hiện tại |
+| Kiểm chứng và báo cáo | 42 kiểm thử; lint/format; tám kiểm tra browser; báo cáo kỹ thuật, cập nhật tiến độ và đề xuất dữ liệu GSM | `tests/`; `scripts/check_dashboard.py`; `docs/submission/days/20261003/validation.md`; hồ sơ hiện tại |
 
 ## Kế hoạch cá nhân cho giai đoạn tiếp theo
 

@@ -20,7 +20,9 @@ src/gsm_poc/
   cli.py, __main__.py      python -m gsm_poc
   app.py                  Streamlit artifact reader
 tests/                    deterministic fixtures and behavior coverage
-docs/                     scope, identification, data contract, validation
+docs/                     active roadmap, contract, architecture and protocols
+docs/reference/           proposal and target engine design
+docs/submission/          dated reports and preserved result bundles
 data/bronze/              source bytes and source manifests (ignored)
 data/silver/, data/gold/   versioned observed artifacts (ignored)
 data/synthetic/<id>/
@@ -78,6 +80,21 @@ The CLI implements `ingest`, `build`, `generate`, `fit`, `evaluate`, `scenario`,
 `run-all`. Dataset and model run IDs explicitly select dependent artifacts.
 Synthetic mode can run without network access or TLC data. TLC mode never
 substitutes synthetic trips for missing observed records.
+
+## Dashboard conventions
+
+The Streamlit workbench uses a run/DGP/seed selector and three sections:
+Operations, Method checks, and Price scenarios, with exports and interpretation
+notes beside the outputs. Charts read computed artifacts. Source, support and
+uncertainty labels remain adjacent to results.
+
+The existing Hallmark design uses cool paper, restrained cobalt, Bahnschrift
+display text and Segoe UI body text. Portable values live in `tokens.css`;
+layout styling lives in `src/gsm_poc/ui.css` and native Streamlit theme settings.
+Widgets use native state/loading/error feedback, immediate focus rings and
+reduced-motion support. Tables retain local horizontal scrolling on narrow screens.
+The historical browser QA record is in
+[historical validation](submission/days/20261003/validation.md#browser-verification).
 
 ## Statistical contract
 

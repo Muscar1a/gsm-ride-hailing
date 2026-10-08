@@ -1,14 +1,14 @@
 # Benchmark protocol: method accuracy and business value
 
-## Objective and current status
+## Objective and protocol
 
 The benchmark should establish where the method works, whether it supports better
 pricing decisions, and eventually whether those decisions improve GSM's business.
 It must allow zero uplift, negative uplift and a simpler estimator winning.
 
-| Layer | What it establishes | Current status |
+| Layer | What it establishes | Implementation / evidence |
 |---|---|---|
-| Controlled method benchmark | Recovery of known effects under specified assumptions | Implemented in `evaluate.py`; executed results in `VALIDATION.md` |
+| Controlled method benchmark | Recovery of known effects under specified assumptions | Implemented in `evaluate.py`; reporting results in the [Week 2 report](submission/days/20261007/weekly_report.md), earlier measurements in [historical validation](submission/days/20261003/validation.md) |
 | Separate Swissmetro choice baseline | Predictive choice performance on held-out people | Implemented in `swissmetro.py`; MNL versus intercept-only results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy_benchmark.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | GSM offline policy evaluation | Estimated value under verified real-data identification and support | Requires GSM logs and a separate evaluator |
@@ -18,10 +18,13 @@ Good effect estimates do not by themselves establish revenue uplift. The existin
 scenario engine outputs simulated quote choices with a fixed viewer population;
 it does not output actual revenue, completed trips or profit.
 
-The reporting coverage protocol is now running from a frozen snapshot in batches
-of at most five seeds. It uses seeds 20001–20100; the runtime probe 19001 is not
-included in reporting. See [execution/resume instructions](WEEK_2_BENCHMARKS.md).
-Execution completion and statistical acceptance remain separate statuses.
+The reporting coverage protocol uses a frozen snapshot, batches of at most five
+seeds, and reporting seeds 20001–20100. Runtime probe 19001 is excluded.
+[Execution and resume instructions](#reporting-execution-and-compute-provenance)
+below record the frozen source and executed CPU schedule. Current progress is
+indexed in [README.md](README.md); gate
+conclusions are recorded in the [acceptance review](submission/days/20261007/acceptance_review.md).
+Execution completion and statistical acceptance are separate statuses.
 
 ## 1. Method benchmark
 
@@ -60,7 +63,7 @@ machine. Point accuracy and interval calibration are separate reporting gates.
 
 This fresh-seed run completed as `20261003T135730-1ae94396`: all 100 seed jobs
 finished with no failed jobs. Its measured results and limitations are recorded
-in [VALIDATION.md](VALIDATION.md#fresh-seed-point-accuracy-benchmark).
+in [VALIDATION.md](submission/days/20261003/validation.md#fresh-seed-point-accuracy-benchmark).
 
 ## 2. Controlled pricing-policy benchmark
 
@@ -230,3 +233,101 @@ inconclusive. A losing policy is a valid benchmark outcome.
 Only an executed, appropriately analyzed GSM study can support a claim about
 GSM revenue impact in the population, prices and operating conditions tested.
 Neither synthetic recovery nor simulated policy uplift establishes that claim.
+
+## 5. Reproducing Week 2 benchmarks
+
+Run commands from the repository root with the configured environment.
+Metrics and acceptance remain in the dated submission records.
+
+### Swissmetro choice baseline
+
+Download the public source without modifying it:
+
+```powershell
+New-Item -ItemType Directory -Force data/raw/swissmetro
+Invoke-WebRequest -Uri https://transp-or.epfl.ch/data/swissmetro.dat -OutFile data/raw/swissmetro/swissmetro.dat -TimeoutSec 60
+.venv/Scripts/python.exe -m gsm_poc.swissmetro --seed 31001
+```
+
+The module uses existing NumPy/SciPy dependencies; Biogeme is not required.
+The fixed specification is two alternative-specific constants (Swissmetro
+reference) and generic time/cost coefficients. The comparator fits only the
+two constants. Both normalize over available alternatives.
+
+All SP trip purposes are retained; unknown `CHOICE=0` and non-SP rows are
+excluded with counts. Exact duplicate attributes are retained as separate
+survey tasks. Time and cost are minutes and CHF, scaled by 100 for fitting.
+The EPFL preparation convention sets incremental Train/Swissmetro cost to
+zero for annual GA pass holders. No headway is interpreted as pickup ETA.
+
+Seed 31001 permutes sorted person IDs into 70%/15%/15% train/validation/test
+groups. Repeated responses stay together. Both models are specified before
+evaluation, fit on train only, and reported on every split. There is no tuning
+or selection on final test. `source_row` identifies a preserved source task;
+`person_id` identifies the repeated respondent.
+
+Outputs under `runs/<run_id>/swissmetro/`:
+
+- `source_manifest.json`: source/dictionary/preparation URLs, SHA-256, byte
+  count, verification time, and license limitation.
+- `splits.json`: person membership and row counts.
+- `report.json`: quality/exclusion counts, coefficients, optimizer/rank
+  diagnostics, test log-loss difference, units and limitations.
+- `metrics.csv` and `predictions.parquet`: row/person mean log loss, accuracy,
+  probabilities and availability checks.
+
+Use the printed run ID with `--run-id` to verify/reuse unchanged outputs.
+Changed source bytes, code, environment or configuration invalidate reuse.
+Raw data and run artifacts are ignored. The
+[EPFL/Biogeme Data section](https://biogeme.epfl.ch/) explicitly lists these
+datasets for research and education (reviewed 2026-10-07). This supplies use
+evidence for the academic PoC. A dataset-specific license and redistribution
+or commercial permission remain unconfirmed; do not infer them from the
+software license. This supplementary review does not rewrite the sealed run's
+source manifest or outputs.
+
+References: [EPFL dictionary](https://transp-or.epfl.ch/biogeme-2.5/swissmetro.pdf),
+[EPFL preparation](https://biogeme.epfl.ch/sphinx/_modules/biogeme/data/swissmetro.html),
+[MNL specification](https://biogeme.epfl.ch/sphinx/auto_examples/swissmetro/plot_b01a_logit.html).
+
+### Reporting execution and compute provenance
+
+The reporting run uses seeds 20001–20100 for all five DGPs, with 199 original-day
+bootstrap refits per identified estimator. Probe 19001 is excluded. The executed
+snapshot is `.cache/week2-evaluation-574cf501-20261007`, with TLC context build
+`214dd5a1184bd3705e66` from revision
+`574cf501304a777827c2e04704d96a1ab563e1b2`.
+
+The original sequential runner accepts the following command:
+
+```powershell
+.venv/Scripts/python.exe scripts/run_week2_coverage.py --snapshot .cache/week2-evaluation-574cf501-20261007 --build-id 214dd5a1184bd3705e66
+```
+
+The final reporting execution used the parallel coordinator with at most
+30 workers, a 5 GiB RAM reserve, batches of five seeds and a six-hour batch timeout:
+
+```powershell
+.venv/Scripts/python.exe -u scripts/run_week2_parallel.py --snapshot .cache/week2-evaluation-574cf501-20261007 --build-id 214dd5a1184bd3705e66 --workers 30 --ram-reserve-gib 5 --batch-timeout-seconds 21600
+```
+
+Do not launch another runner while one is active; the shared OS lock rejects it.
+Resume only after the recorded process exits, using the same source, config,
+environment and context. Successful checkpoints are verified and reused;
+an interrupted seed is rerun. Failures stop scheduling and retain useful error
+context. Changed source/config/environment requires a new frozen spec rather
+than rewriting the original evidence.
+
+Outputs reside under `<snapshot>/week2_reporting/`: frozen spec, status,
+execution metadata, pooled metrics and logs. Checkpoints reside under
+`<snapshot>/runs/<batch_id>/evaluation/`. The local snapshot/cache is ignored by
+Git. The [submitted result bundle](submission/days/20261007/results/week2/README.md)
+preserves the frozen source/config/lock/context, scripts, logs and checkpoints in
+`reproducibility.zip`, alongside metrics and checksums.
+
+The final run completed 500/500 jobs on October 7. The snapshot source was kept
+unchanged; the bounded checkpoint I/O adapter and recovery are identified in
+the bundle's `execution.json` and `recovery_audit/`. Numerical results, recovery
+hashes and acceptance are recorded in the
+[acceptance review](submission/days/20261007/acceptance_review.md) and
+[statistical review](submission/days/20261007/statistical_review.md).

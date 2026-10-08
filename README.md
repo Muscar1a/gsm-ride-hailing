@@ -1,13 +1,26 @@
 # GSM Causal Marketplace PoC
 
+Start with the [documentation index](docs/README.md) for current progress,
+the active roadmap, technical references and submission evidence.
+
 A runnable implementation of the first two weeks in the
-[GSM proposal](docs/general/GSM_Causal_Marketplace_Proposal.md), following the
+[GSM proposal](docs/reference/GSM_Causal_Marketplace_Proposal.md), following the
 [shared data contract](docs/GSM_DATA_CONTRACT.md). It builds operational
 TLC marts, generates controlled X/Y/NONE choices, compares OLS and DML, evaluates
 known effects, and exposes supported price scenarios in Streamlit.
 
 **Simulated behavior is evidence C.** TLC records are completed NYC trips. The
 PoC does not estimate GSM elasticity, supply response, canceled demand or ROI.
+
+## Current status
+
+Latest measured evidence: **2026-10-07 17:13:28, Asia/Bangkok**.
+Week 2 compute and statistical review are complete: 500/500 reporting seed jobs,
+the separate Swissmetro baseline and 40/40 development policy-value jobs have
+results. **Full Week 2 acceptance remains open** for interval-calibration
+limitations, the final demand/choice handoff and reviewer confirmation.
+See the [acceptance review](docs/submission/days/20261007/acceptance_review.md)
+and [roadmap](docs/ROADMAP.md) for evidence and remaining work.
 
 ## Install and run
 
@@ -45,13 +58,13 @@ Synthetic simulations can use other date scopes without claiming observed TLC co
 
 `configs/default.toml` uses all 31 days for operations and targets 100 seeds across
 five DGPs and 199 bootstrap draws. This is an expensive reporting configuration.
-Measure a bounded run first; the profile is not a claim that this evaluation has
-been completed. See [actual validation](docs/VALIDATION.md).
+Measure a bounded run first. Executed profiles and acceptance are recorded in
+the [documentation index](docs/README.md) and its linked evidence.
 
-The verified TLC-context example recorded in [validation](docs/VALIDATION.md) has
+The verified TLC-context example recorded in [validation](docs/submission/days/20261003/validation.md) has
 199 valid bootstrap draws per estimator and a supported scenario with intervals. The full-month
-data build also completed. See the validation record for exact counts, measured
-errors and the remaining 100-seed evaluation.
+data build also completed. This record describes its October 3 run; later
+reporting evidence is linked in [Current status](#current-status).
 
 ## Commands
 
@@ -132,7 +145,8 @@ uv run pytest -q
 
 Tests use deterministic fixtures and no network calls.
 
-See [architecture](docs/ARCHITECTURE.md), [implementation plan](docs/IMPLEMENTATION_PLAN.md),
+See the [documentation index](docs/README.md), [roadmap](docs/ROADMAP.md),
+[architecture](docs/ARCHITECTURE.md),
 [identification](docs/IDENTIFICATION.md), [benchmark protocol](docs/BENCHMARK.md),
 and [GSM data contract](docs/GSM_DATA_CONTRACT.md).
 Supply, matching/charging simulation, DiD and field switchback are next-phase work.
@@ -152,8 +166,9 @@ uv run python -m gsm_poc.policy_benchmark --config configs/policy_development.to
 It reports normalized simulated gross booking value, uplift, regret and paired
 seed uncertainty. This is evidence C with fixed quote traffic and no capacity or
 cost model; it does not establish GSM revenue or interval calibration.
-See [week-2 execution and resume instructions](docs/WEEK_2_BENCHMARKS.md) and
-[measured results/status](docs/submission/days/20261007/weekly_report.md); full coverage acceptance is pending.
+See [week-2 execution and resume instructions](docs/BENCHMARK.md#5-reproducing-week-2-benchmarks) and
+[measured results](docs/submission/days/20261007/weekly_report.md).
+Compute and statistical review are complete; full Week 2 acceptance remains open.
 
 ## Current PoC submission
 
@@ -165,4 +180,4 @@ under `days/YYYYMMDD/`. The latest package has a
 The [October 4 submission archive](docs/submission/days/20261004/README.md)
 retains the earlier report, progress update, contributor plan and attachments.
 The reports compare current progress with the
-[full initial proposal](docs/general/GSM_Causal_Marketplace_Proposal.md).
+[full initial proposal](docs/reference/GSM_Causal_Marketplace_Proposal.md).

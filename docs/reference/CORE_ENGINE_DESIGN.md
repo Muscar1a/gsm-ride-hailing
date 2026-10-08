@@ -7,7 +7,7 @@ and starting values are design choices, not measurements or implementation statu
 
 Sources, formats, grain, units, interfaces, and stage I/O follow
 [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). This document specifies algorithms;
-executed results are recorded in [VALIDATION.md](../VALIDATION.md).
+current progress and executed evidence are indexed in [docs README](../README.md).
 
 ## 1. Objectives and required outputs
 

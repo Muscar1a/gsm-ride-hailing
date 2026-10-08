@@ -163,8 +163,10 @@ seeds 20001–20100. Chưa thực hiện thêm compute trong đợt rà soát n�
 
 ## 6. Bằng chứng và tái lập rà soát
 
-- [Kết quả gốc và manifest](results/week2/README.md) giữ nguyên bytes/hash;
-  metadata `pending review` ở gói xuất phản ánh thời điểm xuất trước rà soát.
+- [Kết quả và manifest](results/week2/README.md) giữ nguyên kết quả số, frozen
+  source và archive tái lập. README/manifest/checksum được cập nhật tài liệu
+  ngày 08/10/2026; manifest ghi hash gốc. Các hash trong audit ngày 07/10 và
+  metadata `pending review` vẫn phản ánh mốc xuất/rà soát ban đầu.
 - [Audit JSON](results/week2/statistical_review/audit.json),
   [60 ô metrics](results/week2/statistical_review/cell_metrics.csv),
   [bảng tổng hợp](results/week2/statistical_review/dgp_estimator_summary.csv) và

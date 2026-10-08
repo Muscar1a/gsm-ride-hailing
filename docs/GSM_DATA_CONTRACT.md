@@ -1,8 +1,9 @@
 # GSM Data Contract and Stage Inputs/Outputs
 
 This is the repository standard for data requests, formats, units, and stage
-interfaces. `docs/general/` describes the design; `docs/task/` defines weekly
-work and acceptance. Executed results are recorded in [VALIDATION.md](VALIDATION.md).
+interfaces. [Reference designs](reference/CORE_ENGINE_DESIGN.md) describe the target
+system; [ROADMAP.md](ROADMAP.md) defines remaining work and integration gates.
+Current progress and executed evidence are indexed in [README.md](README.md).
 GSM interfaces remain proposed until native schemas and adapters are confirmed.
 
 The previously cited `GSM Causal Marketplace - Data Requirements.pdf` is absent

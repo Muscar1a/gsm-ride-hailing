@@ -1,28 +1,16 @@
-# Executed validation
+# Historical validation records
 
-## Weekly reports
-
-PoC reports and short progress updates are saved in
-`docs/submission/days/YYYYMMDD/`, using the report cutoff date. The latest report is
-[Week 2 — 2026-10-07](submission/days/20261007/weekly_report.md): Swissmetro and the
-independent development policy-value benchmark completed;
-full repeated-seed coverage is running and statistical acceptance remains pending.
-See the [short progress update](submission/days/20261007/progress_update.md).
-See the [weekly report index](submission/README.md).
-
-The October 7 final policy implementation passed **131 tests in 40.95 seconds**,
-Ruff lint/format checks (36 files including scripts), and ty 0.0.82 on all
-`src/gsm_poc` with `--error-on-warning`. The policy run has 40 synthetic seed jobs,
-240 valid policy values and seven recorded simple-rule fallbacks. Final manifests
-and reuse were verified; rerunning Swissmetro produced unchanged metrics and
-predictions. See the [acceptance review](submission/days/20261007/acceptance_review.md)
-for exact run IDs, hashes, cutoff and open gates. These checks do not rerun the
-historical TLC/browser measurements below. Remote CI remains unverified.
+This record preserves the measured TLC/model/browser results from October 3.
+Later code checks (131 tests, Ruff and ty on October 7), Swissmetro/policy reruns
+and their manifests are recorded in the
+[Week 2 acceptance review](../20261007/acceptance_review.md).
+Current progress is indexed in the [docs README](../../../README.md);
+the [submission index](../../README.md) links dated reports.
 
 ## Historical validation — 2026-10-03
 
 The results below retain the October 3 snapshot. Statements about pending work
-refer to that date; later progress is recorded in the weekly reports above.
+refer to that date; later progress is indexed in the [docs README](../../../README.md).
 
 Verified locally on 2026-10-03, using Windows, Python 3.11.9, uv 0.10.12,
 and the checked-in `uv.lock`. Run manifests record package versions, source code
@@ -163,7 +151,7 @@ different questions; their results must not be combined into a coverage claim.
 Completed-manifest artifact checksums were verified. Machine-readable results
 are in `runs/20261003T135730-1ae94396/evaluation/evaluation_metrics.csv`, with all
 1,200 coefficient rows in `seed_metrics.parquet`. The planned independent policy
-value and GSM revenue studies are described in [BENCHMARK.md](BENCHMARK.md).
+value and GSM revenue studies are described in [BENCHMARK.md](../../../BENCHMARK.md).
 
 ## TLC-context bootstrap and scenario
 
@@ -212,6 +200,14 @@ GSM impact. All model/scenario artifacts passed completed-manifest checksum
 verification.
 
 ## Browser verification
+
+The dashboard design review used the TLC-context model
+`20261003T130951-df24a7e4` and its 199-draw uncertainty display. Headless Edge
+checked all tabs, outside-support rejection and recovery, and 320/375/414/768 px
+layouts with no page overflow. Screenshots are local QA intermediates in
+`.cache/dashboard-qa-final/`. The local Playwright dependency and installed Edge
+were used because the in-app browser Node runtime was unavailable. This is
+historical evidence, not a fresh browser check during documentation cleanup.
 
 The final TLC-context model was checked through installed headless Edge:
 

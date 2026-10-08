@@ -5,7 +5,7 @@ Problem 06 | Nguyễn Thành An
 Source requirements, formats, grain, units, and stage inputs/outputs follow
 [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). Algorithms follow
 [CORE_ENGINE_DESIGN.md](CORE_ENGINE_DESIGN.md). This document defines the target
-system; executed results are recorded in [VALIDATION.md](../VALIDATION.md).
+system; current progress and executed evidence are indexed in [docs README](../README.md).
 
 ## Problem and scope
 

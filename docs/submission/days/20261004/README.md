@@ -1,68 +1,35 @@
-> Bản lưu hồ sơ ngày 04/10/2026 đã nộp theo xác nhận của người thực hiện.
-> Nội dung bên dưới giữ trạng thái tại lúc soạn; các đường dẫn được cập nhật khi đổi thư mục.
+# Hồ sơ đã nộp — 04/10/2026
 
-Ghi chú lưu trữ: hồ sơ dưới dẫn `GSM Causal Marketplace - Data Requirements.pdf`,
-nhưng tệp nguồn đó không có trong checkout này. Tài liệu yêu cầu dữ liệu hiện
-có trong repo là [GSM_DATA_CONTRACT.md](../../../GSM_DATA_CONTRACT.md).
+**Người thực hiện:** Nguyễn Thành An · Cá nhân.
+Hồ sơ đã nộp theo xác nhận được ghi trong bản lưu. Báo cáo và PDF dưới đây
+phản ánh mốc 04/10; các link nội bộ được cập nhật khi sắp xếp tài liệu.
+Tiến độ hiện tại nằm ở [danh mục docs](../../../README.md),
+[hồ sơ cập nhật 07/10](../20261007/README.md) và
+[roadmap](../../../ROADMAP.md).
 
-# Submission documents — 04 October 2026
+## Tài liệu trong hồ sơ
 
-Prepared in Vietnamese for the current PoC submission by the sole contributor,
-**Nguyễn Thành An** (`26ai.annt@vinuni.edu.vn`).
-The [full initial proposal](../../../general/GSM_Causal_Marketplace_Proposal.md) supplies the
-objectives and five-week plan used to report progress. Current work covers only
-part of that scope; GSM-dependent conditions remain.
-
-The supplied [GSM Causal Marketplace - Data Requirements.pdf](<../../../GSM Causal Marketplace - Data Requirements.pdf>)
-is the source for the data request: eight raw source groups, the latest 12 months
-and nearby/control areas. Native schemas and existing log frequency are retained.
-The researcher handles schema mapping, joins and features. The requested
-Swissmetro choice baseline is pending; current measured work uses TLC and
-controlled synthetic/semi-synthetic choices.
-
-| Required item | Editable source | PDF |
+| Tài liệu | Markdown | PDF |
 |---|---|---|
-| Approximately half-page progress update | [Progress_Update.md](Progress_Update.md) | [Progress_Update.pdf](Progress_Update.pdf) |
-| Technical PoC report | [POC_Technical_Report.md](POC_Technical_Report.md) | [POC_Technical_Report.pdf](POC_Technical_Report.pdf) |
-| Sole contributor's roles, completed work and next tasks | [Team_Allocation.md](Team_Allocation.md) | [Team_Allocation.pdf](Team_Allocation.pdf) |
+| Cập nhật tiến độ | [Progress_Update.md](Progress_Update.md) | [Progress_Update.pdf](Progress_Update.pdf) |
+| Báo cáo kỹ thuật PoC | [POC_Technical_Report.md](POC_Technical_Report.md) | [POC_Technical_Report.pdf](POC_Technical_Report.pdf) |
+| Vai trò và kế hoạch cá nhân | [Team_Allocation.md](Team_Allocation.md) | [Team_Allocation.pdf](Team_Allocation.pdf) |
 
-## Finish before submission
+## Phạm vi tại ngày 04/10
 
-1. Confirm the completed work and the proposed schedule in the allocation
-   document. Nguyễn Thành An is the sole contributor and submitter.
-2. Review progress against the full proposal in the progress update and
-   technical report. Demand/choice validation is evidence C; supply response,
-   the market simulator, switchback and GSM business outcomes remain future work.
-3. Source publication was verified on 04/10/2026: the public
-   [GitHub repository](https://github.com/Muscar1a/gsm-ride-hailing) has the local
-   PoC commit `217e1f4` on `main`. The new submission documents are still local;
-   include their final PDFs as attachments. No public demo URL is available.
-   Attach the supplied Data Requirements PDF as the detailed data request.
-4. After editing the three documents, regenerate the PDFs and inspect the page
-   images.
-5. The sole contributor submits the package by email to TS. Lê Duy Dũng
-   (`dung.ld@vinuni.edu.vn`) by Sunday, **04/10/2026**. No email has been sent.
+Hồ sơ đối chiếu với [proposal](../../../reference/GSM_Causal_Marketplace_Proposal.md)
+và [validation ngày 03/10](../20261003/validation.md). Phần đã kiểm chứng là
+pipeline TLC, demand/choice OLS/DML và kịch bản giá trên dữ liệu tổng hợp/bán
+tổng hợp, evidence C. Supply, simulator và kết quả kinh tế GSM thuộc bước sau.
+Swissmetro, policy-value và reporting coverage khi đó chưa hoàn tất; kết quả
+bổ sung nằm trong [báo cáo 07/10](../20261007/weekly_report.md).
 
-The technical report uses results recorded in [VALIDATION.md](../../../VALIDATION.md).
-Simulated choices are method-validation evidence; actual GSM revenue uplift,
-policy-value benchmarking and repeated-seed interval calibration remain unmeasured.
+Tệp nguồn `GSM Causal Marketplace - Data Requirements.pdf` được nhắc trong
+hồ sơ cũ nhưng không có trong checkout. Yêu cầu dữ liệu đang dùng nằm ở
+[GSM_DATA_CONTRACT.md](../../../GSM_DATA_CONTRACT.md).
 
-## Regenerate PDFs
+## PDF lịch sử
 
-Use the repository's Python 3.11 environment and an installed Chromium browser.
-On the current Windows environment:
-
-```powershell
-uv sync --locked --group reports
-uv run --group reports python scripts/render_submission.py --browser "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-```
-
-The `reports` dependency group adds Markdown conversion and PDF rendering/text
-inspection. Playwright is already in the development group. PDFs are written
-beside their Markdown sources; printable HTML, extracted text, page PNGs and
-source/PDF hashes go to ignored `.cache/submission_qa/`. Rendering blocks remote
-HTTP assets and uses local fonts. The progress/report PDFs use A4 portrait;
-the allocation PDF also uses A4 portrait for the solo contributor's responsibilities.
-
-The renderer checks that each page contains text, preserves the document title,
-and has no replacement glyphs. Page images still need visual review after edits.
+Các PDF giữ bản xuất của hồ sơ đã nộp. Trong checkout hiện tại chưa có script
+dựng lại các PDF này. Đợt đồng bộ README chỉ cập nhật mô tả và đường dẫn;
+kết quả đo và PDF lịch sử giữ nguyên.

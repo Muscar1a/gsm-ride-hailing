@@ -28,26 +28,64 @@ flowchart LR
 The W→T edge is absent in randomized DGPs. The U edges exist only in the hidden
 confounding stress test. DML can adjust W; it cannot adjust an unobserved U.
 
-## DGPs
+## DGPs and known-truth generator
 
-| Mechanism | Price assignment | Purpose |
-|---|---|---|
-| RCT_SYN | Independent three-level randomized prices | Parameter recovery |
-| OBSERVED_CONFOUNDING | Independent conditional on observed W | Adjustment comparison |
-| HIDDEN_CONFOUNDING | W and hidden block-specific U | Demonstrate omitted-variable limitations |
-| NULL_EFFECT | Randomized prices, theta zero | False positive assessment |
-| COLLINEAR_PRICE | X and Y multipliers identical | Reject separate unidentified effects |
+Each block has peak/weekend in {0,1}, train-scaled distance d in [0,1], and hour h.
+Freeze scaling on train; apply to validation/test and flag values outside support.
+The following are declared experimental parameters, not TLC estimates:
 
-The generator uses the exact equations in section 8.3 of the detailed design.
-Context, assignment and outcome RNGs use separate NumPy SeedSequence streams.
-Invalid probabilities cause failure; they are never clipped or renormalized.
+$$
+b_X(W)=0.30+0.05\,peak-0.04d+0.02\,weekend+0.02\sin(2\pi h/24).
+$$
+
+$$
+b_Y(W)=0.25+0.04\,peak-0.03d+0.01\,weekend+0.02\cos(2\pi h/24).
+$$
+
+$$
+\Theta=\begin{pmatrix}-0.60&0.15\\0.12&-0.50\end{pmatrix},\qquad
+\begin{pmatrix}p_X\\p_Y\end{pmatrix}=
+\begin{pmatrix}b_X(W)\\b_Y(W)\end{pmatrix}+\Theta T,\qquad
+p_{\text{NONE}}=1-p_X-p_Y.
+$$
+
+Draw 50 mutually exclusive choices per block, optionally via multinomial counts
+expanded to sessions. Use separate NumPy SeedSequence streams for context,
+assignment, and choice.
+Validate every probability before sampling; reject invalid configurations without
+clipping/renormalizing, which would change the declared truth.
+
+| DGP | Assignment | Outcome | Role |
+|---|---|---|---|
+| RCT_SYN | Independent prices; one-third probability per level | Declared equations | Basic recovery |
+| OBSERVED_CONFOUNDING | Price-level probabilities depend on W | Same equations | Observed-confounding adjustment |
+| HIDDEN_CONFOUNDING | Assignment depends on W and U | Add 0.025U to p_X and 0.020U to p_Y | Missing-variable stress |
+| NULL_EFFECT | Random prices, all theta zero | Context only | False positives |
+| COLLINEAR_PRICE | Identical X/Y multipliers | Basic equations | Reject full matrix identification |
+
+OBSERVED_CONFOUNDING uses weights `exp(0.8 * s_j(W) * v)` for v=-1,0,1 and
+multipliers 0.9,1,1.1, normalized to probabilities. Define
+`s_X=clip(2*peak-1+0.5*weekend-0.5*d,-1,1)` and
+`s_Y=clip(1.5*peak-0.75+0.5*sin(2*pi*h/24),-1,1)`.
+Sample prices independently conditional on W.
+
+For HIDDEN_CONFOUNDING, draw independent U ~ Uniform[-1,1] per block, replace
+s_j with `clip(s_j+0.5*U,-1,1)`, and modify outcomes as above. U/truth probabilities
+stay in oracle. Exclude `assignment_probability` from W because it may reveal U.
+
+Training prices have three levels. Intermediate scenarios assume local linearity
+in log price. Later nonlinear stress cases require truth derived from their new
+generator, not reuse of the linear theta.
 
 ## Estimation and inference
 
 Naive OLS regresses proportions on log prices and an intercept. Adjusted OLS adds
 a fixed context basis. LinearDML uses multi-output random forests for E[Q|W] and
-E[T|W], then estimates the residual relation. Continuous treatments and block
-proportions use `discrete_treatment=False` and `discrete_outcome=False`.
+E[T|W], then estimates the residual relation. The initial nuisance defaults are
+50 trees, depth 6, minimum leaf 20, with five GroupKFold splits by original day;
+the effective run config and manifest identify the executed settings.
+Continuous treatments and block proportions use `discrete_treatment=False`
+and `discrete_outcome=False`.
 
 Context contains zone, time-of-day sin/cos, weekday, weekend, peak and scaled
 distance. IDs, assignment probabilities, hidden U, oracle probabilities, future
