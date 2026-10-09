@@ -10,6 +10,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import time
 import uuid
@@ -19,7 +20,7 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from gsm_poc.config import Config
+from gsm_poc.core.config import Config
 
 
 def utc_now() -> str:
@@ -84,6 +85,21 @@ def write_frame(path: Path, frame: pd.DataFrame) -> None:
 def write_model(path: Path, model: Any) -> None:
     with atomic_path(path) as temporary:
         joblib.dump(model, temporary, compress=3)
+
+
+def freeze_artifacts(
+    source_dir: Path, target_dir: Path, artifacts: dict[str, str]
+) -> list[Path]:
+    """Atomically copy artifacts from source_dir into target_dir and verify SHA256 hashes."""
+    paths = []
+    for name, expected in artifacts.items():
+        destination = target_dir / name
+        with atomic_path(destination) as temporary:
+            shutil.copyfile(source_dir / name, temporary)
+            if sha256_file(temporary) != expected:
+                raise ValueError(f"Source changed while freezing artifact: {name}")
+        paths.append(destination)
+    return paths
 
 
 def safe_id(value: str) -> str:

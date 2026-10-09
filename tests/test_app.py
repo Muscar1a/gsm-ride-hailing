@@ -3,7 +3,7 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-from gsm_poc.pipeline import Pipeline
+from gsm_poc.pipeline.pipeline import Pipeline
 
 
 def test_dashboard_changes_scenario_and_withholds_unsupported_price(config, monkeypatch):
@@ -14,7 +14,7 @@ def test_dashboard_changes_scenario_and_withholds_unsupported_price(config, monk
         ),
     )
     Pipeline(config, "app-test").run_all(include_evaluation=False)
-    app_path = Path(__file__).parents[1] / "src/gsm_poc/app.py"
+    app_path = Path(__file__).parents[1] / "src/gsm_poc/ui/app.py"
     monkeypatch.chdir(config.workspace)
     app = AppTest.from_file(str(app_path)).run(timeout=30)
     assert not app.exception
@@ -37,7 +37,7 @@ def test_dashboard_saves_selected_zone_scope_in_export(config, monkeypatch):
         ),
     )
     Pipeline(config, "app-test-scope").run_all(include_evaluation=False)
-    app_path = Path(__file__).parents[1] / "src/gsm_poc/app.py"
+    app_path = Path(__file__).parents[1] / "src/gsm_poc/ui/app.py"
     monkeypatch.chdir(config.workspace)
     app = AppTest.from_file(str(app_path)).run(timeout=30)
     assert not app.exception

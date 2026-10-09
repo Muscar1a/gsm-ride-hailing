@@ -14,9 +14,9 @@ import numpy as np
 import pandas as pd
 import simpy
 
-from gsm_poc.artifacts import fingerprint
-from gsm_poc.config import Config
-from gsm_poc.demand import DemandPlan, validate_snapshot
+from gsm_poc.core.artifacts import fingerprint
+from gsm_poc.core.config import Config
+from gsm_poc.simulation.demand import DemandPlan, validate_snapshot
 
 REQUEST_COLUMNS = [
     "request_id",

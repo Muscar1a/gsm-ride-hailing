@@ -9,11 +9,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from gsm_poc.config import Config
-from gsm_poc.estimate import ModelBundle
-from gsm_poc.generate import PRICE_LEVELS
-from gsm_poc.uncertainty import BootstrapResult, percentile_interval
-from gsm_poc.validate import valid_probabilities
+from gsm_poc.causal.estimate import ModelBundle
+from gsm_poc.causal.features import PRICE_LEVELS
+from gsm_poc.causal.uncertainty import BootstrapResult, percentile_interval
+from gsm_poc.core.config import Config
+from gsm_poc.core.validators import valid_probabilities
 
 
 @dataclasses.dataclass(frozen=True)

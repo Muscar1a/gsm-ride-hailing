@@ -10,7 +10,7 @@ It must allow zero uplift, negative uplift and a simpler estimator winning.
 |---|---|---|
 | Controlled method benchmark | Recovery of known effects under specified assumptions | Implemented in `evaluate.py`; reporting results in the [Week 2 report](submission/days/20261007/weekly_report.md), earlier measurements in [historical validation](submission/days/20261003/validation.md) |
 | Separate Swissmetro choice baseline | Predictive choice performance on held-out people | Implemented in `swissmetro.py`; MNL versus intercept-only results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
-| Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy_benchmark.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
+| Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | Core engine validation | State/accounting correctness, repeatability, failure behavior and measured operating limits | Demand bridge and fixed-supply development checks exist; full engine protocol and release evidence remain required |
 | GSM offline policy evaluation | Estimated value under verified real-data identification and support | Requires GSM logs and a separate evaluator |
 | GSM randomized validation | Incremental realized revenue under the tested deployment | Requires a designed and executed GSM experiment |
@@ -96,7 +96,7 @@ selects a replacement using test results.
 Run the fixed development profile:
 
 ```powershell
-.venv/Scripts/python.exe -m gsm_poc.policy_benchmark --config configs/policy_development.toml --run-id week2-policy-final-32001-32020
+.venv/Scripts/python.exe -m gsm_poc.causal.benchmarks.policy --config configs/policy_development.toml --run-id week2-policy-final-32001-32020
 ```
 
 `runs/<run_id>/policy/` contains the frozen protocol, per-seed decisions/results,

@@ -123,7 +123,7 @@ fixture using the [core engine validation protocol](BENCHMARK.md#core-engine-val
 Use core solver defaults: damping 0.3, at most 50 iterations, 600 seconds/job.
 Freeze event budgets/tolerances/replicates before execution; confirm with
 independent seeds. Proposed modules: `compensation.py`, `supply.py`,
-`marketplace_simulator.py`, `equilibrium.py`, `marketplace_scenario.py`.
+`marketplace.py`, `equilibrium.py`, `marketplace_scenario.py`.
 SimPy is now declared and locked for the implemented fixed-supply simulator.
 
 ## 3. Handoff and follow-up

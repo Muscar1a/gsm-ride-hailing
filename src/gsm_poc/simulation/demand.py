@@ -4,16 +4,18 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import numpy as np
 import pandas as pd
 
-from gsm_poc.artifacts import fingerprint
-from gsm_poc.config import Config
-from gsm_poc.estimate import ModelBundle
-from gsm_poc.scenario import ScenarioRequest, scenario
+from gsm_poc.causal.scenario import ScenarioRequest, scenario
+from gsm_poc.core.artifacts import fingerprint
+from gsm_poc.core.config import Config
+
+if TYPE_CHECKING:
+    from gsm_poc.causal.estimate import ModelBundle
 
 
 @dataclasses.dataclass

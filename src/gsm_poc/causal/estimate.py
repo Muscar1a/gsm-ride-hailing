@@ -10,17 +10,17 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 
-from gsm_poc.config import Config
-from gsm_poc.features import (
+from gsm_poc.causal.features import (
     OUTCOME_COLUMNS,
+    PRICE_LEVELS,
     TREATMENT_COLUMNS,
     Encoder,
     date_splits,
     day_folds,
     require_observed,
 )
-from gsm_poc.generate import PRICE_LEVELS
-from gsm_poc.validate import valid_probabilities
+from gsm_poc.core.config import Config
+from gsm_poc.core.validators import valid_probabilities
 
 
 @dataclasses.dataclass

@@ -1,10 +1,9 @@
-"""Source-schema and shared statistical validity checks."""
+"""Source-schema and TLC validation checks."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -70,20 +69,3 @@ def zone_lookup(path: Path) -> pd.DataFrame:
         raise ValueError("Zone lookup IDs must be unique non-null integers")
     zones["LocationID"] = numeric.astype("int32")
     return zones
-
-
-def valid_probabilities(probabilities: np.ndarray, tolerance: float = 1e-12) -> bool:
-    values = np.asarray(probabilities, dtype=float)
-    return bool(
-        values.ndim == 2
-        and values.shape[1] == 3
-        and np.isfinite(values).all()
-        and (values >= 0).all()
-        and (values <= 1).all()
-        and np.allclose(values.sum(axis=1), 1, rtol=0, atol=tolerance)
-    )
-
-
-def require_probabilities(probabilities: np.ndarray) -> None:
-    if not valid_probabilities(probabilities):
-        raise ValueError("Invalid X/Y/NONE probabilities; configuration is rejected, not clipped")

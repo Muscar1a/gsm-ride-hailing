@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from gsm_poc.artifacts import fingerprint, write_frame, write_json
-from gsm_poc.build_silver import connection, fetch_required_row
-from gsm_poc.config import Config
+from gsm_poc.core.artifacts import fingerprint, write_frame, write_json
+from gsm_poc.core.config import Config
+from gsm_poc.data.silver import connection, fetch_required_row
 
 
 def build_context(config: Config, silver: Path, build_id: str) -> dict:

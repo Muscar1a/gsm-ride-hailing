@@ -10,11 +10,17 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from gsm_poc.artifacts import (
+from gsm_poc.causal.estimate import FitResult, fit_all
+from gsm_poc.causal.evaluate import effect_rows, monte_carlo, saved_method_evaluation
+from gsm_poc.causal.features import date_splits, require_observed
+from gsm_poc.causal.scenario import ScenarioRequest, scenario
+from gsm_poc.causal.uncertainty import BootstrapResult, bootstrap
+from gsm_poc.core.artifacts import (
     Run,
     atomic_path,
     completed_run,
     fingerprint,
+    freeze_artifacts,
     read_json,
     safe_id,
     sha256_file,
@@ -22,19 +28,14 @@ from gsm_poc.artifacts import (
     write_json,
     write_model,
 )
-from gsm_poc.build_context import build_context
-from gsm_poc.build_marts import build_marts
-from gsm_poc.build_silver import build_silver
-from gsm_poc.config import Config
-from gsm_poc.demand import DemandPlan, prepare_demand_plan
-from gsm_poc.estimate import FitResult, fit_all
-from gsm_poc.evaluate import effect_rows, monte_carlo, saved_method_evaluation
-from gsm_poc.features import date_splits, require_observed
-from gsm_poc.generate import generate, save_generated
-from gsm_poc.ingest import ingest
-from gsm_poc.marketplace_simulator import simulate_marketplace
-from gsm_poc.scenario import ScenarioRequest, scenario
-from gsm_poc.uncertainty import BootstrapResult, bootstrap
+from gsm_poc.core.config import Config
+from gsm_poc.data.context import build_context
+from gsm_poc.data.ingest import ingest
+from gsm_poc.data.marts import build_marts
+from gsm_poc.data.silver import build_silver
+from gsm_poc.simulation.demand import DemandPlan, prepare_demand_plan
+from gsm_poc.simulation.dgp import generate, save_generated
+from gsm_poc.simulation.marketplace import simulate_marketplace
 
 
 class Pipeline:
@@ -157,34 +158,34 @@ class Pipeline:
             dataset_id = kwargs["datasetId"]
 
         def fit_inputs():
-            rawDatasetId = dataset_id or self.run.manifest.get("dataset_id", "")
-            if not rawDatasetId:
+            raw_dataset_id = dataset_id or self.run.manifest.get("dataset_id", "")
+            if not raw_dataset_id:
                 raise ValueError(
                     "Dataset ID is required to fit models; pass --dataset-id or run generate"
                 )
-            validatedDatasetId = safe_id(rawDatasetId)
-            root = self.config.workspace / "data/synthetic" / validatedDatasetId
+            validated_dataset_id = safe_id(raw_dataset_id)
+            root = self.config.workspace / "data/synthetic" / validated_dataset_id
             observed = root / "observed/choice_block.parquet"
-            metadataPath = root / "manifest.json"
+            metadata_path = root / "manifest.json"
             if not observed.is_file():
                 raise FileNotFoundError(f"Observed choice block not found: {observed}")
-            if not metadataPath.is_file():
-                raise FileNotFoundError(f"Dataset manifest not found: {metadataPath}")
+            if not metadata_path.is_file():
+                raise FileNotFoundError(f"Dataset manifest not found: {metadata_path}")
             return {
-                "dataset_id": validatedDatasetId,
+                "dataset_id": validated_dataset_id,
                 "observed_sha256": sha256_file(observed),
-                "metadata_sha256": sha256_file(metadataPath),
+                "metadata_sha256": sha256_file(metadata_path),
             }
 
         with self.run.stage("fit", fit_inputs) as execute:
             if execute:
-                rawDatasetId = dataset_id or self.run.manifest.get("dataset_id", "")
-                validatedDatasetId = safe_id(rawDatasetId)
-                root = self.config.workspace / "data/synthetic" / validatedDatasetId
+                raw_dataset_id = dataset_id or self.run.manifest.get("dataset_id", "")
+                validated_dataset_id = safe_id(raw_dataset_id)
+                root = self.config.workspace / "data/synthetic" / validated_dataset_id
                 observed = root / "observed/choice_block.parquet"
-                metadataPath = root / "manifest.json"
+                metadata_path = root / "manifest.json"
                 blocks = pd.read_parquet(observed)
-                metadata = read_json(metadataPath)
+                metadata = read_json(metadata_path)
                 if metadata["source_kind"] != self.run.manifest["source_kind"]:
                     raise ValueError("Dataset source kind differs from run configuration")
                 if metadata["dgp_id"] != self.config.simulation.dgp:
@@ -227,7 +228,7 @@ class Pipeline:
                             splits["test"],
                             self.config,
                             self.run.run_id,
-                            validatedDatasetId,
+                            validated_dataset_id,
                         )
                     )
                 effects_path = self.run.path / "effects.csv"
@@ -251,7 +252,7 @@ class Pipeline:
                 write_json(split_path, split_record)
                 paths.extend([effects_path, context_path, split_path])
                 self.run.manifest.update(
-                    dataset_id=validatedDatasetId,
+                    dataset_id=validated_dataset_id,
                     model_results={
                         name: result.diagnostics["status"] for name, result in results.items()
                     },
@@ -274,39 +275,39 @@ class Pipeline:
             root = self.config.workspace / "data/synthetic" / dataset_id
             oracle = root / "oracle/oracle_block.parquet"
             observed = root / "observed/choice_block.parquet"
-            metadataPath = root / "manifest.json"
+            metadata_path = root / "manifest.json"
             if not oracle.is_file():
                 raise FileNotFoundError(f"Oracle block not found: {oracle}")
             if not observed.is_file():
                 raise FileNotFoundError(f"Observed choice block not found: {observed}")
-            if not metadataPath.is_file():
-                raise FileNotFoundError(f"Dataset manifest not found: {metadataPath}")
+            if not metadata_path.is_file():
+                raise FileNotFoundError(f"Dataset manifest not found: {metadata_path}")
             inputs = {
                 "dataset_id": dataset_id,
                 "oracle_sha256": sha256_file(oracle),
                 "observed_sha256": sha256_file(observed),
-                "metadata_sha256": sha256_file(metadataPath),
+                "metadata_sha256": sha256_file(metadata_path),
                 "scenario": self.config.scenario.__dict__,
                 "models": {},
             }
             for name in self.config.model.estimators:
                 directory = self.run.path / "models" / name
-                diagnosticsPath = directory / "diagnostics.json"
-                if not diagnosticsPath.is_file():
-                    raise FileNotFoundError(f"Estimator diagnostics not found: {diagnosticsPath}")
-                modelInputs = {"diagnostics_sha256": sha256_file(diagnosticsPath)}
-                if read_json(diagnosticsPath)["status"] != "not_identified":
-                    modelBundle = directory / "model_bundle.joblib"
-                    bootstrapBundles = directory / "bootstrap_bundles.joblib"
-                    if not modelBundle.is_file():
-                        raise FileNotFoundError(f"Model bundle not found: {modelBundle}")
-                    if not bootstrapBundles.is_file():
-                        raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrapBundles}")
-                    modelInputs.update(
-                        model_sha256=sha256_file(modelBundle),
-                        bootstrap_sha256=sha256_file(bootstrapBundles),
+                diagnostics_path = directory / "diagnostics.json"
+                if not diagnostics_path.is_file():
+                    raise FileNotFoundError(f"Estimator diagnostics not found: {diagnostics_path}")
+                model_inputs = {"diagnostics_sha256": sha256_file(diagnostics_path)}
+                if read_json(diagnostics_path)["status"] != "not_identified":
+                    model_bundle = directory / "model_bundle.joblib"
+                    bootstrap_bundles = directory / "bootstrap_bundles.joblib"
+                    if not model_bundle.is_file():
+                        raise FileNotFoundError(f"Model bundle not found: {model_bundle}")
+                    if not bootstrap_bundles.is_file():
+                        raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrap_bundles}")
+                    model_inputs.update(
+                        model_sha256=sha256_file(model_bundle),
+                        bootstrap_sha256=sha256_file(bootstrap_bundles),
                     )
-                inputs["models"][name] = modelInputs
+                inputs["models"][name] = model_inputs
             return inputs
 
         with self.run.stage("method_evaluation", evaluation_inputs) as execute:
@@ -345,54 +346,54 @@ class Pipeline:
         if "modelRunId" in kwargs and model_run_id is None:
             model_run_id = kwargs["modelRunId"]
 
-        selectedRun = model_run_id or self.run.run_id
-        directory = self.config.workspace / "runs" / safe_id(selectedRun)
-        targetContextSet = (
+        selected_run = model_run_id or self.run.run_id
+        directory = self.config.workspace / "runs" / safe_id(selected_run)
+        target_context_set = (
             f"zone_{zone}" if zone is not None else self.config.scenario.target_context_set
         )
         if request is None:
-            resolvedRequest = ScenarioRequest(
+            resolved_request = ScenarioRequest(
                 delta_price_x=self.config.scenario.delta_price_x,
                 delta_price_y=self.config.scenario.delta_price_y,
                 n_sessions=self.config.scenario.n_sessions,
                 interval_level=self.config.evaluation.interval_level,
-                target_context_set=targetContextSet,
+                target_context_set=target_context_set,
             )
         elif zone is not None and request.target_context_set == "all":
-            resolvedRequest = dataclasses.replace(request, target_context_set=targetContextSet)
+            resolved_request = dataclasses.replace(request, target_context_set=target_context_set)
         else:
-            resolvedRequest = request
+            resolved_request = request
 
         def scenario_inputs():
             if model_run_id:
-                completed_run(self.config.workspace, selectedRun)
+                completed_run(self.config.workspace, selected_run)
             name = self.config.model.scenario_estimator
-            diagnosticsPath = directory / "models" / name / "diagnostics.json"
-            if not diagnosticsPath.is_file():
-                raise FileNotFoundError(f"Estimator diagnostics not found: {diagnosticsPath}")
-            diagnostics = read_json(diagnosticsPath)
-            modelPath = directory / "models" / name / "model_bundle.joblib"
-            bootstrapPath = modelPath.with_name("bootstrap_bundles.joblib")
-            modelSha256 = None
-            bootstrapSha256 = None
+            diagnostics_path = directory / "models" / name / "diagnostics.json"
+            if not diagnostics_path.is_file():
+                raise FileNotFoundError(f"Estimator diagnostics not found: {diagnostics_path}")
+            diagnostics = read_json(diagnostics_path)
+            model_path = directory / "models" / name / "model_bundle.joblib"
+            bootstrap_path = model_path.with_name("bootstrap_bundles.joblib")
+            model_sha256 = None
+            bootstrap_sha256 = None
             if diagnostics["status"] != "not_identified":
-                if not modelPath.is_file():
-                    raise FileNotFoundError(f"Model bundle not found: {modelPath}")
-                if not bootstrapPath.is_file():
-                    raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrapPath}")
-                modelSha256 = sha256_file(modelPath)
-                bootstrapSha256 = sha256_file(bootstrapPath)
-            contextsPath = directory / "scenario_contexts.parquet"
-            if not contextsPath.is_file():
-                raise FileNotFoundError(f"Scenario contexts not found: {contextsPath}")
+                if not model_path.is_file():
+                    raise FileNotFoundError(f"Model bundle not found: {model_path}")
+                if not bootstrap_path.is_file():
+                    raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrap_path}")
+                model_sha256 = sha256_file(model_path)
+                bootstrap_sha256 = sha256_file(bootstrap_path)
+            contexts_path = directory / "scenario_contexts.parquet"
+            if not contexts_path.is_file():
+                raise FileNotFoundError(f"Scenario contexts not found: {contexts_path}")
             return {
-                "model_run_id": selectedRun,
-                "request": dataclasses.asdict(resolvedRequest),
+                "model_run_id": selected_run,
+                "request": dataclasses.asdict(resolved_request),
                 "zone": zone,
-                "diagnostics_sha256": sha256_file(diagnosticsPath),
-                "model_sha256": modelSha256,
-                "bootstrap_sha256": bootstrapSha256,
-                "contexts_sha256": sha256_file(contextsPath),
+                "diagnostics_sha256": sha256_file(diagnostics_path),
+                "model_sha256": model_sha256,
+                "bootstrap_sha256": bootstrap_sha256,
+                "contexts_sha256": sha256_file(contexts_path),
             }
 
         with self.run.stage("scenario", scenario_inputs) as execute:
@@ -413,7 +414,7 @@ class Pipeline:
                 if zone is not None:
                     contexts = contexts[contexts.zone_id == zone]
                 result = scenario(
-                    bundle, contexts, resolvedRequest, self.config, selectedRun, draws
+                    bundle, contexts, resolved_request, self.config, selected_run, draws
                 )
                 write_json(path, result)
                 self.run.outputs("scenario", [path], output_status=result["status"])
@@ -484,16 +485,7 @@ class Pipeline:
                 assert source_config is not None
                 source = self.config.workspace / "runs" / model_run_id
                 frozen = self.run.path / "demand_bundle"
-                paths = []
-                for name, expected in source_artifacts.items():
-                    destination = frozen / name
-                    with atomic_path(destination) as temporary:
-                        shutil.copyfile(source / name, temporary)
-                        if sha256_file(temporary) != expected:
-                            raise ValueError(
-                                f"Source changed while freezing demand artifact: {name}"
-                            )
-                    paths.append(destination)
+                paths = freeze_artifacts(source, frozen, source_artifacts)
                 manifest_path = frozen / "source_manifest.json"
                 write_json(manifest_path, source_manifest)
                 paths.append(manifest_path)
@@ -636,16 +628,7 @@ class Pipeline:
             if execute:
                 source = self.config.workspace / "runs" / demand_run_id
                 frozen = self.run.path / "simulation_inputs"
-                paths = []
-                for name, expected in source_artifacts.items():
-                    destination = frozen / name
-                    with atomic_path(destination) as temporary:
-                        shutil.copyfile(source / name, temporary)
-                        if sha256_file(temporary) != expected:
-                            raise ValueError(
-                                f"Source changed while freezing simulation input: {name}"
-                            )
-                    paths.append(destination)
+                paths = freeze_artifacts(source, frozen, source_artifacts)
                 source_path = frozen / "source_manifest.json"
                 rules_copy = frozen / "rules.json"
                 write_json(source_path, source_manifest)

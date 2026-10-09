@@ -9,9 +9,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from gsm_poc.config import Config
-from gsm_poc.estimate import ModelBundle, fit_estimator
-from gsm_poc.features import TREATMENT_COLUMNS
+from gsm_poc.causal.estimate import ModelBundle, fit_estimator
+from gsm_poc.causal.features import TREATMENT_COLUMNS
+from gsm_poc.core.config import Config
 
 
 @dataclasses.dataclass

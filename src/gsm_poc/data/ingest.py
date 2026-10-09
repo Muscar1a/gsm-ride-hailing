@@ -8,9 +8,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from gsm_poc.artifacts import atomic_path, read_json, sha256_file, utc_now, write_json
-from gsm_poc.config import TLC_SOURCE_VERSION, Config
-from gsm_poc.validate import tlc_schema, zone_lookup
+from gsm_poc.core.artifacts import atomic_path, read_json, sha256_file, utc_now, write_json
+from gsm_poc.core.config import TLC_SOURCE_VERSION, Config
+from gsm_poc.data.validate import tlc_schema, zone_lookup
 
 
 def _download(url: str, target: Path, config: Config) -> dict:

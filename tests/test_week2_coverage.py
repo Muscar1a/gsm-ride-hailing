@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-
 from gsm_poc.artifacts import Run, read_json, write_frame, write_json
 from gsm_poc.config import Config, EvaluationConfig
 
@@ -89,9 +88,12 @@ def completed_batch(tmp_path, frame):
         write_frame(path, frame)
         run.outputs("evaluate", [path])
     run.complete()
-    frozen_source = tmp_path / "src/gsm_poc"
+    frozen_source = tmp_path / "src/gsm_poc/causal"
     frozen_source.mkdir(parents=True)
-    shutil.copy2(SCRIPT.parents[1] / "src/gsm_poc/evaluate.py", frozen_source / "evaluate.py")
+    eval_src = SCRIPT.parents[1] / "src/gsm_poc/causal/evaluate.py"
+    if not eval_src.exists():
+        eval_src = SCRIPT.parents[1] / "src/gsm_poc/evaluate.py"
+    shutil.copy2(eval_src, frozen_source / "evaluate.py")
     return run, job, {"environment": run.manifest["environment"], "config": config.as_dict()}
 
 

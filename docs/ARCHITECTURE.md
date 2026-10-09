@@ -1,36 +1,24 @@
 # Project architecture
 
 ```text
-configs/                  TOML profiles; no secrets
-src/gsm_poc/
-  config.py               validated configuration and date scope
-  artifacts.py            hashing, atomic files, manifests and stage lifecycle
-  ingest.py               immutable TLC sources and download validation
-  validate.py             TLC schema and shared probability checks
-  build_silver.py         DuckDB normalization and row-level quality flags
-  build_marts.py          complete operational grid and reconciliation
-  build_context.py        train-only context templates and fallback metadata
-  generate.py             policy, sessions, block tables, isolated oracle
-  features.py             allowlisted encoding and day-based splits
-  estimate.py             OLS / LinearDML and model bundle
-  uncertainty.py          bootstrap with complete refits by original day
-  evaluate.py             oracle-only method evaluation and seed checkpoints
-  scenario.py             supported price changes and uncertainty
-  demand.py               frozen choice-to-request bridge and initial snapshot validation
-  marketplace_simulator.py bounded SimPy fixed-supply trajectories and accounting
-  pipeline.py             stage orchestration and content-based reuse
-  cli.py, __main__.py      python -m gsm_poc
-  app.py                  Streamlit artifact reader
-tests/                    deterministic fixtures and behavior coverage
-docs/                     active roadmap, contract, architecture and protocols
-docs/reference/           proposal and target engine design
-docs/submission/          dated reports and preserved result bundles
-data/bronze/              source bytes and source manifests (ignored)
-data/silver/, data/gold/   versioned observed artifacts (ignored)
-data/synthetic/<id>/
-  observed/               estimator-visible policy/session/block data
-  oracle/                 true probabilities, hidden U, coefficients
-runs/<id>/                manifests, bundles, effects, diagnostics, exports
+gsm-ride-hailing/
+├── src/gsm_poc/              # Core application package
+│   ├── core/                 # Shared configs, validators, and artifact lifecycle
+│   ├── data/                 # Medallion data pipeline (ingest, silver, marts, context)
+│   ├── causal/               # Econometrics, estimation, uncertainty, and scenarios
+│   │   └── benchmarks/       # Discrete choice and policy benchmarks
+│   ├── simulation/           # DGP generator, demand planning, and marketplace
+│   ├── pipeline/             # Batch orchestration and stage execution
+│   └── ui/                   # Streamlit dashboard and visual tabs
+│       └── tabs/             # Operations, method checks, scenario explorer
+├── configs/                  # TOML execution and experiment profiles
+├── scripts/                  # Coverage evaluation runners and compute probes
+├── tests/                    # Deterministic regression, unit, and integration tests
+├── docs/                     # Specifications, contracts, and roadmap
+│   ├── reference/            # Proposal and engine design reference docs
+│   └── submission/           # Preserved reports and milestone evaluations
+├── data/                     # Versioned artifacts (bronze, silver, gold, synthetic)
+└── runs/                     # Execution runs, manifests, bundles, and diagnostics
 ```
 
 ```mermaid
@@ -168,7 +156,7 @@ uncertainty labels remain adjacent to results.
 
 The existing Hallmark design uses cool paper, restrained cobalt, Bahnschrift
 display text and Segoe UI body text. Portable values live in `tokens.css`;
-layout styling lives in `src/gsm_poc/ui.css` and native Streamlit theme settings.
+layout styling lives in `src/gsm_poc/ui/ui.css` and native Streamlit theme settings.
 Widgets use native state/loading/error feedback, immediate focus rings and
 reduced-motion support. Tables retain local horizontal scrolling on narrow screens.
 The historical browser QA record is in

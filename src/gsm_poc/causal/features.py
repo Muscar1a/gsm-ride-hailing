@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupKFold
 
-from gsm_poc.config import Config
+from gsm_poc.core.config import Config
 
 FEATURE_COLUMNS = (
     "zone_id",
@@ -20,6 +20,7 @@ FEATURE_COLUMNS = (
     "distance_scaled",
 )
 TREATMENT_COLUMNS = ("log_multiplier_x", "log_multiplier_y")
+PRICE_LEVELS = np.array([0.9, 1.0, 1.1])
 OUTCOME_COLUMNS = ("q_x", "q_y")
 COUNT_COLUMNS = ("n_x", "n_y", "n_none")
 ORACLE_COLUMNS = {"u", "p_x", "p_y", "p_none", "b_x", "b_y", "theta", "true_probability"}

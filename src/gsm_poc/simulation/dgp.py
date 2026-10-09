@@ -8,9 +8,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from gsm_poc.artifacts import fingerprint, sha256_file, write_frame, write_json
-from gsm_poc.config import Config
-from gsm_poc.validate import require_probabilities
+from gsm_poc.core.artifacts import fingerprint, sha256_file, write_frame, write_json
+from gsm_poc.core.config import Config
+from gsm_poc.core.validators import require_probabilities
 
 PRICE_LEVELS = np.array([0.9, 1.0, 1.1])
 TRUE_THETA = np.array([[-0.60, 0.15], [0.12, -0.50]])

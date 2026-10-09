@@ -19,37 +19,19 @@ progress, technical specifications and submission evidence.
 ## Code structure
 
 ```text
-src/gsm_poc/
-  __init__.py             Python package
-  __main__.py             module entry point
-  app.py                  Streamlit artifact reader
-  artifacts.py            atomic files, hashes and run lifecycle
-  build_context.py        train-only context templates
-  build_marts.py          completed-trip operational marts
-  build_silver.py         TLC normalization and quality flags
-  cli.py                  command-line entry points
-  config.py               configuration and date-scope validation
-  demand.py               choice-to-request bridge and snapshot validation
-  estimate.py             OLS / LinearDML and fitted model bundles
-  evaluate.py             known-truth evaluation and seed checkpoints
-  features.py             feature encoding and day-based splits
-  generate.py             controlled choices and isolated oracle
-  ingest.py               pinned TLC source ingestion
-  marketplace_simulator.py fixed-supply event simulation and operational accounting
-  pipeline.py             batch-stage orchestration and artifact reuse
-  policy_benchmark.py     independent synthetic pricing-policy evaluation
-  scenario.py             supported price scenarios
-  swissmetro.py           separate public choice baseline
-  uncertainty.py          day bootstrap with complete model refits
-  validate.py             TLC schema and probability validation
-  ui.css                  dashboard styles
-
-configs/                  TOML profiles, synthetic snapshot, rules and request fixture
-scripts/                  reporting runners, compute probes and statistical review
-tests/                    deterministic fixtures and behavior coverage
-docs/                     usage, architecture, contracts, roadmap and evidence
-.github/workflows/        repository checks in CI
-.streamlit/               Streamlit configuration
-pyproject.toml            package, dependencies and tool configuration
-uv.lock                   locked dependencies
+gsm-ride-hailing/
+├── src/gsm_poc/              # Core application package
+│   ├── core/                 # Infrastructure, configuration, and artifact lifecycle
+│   ├── data/                 # Medallion data pipeline (ingest, silver, marts, context)
+│   ├── causal/               # Causal estimation, uncertainty, and price scenarios
+│   │   └── benchmarks/       # Choice and pricing-policy benchmarks
+│   ├── simulation/           # DGP generation, demand planning, and marketplace
+│   ├── pipeline/             # Stage orchestration and artifact DAG execution
+│   └── ui/                   # Streamlit dashboard application and view tabs
+│       └── tabs/             # Operations, method evaluation, and scenario tabs
+├── configs/                  # TOML profiles and pipeline configurations
+├── scripts/                  # Coverage runners, compute benchmarks, and probes
+├── tests/                    # Deterministic unit, integration, and coverage tests
+├── docs/                     # Architecture, technical contracts, and roadmap
+└── data/                     # Raw, processed, and synthetic artifacts (.gitignored)
 ```

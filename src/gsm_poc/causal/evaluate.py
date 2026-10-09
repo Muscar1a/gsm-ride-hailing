@@ -10,24 +10,24 @@ import numpy as np
 import pandas as pd
 from scipy.stats import binomtest
 
-from gsm_poc.artifacts import (
+from gsm_poc.causal.estimate import FitResult, ModelBundle, fit_all
+from gsm_poc.causal.features import date_splits
+from gsm_poc.causal.uncertainty import (
+    BootstrapResult,
+    bootstrap,
+    interval_sensitivity,
+    percentile_interval,
+)
+from gsm_poc.core.artifacts import (
     fingerprint,
     read_json,
     sha256_file,
     write_frame,
     write_json,
 )
-from gsm_poc.config import Config
-from gsm_poc.estimate import FitResult, ModelBundle, fit_all
-from gsm_poc.features import date_splits
-from gsm_poc.generate import TRUE_THETA, Generated, generate
-from gsm_poc.uncertainty import (
-    BootstrapResult,
-    bootstrap,
-    interval_sensitivity,
-    percentile_interval,
-)
-from gsm_poc.validate import valid_probabilities
+from gsm_poc.core.config import Config
+from gsm_poc.core.validators import valid_probabilities
+from gsm_poc.simulation.dgp import TRUE_THETA, Generated, generate
 
 
 def effect_rows(

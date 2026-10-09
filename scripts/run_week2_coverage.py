@@ -18,7 +18,6 @@ import time
 from pathlib import Path
 
 import pandas as pd
-
 from gsm_poc.artifacts import (
     completed_run,
     environment,
@@ -217,9 +216,11 @@ def aggregate_batches(snapshot: Path, spec: dict, jobs: list[dict]) -> dict:
         expected_cells = len(spec["config"]["model"]["estimators"]) * 4
         if not combined.groupby(["dgp_id", "seed"]).size().eq(expected_cells).all():
             raise ValueError("Reporting seed has missing estimator/effect cells")
-        # Read the evaluator from the snapshot too; never pool with live changed code.
+        eval_path = snapshot / "src/gsm_poc/causal/evaluate.py"
+        if not eval_path.exists():
+            eval_path = snapshot / "src/gsm_poc/evaluate.py"
         module_spec = importlib.util.spec_from_file_location(
-            "gsm_poc._reporting_evaluate", snapshot / "src/gsm_poc/evaluate.py"
+            "gsm_poc._reporting_evaluate", eval_path
         )
         if module_spec is None or module_spec.loader is None:
             raise ValueError("Frozen evaluator could not be loaded")

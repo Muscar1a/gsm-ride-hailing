@@ -13,8 +13,8 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.special import logsumexp
 
-from gsm_poc.artifacts import Run, sha256_file, utc_now, write_frame, write_json
-from gsm_poc.config import Config
+from gsm_poc.core.artifacts import Run, sha256_file, utc_now, write_frame, write_json
+from gsm_poc.core.config import Config
 
 SOURCE_URL = "https://transp-or.epfl.ch/data/swissmetro.dat"
 DICTIONARY_URL = "https://transp-or.epfl.ch/biogeme-2.5/swissmetro.pdf"

@@ -8,9 +8,9 @@ import json
 import sys
 from pathlib import Path
 
-from gsm_poc.config import DGPS, ESTIMATORS, Config
-from gsm_poc.pipeline import Pipeline
-from gsm_poc.scenario import ScenarioRequest
+from gsm_poc.causal.scenario import ScenarioRequest
+from gsm_poc.core.config import DGPS, ESTIMATORS, Config
+from gsm_poc.pipeline.pipeline import Pipeline
 
 
 def parser() -> argparse.ArgumentParser:

@@ -13,12 +13,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t
 
-from gsm_poc.artifacts import Run, fingerprint, read_json, write_frame, write_json, write_model
-from gsm_poc.config import Config
-from gsm_poc.estimate import ModelBundle, fit_estimator
-from gsm_poc.features import date_splits, require_observed
-from gsm_poc.generate import PRICE_LEVELS, TRUE_THETA, Generated, generate
-from gsm_poc.validate import valid_probabilities
+from gsm_poc.causal.estimate import ModelBundle, fit_estimator
+from gsm_poc.causal.features import date_splits, require_observed
+from gsm_poc.core.artifacts import Run, fingerprint, read_json, write_frame, write_json, write_model
+from gsm_poc.core.config import Config
+from gsm_poc.core.validators import valid_probabilities
+from gsm_poc.simulation.dgp import PRICE_LEVELS, TRUE_THETA, Generated, generate
 
 POLICIES = ("unchanged", "simple_rule", "naive_ols", "adjusted_ols", "dml", "oracle_reference")
 ACTIONS = tuple(itertools.product(PRICE_LEVELS.tolist(), repeat=2))
@@ -385,7 +385,7 @@ def run_benchmark(config: Config, run_id: str | None = None) -> Run:
     spec = protocol_spec(config)
     run = Run(config, run_id)
     root = run.path / "policy"
-    with run.stage("policy_benchmark", spec) as execute:
+    with run.stage("policy", spec) as execute:
         if execute:
             spec_path = root / "frozen_spec.json"
             if spec_path.exists() and fingerprint(read_json(spec_path)) != fingerprint(spec):
@@ -451,7 +451,7 @@ def run_benchmark(config: Config, run_id: str | None = None) -> Run:
                 },
             )
             paths.extend(outputs)
-            run.outputs("policy_benchmark", paths, policy_rows=len(results))
+            run.outputs("policy", paths, policy_rows=len(results))
     run.complete()
     return run
 

@@ -14,7 +14,7 @@ versions tested on Python 3.11.9 / Windows.
 ```powershell
 uv sync --locked
 uv run python -m gsm_poc run-all --config configs/demo.toml
-uv run streamlit run src/gsm_poc/app.py
+uv run streamlit run src/gsm_poc/ui/app.py
 ```
 
 The offline demo needs no raw-data download. It uses explicit synthetic contexts,

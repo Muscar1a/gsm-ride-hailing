@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-
 from gsm_poc.artifacts import (
     completed_run,
     fingerprint,
@@ -16,9 +15,10 @@ from gsm_poc.artifacts import (
     write_frame,
     write_json,
 )
-from gsm_poc.cli import main
 from gsm_poc.demand import DemandPlan, validate_snapshot
-from gsm_poc.marketplace_simulator import simulate_marketplace
+from gsm_poc.marketplace import simulate_marketplace
+
+from gsm_poc.cli import main
 from gsm_poc.pipeline import Pipeline
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -7,9 +7,9 @@ from typing import Any
 
 import duckdb
 
-from gsm_poc.artifacts import atomic_path, fingerprint, sha256_file, write_json
-from gsm_poc.config import TLC_SOURCE_VERSION, Config
-from gsm_poc.validate import FLAG_COLUMNS, TLC_COLUMNS, tlc_schema, zone_lookup
+from gsm_poc.core.artifacts import atomic_path, fingerprint, sha256_file, write_json
+from gsm_poc.core.config import TLC_SOURCE_VERSION, Config
+from gsm_poc.data.validate import FLAG_COLUMNS, TLC_COLUMNS, tlc_schema, zone_lookup
 
 
 def connection(config: Config) -> duckdb.DuckDBPyConnection:
@@ -51,7 +51,7 @@ def build_silver(config: Config, source: dict) -> dict:
     lookup = zone_lookup(zone_path)
     processing_code = {
         name: sha256_file(Path(__file__).with_name(name))
-        for name in ("build_silver.py", "build_marts.py", "build_context.py", "validate.py")
+        for name in ("silver.py", "marts.py", "context.py", "validate.py")
     }
     build_id = fingerprint(
         {"source": source, "scope": config.as_dict()["source"], "processing_code": processing_code}

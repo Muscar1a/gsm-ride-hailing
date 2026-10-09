@@ -5,12 +5,12 @@ import dataclasses
 import numpy as np
 import pandas as pd
 import pytest
-
-from gsm_poc import policy_benchmark as policy
 from gsm_poc.artifacts import read_json
 from gsm_poc.estimate import ModelBundle, fit_estimator
 from gsm_poc.features import date_splits
 from gsm_poc.generate import TRUE_THETA
+
+from gsm_poc import policy as policy
 
 
 @pytest.fixture
