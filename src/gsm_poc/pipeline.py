@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import dataclasses
+import shutil
+from pathlib import Path
 from typing import Any
 
 import joblib
@@ -10,6 +12,7 @@ import pandas as pd
 
 from gsm_poc.artifacts import (
     Run,
+    atomic_path,
     completed_run,
     fingerprint,
     read_json,
@@ -23,11 +26,13 @@ from gsm_poc.build_context import build_context
 from gsm_poc.build_marts import build_marts
 from gsm_poc.build_silver import build_silver
 from gsm_poc.config import Config
+from gsm_poc.demand import DemandPlan, prepare_demand_plan
 from gsm_poc.estimate import FitResult, fit_all
 from gsm_poc.evaluate import effect_rows, monte_carlo, saved_method_evaluation
 from gsm_poc.features import date_splits, require_observed
 from gsm_poc.generate import generate, save_generated
 from gsm_poc.ingest import ingest
+from gsm_poc.marketplace_simulator import simulate_marketplace
 from gsm_poc.scenario import ScenarioRequest, scenario
 from gsm_poc.uncertainty import BootstrapResult, bootstrap
 
@@ -415,6 +420,322 @@ class Pipeline:
             else:
                 result = read_json(path)
         return result
+
+    def prepare_demand(
+        self,
+        model_run_id: str,
+        snapshot_path: Path,
+        request: ScenarioRequest | None = None,
+        estimator: str | None = None,
+    ) -> dict:
+        """Freeze a verified local choice handoff and prepare simulator inputs."""
+        if model_run_id == self.run.run_id:
+            raise ValueError("prepare-demand requires a new run separate from the frozen model run")
+        source_manifest: dict = {}
+        snapshot: dict = {}
+        source_artifacts: dict[str, str] = {}
+        source_config = None
+        selected_estimator = ""
+
+        def demand_inputs():
+            nonlocal source_manifest, snapshot, source_config, selected_estimator, source_artifacts
+            source_manifest = completed_run(self.config.workspace, model_run_id)
+            if source_manifest.get("stages", {}).get("fit", {}).get("status") != "succeeded":
+                raise ValueError("Demand requires a completed choice fit")
+            source_config = Config.from_dict(source_manifest["config"], self.config.workspace)
+            selected_estimator = estimator or source_config.model.scenario_estimator
+            if selected_estimator not in source_manifest.get("model_results", {}):
+                raise ValueError("Selected estimator is not present in the frozen model run")
+            directory = self.config.workspace / "runs" / safe_id(model_run_id)
+            prefix = f"models/{selected_estimator}"
+            names = [
+                "effects.csv",
+                "splits.json",
+                "scenario_result.json",
+                "scenario_contexts.parquet",
+                f"{prefix}/diagnostics.json",
+            ]
+            diagnostics = read_json(directory / names[-1])
+            if diagnostics["status"] != source_manifest["model_results"][selected_estimator]:
+                raise ValueError("Frozen model status differs from estimator diagnostics")
+            if diagnostics["status"] != "not_identified":
+                names.extend(
+                    [f"{prefix}/model_bundle.joblib", f"{prefix}/bootstrap_bundles.joblib"]
+                )
+            source_artifacts = {}
+            for name in names:
+                relative = f"runs/{model_run_id}/{name}"
+                if relative not in source_manifest["artifacts"]:
+                    raise ValueError(f"Required demand artifact is not registered: {relative}")
+                source_artifacts[name] = source_manifest["artifacts"][relative]
+            snapshot = read_json(snapshot_path)
+            return {
+                "model_run_id": model_run_id,
+                "estimator": selected_estimator,
+                "source_manifest_sha256": sha256_file(directory / "manifest.json"),
+                "source_artifacts": source_artifacts,
+                "snapshot": snapshot,
+                "request": dataclasses.asdict(request) if request is not None else None,
+            }
+
+        with self.run.stage("prepare_demand", demand_inputs) as execute:
+            result_path = self.run.path / "demand_result.json"
+            if execute:
+                assert source_config is not None
+                source = self.config.workspace / "runs" / model_run_id
+                frozen = self.run.path / "demand_bundle"
+                paths = []
+                for name, expected in source_artifacts.items():
+                    destination = frozen / name
+                    with atomic_path(destination) as temporary:
+                        shutil.copyfile(source / name, temporary)
+                        if sha256_file(temporary) != expected:
+                            raise ValueError(
+                                f"Source changed while freezing demand artifact: {name}"
+                            )
+                    paths.append(destination)
+                manifest_path = frozen / "source_manifest.json"
+                write_json(manifest_path, source_manifest)
+                paths.append(manifest_path)
+                prefix = frozen / "models" / selected_estimator
+                diagnostic = read_json(prefix / "diagnostics.json")
+                bundle = (
+                    joblib.load(prefix / "model_bundle.joblib")
+                    if diagnostic["status"] != "not_identified"
+                    else None
+                )
+                if bundle is not None and (
+                    bundle.estimator != selected_estimator
+                    or bundle.source_kind != source_manifest["source_kind"]
+                    or bundle.dataset_id != source_manifest["dataset_id"]
+                    or bundle.dgp_id != source_config.simulation.dgp
+                    or bundle.seed != source_config.simulation.seed
+                ):
+                    raise ValueError("Choice bundle provenance differs from the source manifest")
+                resolved_request = request or ScenarioRequest(
+                    delta_price_x=source_config.scenario.delta_price_x,
+                    delta_price_y=source_config.scenario.delta_price_y,
+                    interval_level=source_config.evaluation.interval_level,
+                )
+                plan = prepare_demand_plan(
+                    bundle,
+                    pd.read_parquet(frozen / "scenario_contexts.parquet"),
+                    snapshot,
+                    resolved_request,
+                    source_config,
+                    model_run_id,
+                    source_artifacts.get(f"models/{selected_estimator}/model_bundle.joblib"),
+                    fingerprint({"manifest": source_manifest, "artifacts": source_artifacts}),
+                )
+                for name in ("demand_plan.parquet", "demand_plan.csv"):
+                    path = self.run.path / name
+                    write_frame(path, plan.frame)
+                    paths.append(path)
+                for name, value in (
+                    ("baseline_snapshot.json", plan.snapshot),
+                    ("demand_spec.json", plan.spec),
+                    ("demand_result.json", plan.result),
+                ):
+                    path = self.run.path / name
+                    write_json(path, value)
+                    paths.append(path)
+                self.run.manifest["demand_source"] = {
+                    "model_run_id": model_run_id,
+                    "estimator": selected_estimator,
+                    "source_config": source_config.as_dict(),
+                    "source_environment": source_manifest["environment"],
+                }
+                self.run.outputs(
+                    "prepare_demand",
+                    paths,
+                    output_rows=len(plan.frame),
+                    output_status=plan.result["status"],
+                    usable_for_simulation=plan.result["usable_for_simulation"],
+                )
+            return read_json(result_path)
+
+    def simulate_marketplace(
+        self,
+        demand_run_id: str,
+        rules_path: Path,
+        requests_path: Path | None = None,
+        *,
+        window_start: str | None = None,
+        window_end: str | None = None,
+        carry_in_run_id: str | None = None,
+    ) -> dict:
+        """Freeze a verified demand run before one bounded fixed-supply trajectory."""
+        if demand_run_id == self.run.run_id:
+            raise ValueError("simulate-marketplace requires a separate output run")
+        if carry_in_run_id == self.run.run_id:
+            raise ValueError("Carry-in and simulation output must use separate runs")
+        source_manifest: dict = {}
+        source_artifacts: dict[str, str] = {}
+        rules: dict = {}
+        requests_checksum: str | None = None
+        carry_manifest: dict = {}
+        carry_checksum: str | None = None
+
+        def simulation_inputs():
+            nonlocal source_manifest, source_artifacts, rules, requests_checksum
+            nonlocal carry_manifest, carry_checksum
+            source_manifest = completed_run(self.config.workspace, demand_run_id)
+            if (
+                source_manifest.get("stages", {}).get("prepare_demand", {}).get("status")
+                != "succeeded"
+            ):
+                raise ValueError("Simulation requires a completed prepare-demand run")
+            source = self.config.workspace / "runs" / safe_id(demand_run_id)
+            names = [
+                "demand_plan.parquet",
+                "demand_result.json",
+                "demand_spec.json",
+                "baseline_snapshot.json",
+            ]
+            source_artifacts = {}
+            for name in names:
+                relative = f"runs/{demand_run_id}/{name}"
+                if relative not in source_manifest["artifacts"]:
+                    raise ValueError(f"Required simulation input is not registered: {relative}")
+                source_artifacts[name] = source_manifest["artifacts"][relative]
+            if read_json(source / "demand_result.json").get("usable_for_simulation") is not True:
+                raise ValueError("Demand usable_for_simulation gate is false or unavailable")
+            rules = read_json(rules_path)
+            requests_checksum = sha256_file(requests_path) if requests_path else None
+            if carry_in_run_id is not None:
+                carry_manifest = completed_run(self.config.workspace, carry_in_run_id)
+                if (
+                    carry_manifest.get("stages", {}).get("simulate_marketplace", {}).get("status")
+                    != "succeeded"
+                ):
+                    raise ValueError("Carry-in requires a completed simulate-marketplace run")
+                relative = f"runs/{carry_in_run_id}/end_snapshot.json"
+                if relative not in carry_manifest["artifacts"]:
+                    raise ValueError("Carry-in checkpoint is not registered")
+                carry_checksum = carry_manifest["artifacts"][relative]
+            return {
+                "demand_run_id": demand_run_id,
+                "source_manifest_sha256": sha256_file(source / "manifest.json"),
+                "source_artifacts": source_artifacts,
+                "rules": rules,
+                "seed": self.config.simulation.seed,
+                "prescribed_requests_sha256": requests_checksum,
+                "window_start": window_start,
+                "window_end": window_end,
+                "carry_in_run_id": carry_in_run_id,
+                "carry_checkpoint_sha256": carry_checksum,
+                "carry_manifest_sha256": sha256_file(
+                    self.config.workspace / "runs" / safe_id(carry_in_run_id) / "manifest.json"
+                )
+                if carry_in_run_id is not None
+                else None,
+            }
+
+        with self.run.stage("simulate_marketplace", simulation_inputs) as execute:
+            result_path = self.run.path / "simulation_result.json"
+            if execute:
+                source = self.config.workspace / "runs" / demand_run_id
+                frozen = self.run.path / "simulation_inputs"
+                paths = []
+                for name, expected in source_artifacts.items():
+                    destination = frozen / name
+                    with atomic_path(destination) as temporary:
+                        shutil.copyfile(source / name, temporary)
+                        if sha256_file(temporary) != expected:
+                            raise ValueError(
+                                f"Source changed while freezing simulation input: {name}"
+                            )
+                    paths.append(destination)
+                source_path = frozen / "source_manifest.json"
+                rules_copy = frozen / "rules.json"
+                write_json(source_path, source_manifest)
+                write_json(rules_copy, rules)
+                paths.extend([source_path, rules_copy])
+                carry_in = None
+                if carry_in_run_id is not None:
+                    destination = frozen / "carry_in.json"
+                    with atomic_path(destination) as temporary:
+                        shutil.copyfile(
+                            self.config.workspace
+                            / "runs"
+                            / safe_id(carry_in_run_id)
+                            / "end_snapshot.json",
+                            temporary,
+                        )
+                        if sha256_file(temporary) != carry_checksum:
+                            raise ValueError("Carry-in changed while freezing")
+                    carry_in = read_json(destination)
+                    carry_manifest_path = frozen / "carry_manifest.json"
+                    write_json(carry_manifest_path, carry_manifest)
+                    paths.extend([destination, carry_manifest_path])
+                prescribed = None
+                if requests_path is not None:
+                    # Read and freeze the same bytes; CSV is the explicit fixture exchange format.
+                    if requests_path.suffix.lower() != ".csv":
+                        raise ValueError("Prescribed requests must use CSV")
+                    destination = frozen / "prescribed_requests.csv"
+                    with atomic_path(destination) as temporary:
+                        shutil.copyfile(requests_path, temporary)
+                        if sha256_file(temporary) != requests_checksum:
+                            raise ValueError("Prescribed requests changed while freezing")
+                    paths.append(destination)
+                    prescribed = pd.read_csv(
+                        destination, dtype={"request_id": str, "service_id": str}
+                    )
+                source_config = Config.from_dict(
+                    source_manifest["demand_source"]["source_config"], self.config.workspace
+                )
+                simulation = simulate_marketplace(
+                    DemandPlan(
+                        pd.read_parquet(frozen / "demand_plan.parquet"),
+                        read_json(frozen / "demand_result.json"),
+                        read_json(frozen / "baseline_snapshot.json"),
+                        read_json(frozen / "demand_spec.json"),
+                    ),
+                    rules,
+                    source_config,
+                    self.config.simulation.seed,
+                    prescribed,
+                    window_start=window_start,
+                    window_end=window_end,
+                    carry_in=carry_in,
+                )
+                for name, frame in (
+                    ("requests", simulation.requests),
+                    ("request_events", simulation.request_events),
+                    ("vehicle_intervals", simulation.vehicle_intervals),
+                ):
+                    for extension in ("parquet", "csv"):
+                        path = self.run.path / f"{name}.{extension}"
+                        write_frame(path, frame)
+                        paths.append(path)
+                for name, value in (
+                    ("simulation_result.json", simulation.result),
+                    ("simulation_spec.json", simulation.spec),
+                    ("end_snapshot.json", simulation.end_snapshot),
+                ):
+                    path = self.run.path / name
+                    write_json(path, value)
+                    paths.append(path)
+                self.run.manifest["simulation_source"] = {
+                    "demand_run_id": demand_run_id,
+                    "source_environment": source_manifest["environment"],
+                    "source_kind": simulation.result["source_kind"],
+                    "demand_source_kind": simulation.result["demand_source_kind"],
+                    "carry_in_run_id": carry_in_run_id,
+                    "carry_checkpoint_version": carry_in.get("checkpoint_version")
+                    if carry_in
+                    else None,
+                }
+                self.run.manifest["source_kind"] = "synthetic"
+                self.run.outputs(
+                    "simulate_marketplace",
+                    paths,
+                    output_requests=len(simulation.requests),
+                    completed_trips=simulation.result["summary"]["completed_trips"],
+                    output_status=simulation.result["status"],
+                )
+            return read_json(result_path)
 
     def evaluate(self, build_id: str | None = None, **kwargs: Any) -> None:
         if "buildId" in kwargs and build_id is None:

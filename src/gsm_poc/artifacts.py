@@ -121,6 +121,7 @@ def environment(workspace: Path) -> dict[str, Any]:
         "streamlit",
         "scipy",
         "joblib",
+        "simpy",
     ):
         try:
             packages[name] = importlib.metadata.version(name)

@@ -2,7 +2,7 @@
 
 Problem 06 | Nguyễn Thành An
 
-Source requirements, formats, grain, units, and stage inputs/outputs follow
+GSM source requirements, export formats, keys and units follow
 [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). Algorithms follow
 [CORE_ENGINE_DESIGN.md](CORE_ENGINE_DESIGN.md). This document defines the target
 system; current progress and executed evidence are indexed in [docs README](../README.md).
@@ -24,6 +24,13 @@ reference question is: **If service X price rises 10% in one zone/time window,
 how do demand, serviceable supply, service choice, and idle supply change?**
 Supply response depends on compensation and the decisions drivers can adjust.
 
+Deliver an end-to-end PoC built on a reusable core engine with verified
+state/accounting, model validity, explicit failure handling, reproducible execution
+and measured workload limits. Its first validated scope is one cluster and two services.
+The PoC demonstrates supported scenario comparisons through a dashboard and exports
+using engine results; delivery quality follows the
+[engine standard](CORE_ENGINE_DESIGN.md#11-engine-delivery-standard).
+
 | Forecast | Interpretation | Dependency |
 |---|---|---|
 | Demand | Change in requests | Customer price sensitivity |
@@ -40,7 +47,7 @@ geographic cluster and time block, with frozen forecasts compared to outcomes.
 | Estimation | Three responses by supported zone/time/service resolution, intervals, evidence A/B/C | Individual customer pricing |
 | Marketplace | One-cluster simulator, equilibrium and idle supply per scenario | Citywide competition model |
 | Validation | Switchback design and forecast reconciliation ledger; cluster pilot subject to GSM approval | Broad rollout |
-| Delivery | Scenario dashboard and CSV/JSON | Production trip-level dispatch optimization |
+| Delivery | End-to-end PoC with a validated core engine, headless scenario execution, dashboard and CSV/JSON | Production trip-level dispatch optimization |
 
 Expected use: support pricing and incentive decisions with traceable economics
 and uncertainty, and explain policy impacts to GSM leadership and regulators.
@@ -182,7 +189,7 @@ compare measured causal effects with frozen forecasts, then update models.
 ## Five-week roadmap
 
 One cluster and two services; synthetic data allows progress without GSM.
-Detailed stage I/O follows the data contract.
+Source data requests follow the [GSM data request](../GSM_DATA_CONTRACT.md).
 
 | Week | Input | Review output |
 |---|---|---|
@@ -200,7 +207,7 @@ power requirements may extend impact evaluation beyond five weeks.
 
 | Deliverable | Content | Needs GSM data? |
 |---|---|---|
-| System | Pipeline, versioned models, one-cluster simulator, scenario dashboard, CSV/JSON | No; synthetic mode is sufficient for technical development |
+| System | End-to-end PoC backed by a reusable core engine, versioned models, one-cluster simulator, headless scenarios, benchmark evidence, dashboard and CSV/JSON | No; controlled sources support technical development and validation within their declared conditions |
 | Design | Identification, switchback, frozen forecast ledger | No |
 | Documentation | Code/configuration, rerun instructions, assumptions | No |
 | GSM results | Causal effects, real calibration, ROI, experimental impact | Yes |
@@ -210,8 +217,10 @@ sources. Unsupported components include a collection/experiment plan.
 
 | Acceptance criterion | Requirement | Verification |
 |---|---|---|
+| Engine robustness | State/accounting invariants, explicit failures, validated carryover and bounded workloads | [Core engine validation protocol](../BENCHMARK.md#core-engine-validation-protocol) and recorded [release gates](CORE_ENGINE_DESIGN.md#173-acceptance-gates) |
 | Reproducibility | Trace every metric to data/model/config/assumptions | Rerun saved versions and seeds |
-| Completeness | +10% price X returns demand/supply/choice/idle and supported operations/economics | Execute demo scenario |
+| Completeness | Price/incentive scenarios return demand/supply/choice/idle and supported operations/economics | Headless scenarios on independent seeds and supported contexts |
+| PoC integration | Dashboard and exports expose the same supported engine results, scope, units, evidence and statuses | Verified scenario walkthrough and artifact comparison |
 | Transparency | Intervals, support/extrapolation, evidence beside metrics | Review dashboard and exports |
 | Estimation | Parameter recovery, coverage, null/placebo behavior | Repeated controlled benchmarks |
 | Simulator | Baseline trip/wait/cancel/idle errors within frozen thresholds | Separate holdout baseline |
@@ -225,7 +234,7 @@ continues.
 
 | End-of-week-5 decision | Condition |
 |---|---|
-| Expand pilot | Stable prototype, adequate data/design, passing A/A/logging checks |
+| Expand pilot | Core engine passes technical gates; adequate data/design and passing A/A/logging checks |
 | Collect more data | Insufficient power or identification; specify missing sources and next review |
 | Pause rollout | Process checks fail or data/approved experiment bounds are unavailable |
 

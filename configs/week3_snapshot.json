@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "week3-two-vehicle-v1",
+  "source_kind": "synthetic",
+  "evidence_level": "C",
+  "calibration_status": "not_calibrated",
+  "timezone": "America/New_York",
+  "horizon_start": "2024-01-26T08:00:00-05:00",
+  "horizon_end": "2024-01-26T10:00:00-05:00",
+  "zone_ids": [161, 162],
+  "service_ids": ["X", "Y"],
+  "exposure_mode": "conditional_on_quote_population",
+  "demand_mode": "reduced_form_policy",
+  "vehicles": [
+    {
+      "vehicle_id": "vehicle-1",
+      "driver_id": "driver-1",
+      "shift_id": "shift-1",
+      "zone_id": 161,
+      "state": "idle",
+      "soc": 0.8,
+      "eligible_services": ["X", "Y"],
+      "shift_start": "2024-01-26T08:00:00-05:00",
+      "shift_end": "2024-01-26T10:00:00-05:00"
+    },
+    {
+      "vehicle_id": "vehicle-2",
+      "driver_id": "driver-2",
+      "shift_id": "shift-2",
+      "zone_id": 162,
+      "state": "idle",
+      "soc": 0.8,
+      "eligible_services": ["X", "Y"],
+      "shift_start": "2024-01-26T08:00:00-05:00",
+      "shift_end": "2024-01-26T10:00:00-05:00"
+    }
+  ]
+}

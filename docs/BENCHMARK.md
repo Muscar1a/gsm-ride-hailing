@@ -1,4 +1,4 @@
-# Benchmark protocol: method accuracy and business value
+# Benchmark protocol: core engine, method accuracy and business value
 
 ## Objective and protocol
 
@@ -11,12 +11,14 @@ It must allow zero uplift, negative uplift and a simpler estimator winning.
 | Controlled method benchmark | Recovery of known effects under specified assumptions | Implemented in `evaluate.py`; reporting results in the [Week 2 report](submission/days/20261007/weekly_report.md), earlier measurements in [historical validation](submission/days/20261003/validation.md) |
 | Separate Swissmetro choice baseline | Predictive choice performance on held-out people | Implemented in `swissmetro.py`; MNL versus intercept-only results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy_benchmark.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
+| Core engine validation | State/accounting correctness, repeatability, failure behavior and measured operating limits | Demand bridge and fixed-supply development checks exist; full engine protocol and release evidence remain required |
 | GSM offline policy evaluation | Estimated value under verified real-data identification and support | Requires GSM logs and a separate evaluator |
 | GSM randomized validation | Incremental realized revenue under the tested deployment | Requires a designed and executed GSM experiment |
 
-Good effect estimates do not by themselves establish revenue uplift. The existing
-scenario engine outputs simulated quote choices with a fixed viewer population;
-it does not output actual revenue, completed trips or profit.
+Good effect estimates do not by themselves establish revenue uplift. The choice
+scenario stage outputs simulated quote choices with a fixed viewer population.
+The separate simulator produces synthetic completed trips and operational metrics;
+actual GSM revenue and profit remain unevaluated.
 
 The reporting coverage protocol uses a frozen snapshot, batches of at most five
 seeds, and reporting seeds 20001–20100. Runtime probe 19001 is excluded.
@@ -193,6 +195,14 @@ Define the actual GSM revenue ledger measure and report contribution margin
 separately. Do not count competitor bookings, gross customer payments or driver
 payments as interchangeable revenue measures.
 
+Use confirmed revenue and `contribution_margin = revenue - variable_cost`.
+Calculate `incentive_roi = delta_contribution_margin / delta_incentive_cost`
+only with positive incremental incentive cost and complete required costs.
+Contribution margin already subtracts incentives once; do not subtract them
+again from its delta. Missing costs or accounting rules leave economics
+unavailable with reasons. The toy policy benchmark reports only simulated gross
+booking value; it does not measure GSM contribution margin, ROI or economic impact.
+
 When assignment propensities and the identification assumptions are credible,
 use an independent policy evaluator with inverse-propensity and doubly robust
 estimates, overlap diagnostics, effective sample size and clustered uncertainty.
@@ -233,6 +243,36 @@ inconclusive. A losing policy is a valid benchmark outcome.
 Only an executed, appropriately analyzed GSM study can support a claim about
 GSM revenue impact in the population, prices and operating conditions tested.
 Neither synthetic recovery nor simulated policy uplift establishes that claim.
+
+## Core engine validation protocol
+
+This protocol defines required validation as engine capabilities are implemented.
+The two-vehicle development fixture is one correctness case. Release conclusions
+require evidence for the implemented scope under the
+[engine delivery standard](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard).
+
+| Layer | Cases and independent checks |
+|---|---|
+| Deterministic correctness | Hand-computable trajectories and stock/flow balances; request partition, vehicle state-time, shared fleet, energy/chargers and ledgers; no double assignment |
+| Continuation and replay | Frozen prescribed event schedules across window boundaries versus one continuous run, including busy vehicles/open requests; seeded replay and operational checkpoint restoration preserve applicable scheduler/random state |
+| Statistical and scenario validation | Existing five demand DGPs; controlled supply/compensation truth; independent baseline holdout; unchanged policy, price/incentive actions and paired-seed comparisons; retain bias/error/coverage and failed counts |
+| Stress and failure behavior | Zero demand/supply/response, zero-base bonuses, fixed/variable compensation, zone heterogeneity/relocation, saturation, long waits/cancellation, low SOC/charging bottlenecks, carryover, corrupt inputs/artifacts, insufficient support, nonconvergence and budget exhaustion |
+| Workload and integration | Headless scenarios at fixture, representative and declared upper workloads; vary fleet size, request volume, horizon and repeated seeds within the validated market scope |
+| PoC integration | A supported scenario walkthrough from baseline/target comparison to dashboard and CSV/JSON; displayed/exported values, units, denominators, model/run references and statuses agree with the engine artifacts |
+
+Freeze scope, datasets/configuration, development and evaluation seeds, baselines,
+tolerances, repetitions and resource budgets before final evaluation. Measure
+wall time, peak memory, request/event/candidate work counts and failure rates;
+record hardware/environment and distinguish cold execution from artifact reuse.
+Choose numerical budgets from bounded development measurements. No performance
+or statistical acceptance is implied before the corresponding runs are recorded.
+
+Keep stage reuse distinct from continuing operational time. Continuation checks
+compare the same event schedules and modeled conditions; stochastic distribution
+checks use independent seeds. Failed/rejected attempts remain in reported counts.
+Analytic accounting, controlled statistical accuracy and real GSM calibration
+have separate conclusions. Release gates are maintained in the
+[core design](reference/CORE_ENGINE_DESIGN.md#173-acceptance-gates).
 
 ## 5. Reproducing Week 2 benchmarks
 

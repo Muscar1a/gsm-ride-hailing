@@ -6,6 +6,7 @@ import argparse
 import dataclasses
 import json
 import sys
+from pathlib import Path
 
 from gsm_poc.config import DGPS, ESTIMATORS, Config
 from gsm_poc.pipeline import Pipeline
@@ -15,7 +16,17 @@ from gsm_poc.scenario import ScenarioRequest
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description="GSM controlled marketplace PoC (evidence C)")
     commands = root.add_subparsers(dest="command", required=True)
-    for name in ("ingest", "build", "generate", "fit", "evaluate", "scenario", "run-all"):
+    for name in (
+        "ingest",
+        "build",
+        "generate",
+        "fit",
+        "evaluate",
+        "scenario",
+        "prepare-demand",
+        "simulate-marketplace",
+        "run-all",
+    ):
         cmd = commands.add_parser(name)
         cmd.add_argument("--config", default="configs/demo.toml")
         cmd.add_argument("--run-id", help="Resume only a matching code/config/environment run")
@@ -41,13 +52,29 @@ def parser() -> argparse.ArgumentParser:
                 action="store_true",
                 help="Still run one oracle comparison; skip repeated seed evaluation",
             )
-        if name == "scenario":
+        if name in ("scenario", "prepare-demand"):
             cmd.add_argument("--model-run-id", required=True)
             cmd.add_argument("--scenario-id", default="price-scenario")
             cmd.add_argument("--delta-x", type=float, default=0.10)
             cmd.add_argument("--delta-y", type=float, default=0.0)
             cmd.add_argument("--baseline-x", type=float, default=1.0)
             cmd.add_argument("--baseline-y", type=float, default=1.0)
+        if name == "prepare-demand":
+            cmd.add_argument("--snapshot", type=Path, required=True)
+        if name == "simulate-marketplace":
+            cmd.add_argument("--demand-run-id", required=True)
+            cmd.add_argument("--rules", type=Path, required=True)
+            cmd.add_argument(
+                "--requests", type=Path, help="Prescribed request CSV instead of Poisson arrivals"
+            )
+            cmd.add_argument(
+                "--window-start", help="Offset-aware window start within demand horizon"
+            )
+            cmd.add_argument("--window-end", help="Offset-aware window end within demand horizon")
+            cmd.add_argument(
+                "--carry-in-run-id", help="Completed operational checkpoint run to continue"
+            )
+        if name == "scenario":
             cmd.add_argument("--n-sessions", type=int, default=10000)
             cmd.add_argument("--zone", type=int)
             cmd.add_argument("--target-context-set", default=None)
@@ -118,6 +145,38 @@ def main(argv: list[str] | None = None) -> int:
                 target_context_set=target_context_set,
             )
             result = pipeline.scenario(request, args.model_run_id, args.zone)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "prepare-demand":
+            result = pipeline.prepare_demand(
+                args.model_run_id,
+                args.snapshot,
+                ScenarioRequest(
+                    args.scenario_id,
+                    args.baseline_x,
+                    args.baseline_y,
+                    args.delta_x,
+                    args.delta_y,
+                    interval_level=config.evaluation.interval_level,
+                ),
+                estimator=args.estimator,
+            )
+            print(
+                json.dumps(
+                    {key: value for key, value in result.items() if key != "blocks"},
+                    ensure_ascii=False,
+                    indent=2,
+                    allow_nan=False,
+                )
+            )
+        elif args.command == "simulate-marketplace":
+            result = pipeline.simulate_marketplace(
+                args.demand_run_id,
+                args.rules,
+                args.requests,
+                window_start=args.window_start,
+                window_end=args.window_end,
+                carry_in_run_id=args.carry_in_run_id,
+            )
             print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         if args.command != "run-all":
             pipeline.run.complete()

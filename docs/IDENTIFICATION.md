@@ -1,8 +1,27 @@
 # Identification and interpretation
 
-This PoC implements the first two weeks in the supplied proposal and detailed
-design. Simulated behavior always carries evidence C, including the randomized
+This document specifies the demand/choice model and its interpretation.
+Simulated behavior always carries evidence C, including the randomized
 synthetic DGP. Randomization in code is not a GSM field experiment.
+
+## Sources and evidence
+
+| Source | Use | Interpretation limits |
+|---|---|---|
+| NYC TLC HVFHV, pinned in configuration/manifests | Completed-trip marts and train-only context | Missing quotes, nonbookers, failed requests, online fleet, bonuses and SOC; realized fares are not prechoice quotes; platform codes are not GSM services |
+| Synthetic/semi-synthetic data | Controlled effect recovery and operational tests | Declared behavior is evidence C; oracle values stay isolated from fitting and scenario prediction; operational tests do not establish GSM calibration |
+| EPFL Swissmetro | Separate stated-preference choice baseline | `CHOICE=0` is unknown; travel time/headway are not pickup ETA; never join it to TLC/GSM. Dataset-specific use limits and validation are in the [benchmark protocol](BENCHMARK.md#swissmetro-choice-baseline) |
+| GSM | Local identification, calibration and economics when sources qualify | Raw data is unavailable; public/synthetic coefficients cannot transfer directly |
+
+A/B/C describe effect evidence rather than raw observations: C for controlled
+synthetic effects, B for valid historical GSM identification under stated
+assumptions, and A for an executed, valid experiment. Future combined forecasts
+must retain evidence per dependency; the full chain may have mixed evidence.
+
+Before fitting GSM data, review the DAG/estimand, assignment mechanism,
+pretreatment features, support, compensation definitions and inference/resampling
+units with local splits. DML does not remove hidden confounding. An adapter swap
+does not establish identification or coefficient transferability.
 
 ## Estimand
 
@@ -15,6 +34,13 @@ The baseline elasticity is `theta[j,k] / p0[j]`, using the weighted mean baselin
 probability of the selected evaluation contexts. Session count supplies weights.
 There is one common matrix for the cluster. Selecting a zone changes the context
 mix and predicted baseline without creating a separately estimated zone matrix.
+
+For observed sessions, assign NONE only after a complete observation window
+with complete choice logs; otherwise retain censoring or an unknown outcome.
+NONE does not establish competitor choice. Quote refreshes do not create
+independent customers: freeze one decision/session rule before fitting, without
+using subsequent booking to select the decision. Refresh sequences require a
+separate estimand. Net choice changes do not identify individual switching customers.
 
 ```mermaid
 flowchart LR
@@ -149,9 +175,12 @@ conversion, canceled requests or unserved demand. X/Y are hypothetical services,
 not Uber/Lyft estimates. Simulated coefficients cannot transfer to GSM.
 
 Supply, charging, spatial interference, recurring customers and temporal carryover
-are outside this DGP. No supply increase, idle vehicles, cancellations, actual
-revenue or ROI are produced. The next phase needs GSM compensation and vehicle
-state data, explicit units, a matching simulator and a new identification review.
+are outside this choice DGP. Its model does not produce supply increases, idle
+hours, cancellations, actual revenue or ROI. The separate fixed-supply simulator
+currently produces synthetic operational trajectories; its assumptions and limits
+are in [USAGE.md](USAGE.md#week-3-fixed-supply-simulation).
+GSM extensions require compensation and vehicle-state data, calibrated operational
+rules and a new identification review.
 DiD and field switchback require appropriate policy variation and GSM approval.
 
 API reference: [EconML LinearDML](https://www.pywhy.org/EconML/_autosummary/econml.dml.LinearDML.html).

@@ -1,0 +1,26 @@
+# Bounded synthetic development handoff, separate from frozen Week 2 reporting.
+[project]
+name = "week3-demand-development"
+context_mode = "synthetic"
+
+[source]
+zones = [161, 162]
+
+[simulation]
+seed = 42
+slot_minutes = 15
+sessions_per_block = 50
+dgp = "RCT_SYN"
+
+[model]
+estimators = ["adjusted_ols"]
+scenario_estimator = "adjusted_ols"
+folds = 5
+
+[evaluation]
+bootstrap_draws = 3
+
+[scenario]
+delta_price_x = 0.10
+delta_price_y = 0.0
+n_sessions = 10000

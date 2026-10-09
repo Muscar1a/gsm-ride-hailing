@@ -1,11 +1,12 @@
 # Core Engine Design - GSM Causal Marketplace
 
 **Basis:** [GSM Causal Marketplace Proposal](GSM_Causal_Marketplace_Proposal.md).
-**Scope:** a two-sided marketplace prototype, one cluster, two services, five weeks.
+**Scope:** a reusable causal marketplace core engine powering an end-to-end PoC;
+first validated scope is one cluster and two services, with a five-week development plan.
 **Document type:** implementation and acceptance design. Formulas, interfaces,
 and starting values are design choices, not measurements or implementation status.
 
-Sources, formats, grain, units, interfaces, and stage I/O follow
+GSM source requests, export formats, keys and units follow
 [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). This document specifies algorithms;
 current progress and executed evidence are indexed in [docs README](../README.md).
 
@@ -31,9 +32,33 @@ price changes affect supply through compensation and adjustable driver decisions
 | Validation | Switchback schedule, frozen forecasts, reconciliation ledger | ExperimentInterface |
 | Handoff | Scenario dashboard, CSV/JSON, reproducible versions | ScenarioRunner, ArtifactStore |
 
-The prototype supports decisions. Production execution requires GSM approval;
+The engine supports decisions. Production execution requires GSM approval;
 individual pricing, production trip dispatch, and citywide competition modeling
 are outside this scope.
+
+### 1.1 Engine delivery standard
+
+The PoC is built on a core engine with independently verified behavior and
+declared operating limits. PoC delivery includes a scenario dashboard and exports
+using the same versioned results as headless execution. A small market scope
+bounds the validation domain; it does not relax correctness, inference or failure
+handling. These are target
+requirements, not claims that current implementation has passed them.
+
+| Area | Required behavior/evidence |
+|---|---|
+| Execution and interfaces | Python/CLI execution independent of UI; explicit schema/version, scope, units and configuration at module boundaries; dashboard reads completed results |
+| State and accounting | Valid request/vehicle transitions, no double assignment, conserved request/state-time/energy/ledger quantities; carryover retains unfinished work and applicable operational state |
+| Failure behavior | Identification/support failures, invalid states, nonconvergence and exhausted budgets retain reasons and withhold dependent official forecasts; valid independent outputs keep their own status |
+| Scientific validity | Simple baselines, leakage-free splits, independent controlled truths/holdouts, support/rank checks, repeated-run accuracy and empirical interval coverage; missing GSM evidence stays explicit |
+| Reproducibility | Versioned data/models/rules/configuration/environment, explicit event ordering and random streams, verified artifact reuse and replay; operational continuation separately validates saved event/RNG state |
+| Resource limits | Freeze representative workloads and acceptance budgets before final checks; measure runtime, memory, work counts and failure rates; expose bounded exhaustion |
+| Extension | Map new sources and replace declared response/operational rules through explicit interfaces; rerun contract and regression checks and record the newly validated scope |
+
+Use the simplest model that meets these gates. Statistical and operational
+fidelity must be supported by evaluation; additional model complexity does not
+substitute for evidence. The benchmark protocol and release gates are in
+[section 17](#17-validation-and-acceptance).
 
 ## 2. Architecture
 
@@ -115,8 +140,11 @@ Nearest-time joins require error assessment and uncertainty labels.
 
 ### 4.2 Internal interfaces
 
-Names/grains follow the [shared research tables](../GSM_DATA_CONTRACT.md#3-shared-research-tables).
-These are proposed research interfaces. Python classes may use CamelCase;
+The following are proposed research interfaces built from
+[GSM source exports](../GSM_DATA_CONTRACT.md#1-gsm-data-requirements).
+Their grains and artifact conventions are maintained in
+[ARCHITECTURE.md](../ARCHITECTURE.md#research-table-schemas).
+Python classes may use CamelCase;
 functions, parameters, tables, and artifacts use snake_case.
 
 | Engine input | Contract tables | Content |
@@ -745,51 +773,40 @@ without GSM; real forecasts/calibration/economics require corresponding sources.
 
 ### 17.2 Benchmarks
 
-Controlled cases include randomized, observed/hidden confounding, null, collinear
-prices, zone heterogeneity, zero supply response, zero-base bonuses, fixed/variable
-compensation, shared fleet, relocation, charging bottlenecks, and carryover.
-Declare truths/assumptions and retain identification/convergence failures in counts.
-
-Report per-effect bias/RMSE, per-output forecast error, coverage with binomial
-uncertainty, null false positives, failures, and runtime. Freeze seeds/thresholds
-before final evaluation. A simple baseline may win. Keep analytic/stock-flow,
-statistical fitting, and real operational validation distinct.
-
-Policy benchmarks select on train/validation and score frozen policies using
-independent oracle tests or valid real-data evaluators. Include unchanged policy
-and zero/negative uplift. Selection models cannot grade their own policies.
+The [core engine validation protocol](../BENCHMARK.md#core-engine-validation-protocol)
+defines correctness, repeated-seed, failure and workload checks. Method and policy
+protocols in the same document retain simple baselines, independent evaluators
+and frozen holdouts. Declare truths/assumptions and retain all rejected/failed
+attempts in their applicable denominators.
 
 ### 17.3 Acceptance gates
 
 | Gate | Requirement |
 |---|---|
+| Headless execution | End-to-end Python/CLI scenarios use declared interfaces without dashboard execution |
+| PoC integration | A supported scenario walkthrough uses the same versioned results in headless execution, dashboard and CSV/JSON, preserving units, denominators, evidence and statuses |
 | Reproducibility | Same versions/data/config/seeds agree within declared tolerance |
-| Complete outputs | +10% price X and increased incentives traverse demand/supply/simulation/equilibrium/metrics |
+| Complete outputs | +10% price X and increased incentives traverse demand/supply/simulation/equilibrium/metrics across independent seeds and supported contexts |
+| State and failure handling | Invariants pass through carryover and supported operational transitions; deliberate invalid inputs, budget exhaustion and nonconvergence yield explicit failures |
 | Transparency | Evidence/interval/support/dependencies displayed and exported per metric |
 | Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
-| Simulator | Holdout errors meet frozen thresholds, or remain unevaluated on GSM |
+| Simulator | Independent controlled baseline errors meet frozen thresholds; GSM calibration is evaluated separately when logs exist |
 | Counterfactual | Reconcile identified experimental/historical effects at the same estimand |
-| Resources | Finite jobs, checkpoint/resume, declared runtime budgets |
+| Resources | Representative workload runtime/memory/work counts meet frozen budgets; stage reuse and operational continuation have separate verified semantics |
 
 Freeze `AcceptanceSpec` for business, operational error, coverage, and runtime
 before final holdout. Never derive thresholds retroactively from achieved results.
 Synthetic technical acceptance is not measured GSM business impact.
+Record technical and GSM-evidence gate conclusions separately. Open requirements
+remain visible even when the calendar milestone or dashboard demo is complete.
 
 ## 18. Five-week sequence
 
-This is a dependency plan, not a completion record. Stage I/O follows the contract.
-
-| Week/stages | Input | Output/downstream gate |
-|---|---|---|
-| 1 - `prepare_data` | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands | Research tables, quality/manifest, split/acceptance; valid keys/grain/units/totals |
-| 2 - `fit_demand_choice`, `validate_benchmarks` | Choice/assignment or controlled blocks; separate Swissmetro, independent evaluator | Demand/choice bundle, pooled/partial matrix, baseline/support/interval, method/choice/policy reports; no leakage |
-| 3 - `fit_supply`, `calibrate_baseline`, `simulate_marketplace`, `solve_equilibrium` | Demand bundle, offers/states/operations or synthetic truth, roster/rules/snapshot/budgets | Supply/calibration bundles, plans/trajectories, equilibrium status, price/incentive scenarios, baseline-error report; correct accounting |
-| 4 - `compare_scenarios`, `design_switchback` | Full model/snapshot, accounting/uncertainty, movement/carryover/power | Full-chain intervals, supported economics, dashboard/export, experiment spec, frozen forecast |
-| 5 - `reconcile_experiment`, `handoff` | Completed artifacts/acceptance; actual experiment logs if available | Reproducible package, instructions, gate status; conditional A/A/pilot/reconciliation |
-
-Without GSM, build modules, synthetic benchmarks, interfaces, and experiment
-design. GSM calibration/effects/ROI remain unevaluated. Week-5 pilot prioritizes
-process checks; impact evaluation may extend according to power analysis.
+Weekly requirements and expected outputs are maintained in the
+[roadmap](../ROADMAP.md#weekly-inputs-and-outputs); it also records current work
+and remaining acceptance gates. This design describes target algorithms rather
+than implementation progress. Without GSM, calibration/effects/ROI remain
+unevaluated while synthetic development and experiment design can continue.
 
 ## 19. Configuration and business decisions
 
@@ -816,7 +833,7 @@ cannot silently inherit unconfirmed synthetic values.
 ## 20. References and use
 
 - [GSM proposal](GSM_Causal_Marketplace_Proposal.md): scope and roadmap.
-- [Data contract](../GSM_DATA_CONTRACT.md): sources, interfaces, units, and stage I/O.
+- [GSM data request](../GSM_DATA_CONTRACT.md): sources, export metadata, keys and units.
 - [Benchmark protocol](../BENCHMARK.md): recovery, policy value, and business impact.
 
 This design specifies the target system. Choosing formulas/modules/configuration
