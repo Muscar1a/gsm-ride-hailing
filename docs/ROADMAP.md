@@ -1,11 +1,11 @@
-# PoC and Core Engine Roadmap — Week 2 Closeout and Weeks 3–5
+# PoC and Core Engine Roadmap — Week 1 Review and Weeks 2–5
 
 Source data requests and export requirements follow
 [GSM_DATA_CONTRACT.md](GSM_DATA_CONTRACT.md).
 Research schemas and artifact conventions follow
 [ARCHITECTURE.md](ARCHITECTURE.md#research-table-schemas).
 Algorithms follow the [core engine design](reference/CORE_ENGINE_DESIGN.md);
-the demand/choice specification and generator equations are in
+the causal specifications and controlled demand/choice generator equations are in
 [IDENTIFICATION.md](IDENTIFICATION.md).
 
 GSM raw data is unavailable. TLC supplies completed-trip context, synthetic truth
@@ -15,30 +15,20 @@ profit and ROI stay `not_evaluated`.
 
 ## Delivery objective
 
-Estimate and validate three causal responses: rider price sensitivity, driver
-labor supply and own/cross-service substitution. The initial target scope is one
-cluster and two services. Each result reports the estimand, estimate and interval,
-decision population, identification assumptions, support, diagnostics and evidence;
-identified results can be handed off before the full simulator is complete.
-Use supported responses to forecast policy effects, compare a finite candidate
-set against unchanged policy, and recommend candidates for a pilot under a
-preregistered business criterion and service-quality, driver-income and budget
-guardrails. Revenue, contribution margin, profit and ROI each require their own
-confirmed measurement inputs and accounting scope; unavailable economics retain
-explicit status rather than using booking value as a substitute.
+Estimate and validate rider-price, driver-labor-supply and own/cross-service
+responses for one cluster and two services, using the estimands in
+[IDENTIFICATION.md](IDENTIFICATION.md). Use supported results for policy
+forecasts, independent finite-policy comparisons and experimental reconciliation
+under the business criterion and guardrails in
+[BENCHMARK.md](BENCHMARK.md#freeze-the-business-objective).
 
-The delivery path is identification, estimation, supported forecasts, independent
-policy evaluation and experimental reconciliation. The reusable core engine,
-simulator, dashboard and exports support these outputs. Simulation translates
-behavioral responses into completed trips, waiting/cancellation, idle
-vehicle-hours and conditional economics; convergence alone does not validate
-the causal responses. Its correctness, explicit failures, reproducibility and
-measured resource limits remain mandatory for simulation-dependent forecasts.
-Headless results, dashboard values and CSV/JSON must refer to the same versioned
-engine outputs, scope, units and statuses. The two-vehicle fixture establishes a
-development case; release requires independent correctness, statistical and
-workload checks under the
+Simulator, core engine, dashboard and exports support these results. Integrated
+forecasts additionally require the correctness, reproducibility, uncertainty and
+resource gates in the
 [engine delivery standard](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard).
+All views/exports use the same versioned results, scope, units and statuses.
+Revenue, contribution margin, profit and ROI require their respective confirmed
+measurement/accounting inputs; unavailable outcomes retain explicit reasons.
 
 The five-week sequence is a planning target. Acceptance follows recorded evidence
 and frozen quality gates; unfinished requirements remain open at handoff.
@@ -49,11 +39,38 @@ These are weekly requirements and targets, not completion records.
 
 | Week | Required input | Expected output and acceptance |
 |---|---|---|
-| 1 | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands and business decision | Causal questions, confirmed business criterion/guardrails, identification and evaluation plan, research tables, quality report, manifests and splits; validate keys/grain/units/totals |
+| 1 | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands and business decision | Reviewed causal specifications, source/mapping readiness, decision register and evaluation plan; validate available research tables, quality reports, manifests and splits. Pending GSM confirmations keep the corresponding closure conditions open. |
 | 2 | Choice/assignment records or controlled blocks; separate Swissmetro data and independent evaluator | Rider demand/choice results, common matrix or identified columns, baseline/support/interval diagnostics and method/choice/policy reports; state unidentified responses and prevent oracle leakage |
 | 3 | Frozen demand/choice bundle; offered compensation, dispatch decisions, eligible participation/shift/state records or declared synthetic truth; shared roster, rules, initial snapshot, seeds and budgets | Driver labor-supply results and separate acceptance diagnostics; supported integrated forecasts with feasible plans/snapshots, offer/operational trajectories, earnings ledger, equilibrium status and baseline-error report; invariant, failure and independent controlled benchmark evidence |
 | 4 | Supported response bundles and validated operational inputs; finance sources/rules to the extent required by the chosen criterion; uncertainty specification, movement/carryover and power assumptions | Independently evaluated finite policy comparisons, intervals and sensitivity, pilot recommendations with guardrail/evidence status; conditional economic comparison/cost bridge, workload checks, experiment/A/A specification and frozen forecasts; dashboard/exports expose the same results |
 | 5 | Versioned causal/policy/engine artifacts, correctness/statistical/performance evidence and acceptance records; actual experiment logs if an experiment occurs | Reproducible evidence package, rerun instructions, identified/unidentified scope and gate status; runnable supporting PoC, pilot handoff and forecast-versus-effect reconciliation when experiment data qualify |
+
+## Week 1 specification and closure
+
+Week 1 establishes the questions, data readiness and evaluation decisions for
+the three responses. Review these specifications before implementing the driver
+models or selecting a GSM policy. Current evidence and unresolved confirmations
+are indexed in [README.md](README.md#tiến-độ-hiện-tại).
+
+| Review item | Specification owner | Closure condition |
+|---|---|---|
+| Causal scope | [IDENTIFICATION.md](IDENTIFICATION.md) | Record treatment/contrast, outcome, population, horizon, units, assignment and inference unit for rider price, labor supply and substitution. Separate conditional quote conversion from total requests, and labor participation/hours from trip acceptance. Mark unidentified components explicitly. |
+| Source coverage and mappings | [ARCHITECTURE.md](ARCHITECTURE.md#research-table-schemas) | Record actual availability for each requested group, native-to-logical mappings, keys/grain/units/timezone, coverage and quality checks. Public/synthetic tables qualify only for their declared scope; an export request does not establish GSM receipt or validation. |
+| Business decision | [BENCHMARK.md](BENCHMARK.md#freeze-the-business-objective) | Obtain actual confirmation of the primary criterion, minimum worthwhile effect, ownership/accounting scope, action bounds, horizon and service/driver/budget guardrails. Keep unconfirmed GSM values pending; illustrative development choices cannot satisfy this confirmation. |
+| Evaluation and experiment planning | [BENCHMARK.md](BENCHMARK.md) | Review baselines, separate development/final evaluation, dependence-aware splits/inference, identification/support and uncertainty gates. Record the proposed assignment strategy, behavioral horizon, carryover/spillover risks, power inputs and A/A checks; freeze new thresholds before a fresh final evaluation. |
+| Reproducibility and review | [ARCHITECTURE.md](ARCHITECTURE.md#storage-and-execution) | Link source/configuration/seed/environment identities, completed artifact checksums and scoped validation evidence. Record the reviewer, date, accepted scope and unresolved conditions only after review occurs. |
+
+Controlled-development readiness and GSM readiness have separate conclusions.
+The former can be reviewed with labeled synthetic assumptions and validated
+public data; the latter remains open without received/validated GSM sources,
+a local identification/split review and the required business confirmations.
+Preparing specifications does not complete causal measurements or imply reviewer
+acceptance; the handoff records its supported scope and remaining conditions.
+
+Week 1 requires the evaluation and experiment strategy. Driver-model
+implementation belongs to week 3; executable schedules, calibrated power,
+frozen forecasts and A/A/pilot evidence remain week 4–5 work under the
+appropriate data and authorization conditions.
 
 ## 1. Close week 2
 

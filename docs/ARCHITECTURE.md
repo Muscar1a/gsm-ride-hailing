@@ -206,10 +206,10 @@ statuses; a single trajectory is not an estimated policy effect.
 
 ## Research table schemas
 
-The following are proposed logical schemas for researcher-built GSM tables.
-They are not GSM export requirements or implemented table names. Native sources
-are requested in [GSM_DATA_CONTRACT.md](GSM_DATA_CONTRACT.md); their mappings must
-be validated before these grains are used.
+This section owns the logical GSM table grains and the mapping/readiness
+requirements below. These are proposed researcher-built schemas; implemented
+tables are identified separately. [GSM_DATA_CONTRACT.md](GSM_DATA_CONTRACT.md)
+owns native export requirements. Validate mappings before using these grains.
 
 | Logical table | Grain/key | Content |
 |---|---|---|
@@ -226,23 +226,82 @@ be validated before these grains are used.
 | `demand_block` | Zone × time block × service | Quote exposure, requests, conversion, pretreatment context, completeness |
 | `baseline_snapshot` | One baseline window / snapshot version | Initial states, roster, request rates, calibration/rules, quality |
 
-Mappings preserve raw data and record source/schema versions, grain, quality
-flags and denominators. Check join cardinality, effective periods, retries/parents
-and failed links; nearest-time joins need uncertainty labels. Distinguish observed
-zero, missing, unknown and not applicable. No trips does not establish offline state.
-
-Trip offers preserve the terms and information actually available at offer time,
-separately from final fare/pay and later trip outcomes. If terms must be
-reconstructed, retain the applicable rule version, timestamped source inputs,
-join provenance and reconstruction status; missing historical inputs leave terms
-unavailable. Do not replace them with realized earnings. Shift participation,
-trip acceptance conditional on an offer and dispatch exposure have separate
-populations and denominators; missing exposure/response is not a recorded zero.
-
 The controlled PoC currently writes `synthetic_policy_block`,
 `synthetic_quote_session` and `choice_block` under `observed/`. The estimation
 grain is zone × time block, with session counts and X/Y/NONE proportions.
 These generated tables do not establish a mapping from GSM native schemas.
+
+### Week 1 GSM mapping and readiness specification
+
+The data contract requests eight source groups over the latest 12 months,
+including relevant services, neighboring zones and controls. The researcher
+records receipt, mapping and validation against the logical schemas above.
+
+Track readiness separately for each source and mapping, retaining the evidence
+reference, reason, owner and review date:
+
+| Readiness state | Required evidence/meaning |
+|---|---|
+| `requested` | Source is listed in the request specification; receipt has not been assessed |
+| `not_received` | No GSM export is available in the workspace; actual coverage remains unknown |
+| `received_unmapped` | Native export and metadata are preserved with source identity/checksums; logical mapping is pending |
+| `mapped_unvalidated` | Native-to-logical mapping is documented; grain, links, coverage and quality checks remain unvalidated |
+| `validated` | Mapping and quality checks have recorded results for the declared source versions, population and time scope |
+
+Source/field availability is a separate provider declaration. Use `not_recorded`
+or `not_applicable` only with GSM confirmation and its reference; lack of receipt
+or a missing field in an export remains unknown pending clarification. Mapping
+validation does not establish causal identification, experimental evidence or
+financial completeness.
+
+The coverage checklist records GSM receipt evidence available in this workspace;
+actual coverage has not been confirmed by GSM.
+
+| GSM source group | Receipt status | Actual GSM coverage | Dependent GSM outputs |
+|---|---|---|---|
+| Booking & Demand | `not_received` | Unknown | Request funnel, completed trips, cancellations and operational outcomes |
+| Pricing & Promotion | `not_received` | Unknown | Displayed/effective prices, promotion/subscription exposure and price-response estimates |
+| Driver Supply & Status | `not_received` | Unknown | Eligible population, participation/hours, serviceable and idle vehicle-hours |
+| Driver Earnings & Incentive | `not_received` | Unknown | Predecision offered terms, incentive response and reconciled driver earnings |
+| Matching & Operations | `not_received` | Unknown | Conditional trip acceptance, dispatch/pickup timing and charging calibration |
+| Customer Choice / Cross-service | `not_received` | Unknown | Observed choice sets, nonbooking, conversion and own/cross-service responses |
+| Policy & Context | `not_received` | Unknown | Assignment/exposure checks, identification, support, interference and carryover |
+| Finance & Cost | `not_received` | Unknown | Recognized revenue, contribution margin, incremental profit and ROI |
+
+Preserve raw exports. Each mapping record connects native table/log, field and
+schema/rule version to logical table/field, with the transformation and
+original/normalized units.
+It must retain:
+
+- Source identity, dictionary/confirmation references, grain, primary/event keys,
+  stable entity keys, retries/parents and source-to-logical lineage.
+- Expected and observed join cardinality, unmatched/ambiguous links, as-of join
+  rules, effective periods and predecision information cutoffs; nearest-time
+  joins require uncertainty labels.
+- Terms/information available at the decision time, separate from realized
+  fare/pay and later outcomes. Reconstruction retains the applicable rule
+  version, timestamped inputs, join provenance and reconstruction status;
+  missing historical inputs leave terms unavailable, never replaced by realized
+  earnings.
+- Actual time/service/zone/population coverage, timezone, observation windows,
+  retention/gaps and sampling rate; missing exposure/response or incomplete
+  windows remain unknown rather than nonbooking, nonparticipation or rejection.
+- Source, eligible, valid and excluded denominators with quality flags/reasons,
+  duplicate/null checks and reconciliation results, separately for shift
+  participation, dispatch exposure and trip acceptance conditional on an offer.
+  Preserve nonbookers, nonparticipants, eligible nonrecipients, failed requests
+  and zero-trip shifts; no trips does not establish offline state. Distinguish
+  observed zero from missing, unknown and not applicable; unknown coverage and
+  outcomes never become zero.
+- Physical driver/vehicle keys and shared service eligibility for the
+  state-time accounting defined in [artifact conventions](#artifact-conventions).
+
+Source classifications and evidence follow [Boundaries](#boundaries). Existing
+public/synthetic quality reports and manifests qualify only their declared
+scopes; they do not fill the GSM receipt/mapping checklist. Missing/unvalidated
+inputs follow the output-status rules in the
+[target architecture](#target-customer-and-driver-architecture). Current progress
+is indexed in [docs README](README.md).
 
 ## Artifact conventions
 

@@ -32,6 +32,139 @@ indexed in [README.md](README.md); gate
 conclusions are recorded in the [acceptance review](submission/days/20261007/acceptance_review.md).
 Execution completion and statistical acceptance are separate statuses.
 
+## Week 1 evaluation specification (prospective)
+
+Week 1 defines how each causal result will be evaluated; it does not certify a
+new model or rewrite an executed protocol. Estimands and identification rules
+follow [IDENTIFICATION.md](IDENTIFICATION.md); decision populations, source grains
+and proposed interfaces follow [ARCHITECTURE.md](ARCHITECTURE.md#research-table-schemas).
+Milestone requirements follow [ROADMAP.md](ROADMAP.md#weekly-inputs-and-outputs).
+The specification records, for each estimand, its population, treatment/outcome
+units, horizon, identified scope, assumptions, baseline, split and inference plan,
+diagnostics, acceptance criteria and unresolved inputs.
+
+### Baselines and learner/evaluator separation
+
+Declare the simplest valid comparator for each estimand before fitting. These
+are prospective choices, not implemented or measured supply results:
+
+| Estimand | Baseline specification |
+|---|---|
+| Rider own-price response | No price response under unchanged policy, plus a simple covariate-adjusted price regression on the same outcome/population; retain naive OLS as a confounding diagnostic where applicable |
+| Own/cross-service substitution | No policy-induced change, plus a simple joint-price response model on matched X/Y request-rate or conditional-choice outcomes; NONE/outside-option outcomes require complete quote/outcome logs; compare only the matrix columns/cells supported by assignment variation, not an invented full matrix |
+| Driver participation and working hours | No incentive response, plus simple participation and conditional-hours regressions using eligible drivers, offered compensation and pretreatment context; evaluate total-hours response with nonparticipants/zero outcomes retained |
+| Trip acceptance, if separately estimated | Constant acceptance among actual eligible offers, plus a simple response model using predecision offer terms; preserve its offer denominator and do not use it as the labor-supply baseline |
+
+Conditional hours among participants is a descriptive/model component unless
+separately identified: treatment can change who participates. The primary hours
+response uses the eligible cohort and retains nonparticipants and zero outcomes.
+
+Use the same data identity, splits, weights, support and outcome definition for
+every method being compared. Fit preprocessing and response/nuisance models on
+training data; validation selects policies and tuning settings. The learner sees
+observed inputs;
+controlled truth/oracle artifacts are isolated for the independent evaluator.
+Freeze learned models and selected policies before final evaluation. An
+evaluator may use controlled truth or a justified real-data identification design;
+the learner's own fitted scenario score cannot be its sole evidence of value. See
+[Athey and Wager](https://arxiv.org/abs/1702.02896).
+
+### Split, inference and horizon specification
+
+Distinguish quote/session or driver-decision observation units from policy
+assignment clusters/blocks, analysis aggregates and the effect horizon. Keep
+all records from an assignment episode and linked decision/outcome window
+together; never treat quotes or offers inside one assigned block as independent
+randomizations. Freeze temporal train/development/final boundaries and any gap
+or washout around boundaries from the chosen horizon/carryover assumptions.
+Fit transformations only on training data, using features available before each
+decision; future earnings, waits and outcomes cannot enter pretreatment context.
+
+Specify repeated-rider/driver handling against the generalization objective.
+A new-entity holdout groups each entity's records; a future-period holdout may
+retain repeated entities only with chronological feature availability and an
+explicit dependence/inference plan. Preserve original entity, assignment and time
+keys through nuisance folds and resampling. Choose clustering, block resampling
+or randomization inference to match assignment, repeated entities, temporal
+dependence and interference; independent quote-row resampling is insufficient.
+Record the number of independent units and restrictions when too few clusters or
+effective blocks support the requested uncertainty. Short price blocks must not
+stand in for an unobserved longer-horizon shift-participation response.
+
+Name the uncertainty target: bootstrap the complete fit-and-select procedure for
+learning-procedure performance; resampling an already frozen policy's outcomes
+targets that policy instead. This does not change the executed seed-level
+Student-t intervals reported below.
+
+After changing a method in response to final results, develop the revision on
+development data and freeze a new protocol with a fresh final holdout or independent
+evaluation seeds. Do not tune on old final outcomes or present their reuse as
+fresh confirmation; retain historical conclusions for their original revision.
+Freeze DGPs, seeds, action constraints and new stress cases before fresh evaluation;
+do not change them after final results to obtain positive uplift.
+
+### Prospective statistical gates and experiment strategy
+
+Freeze estimand-specific tolerances before new final evaluation: known-truth
+recovery bias/RMSE, supported forecast error, null/placebo behavior, nominal
+interval coverage and false-positive rates, and interval availability/stability
+under bounded refits and independent replicates. Report uncertainty for coverage
+and false-positive rates, widths/endpoint stability, attempted/expected/valid/
+failed/rejected counts and unavailable intervals. Coverage among valid intervals
+must accompany its valid/attempted denominator; missing or failed intervals
+cannot improve a pass rate. Placebo conclusions and stress cases retain their
+identification limits. No new supply thresholds or passes are asserted here;
+the historical demand targets below remain confined to their frozen DGP/protocol.
+
+Week 1 also records a preliminary experiment strategy: candidate assignment
+unit, treatment/effect horizon, interference and carryover risks, required power
+inputs (variance, dependence, exposure and worthwhile effect), and A/A logging,
+assignment and applicable ledger checks. Specify model/policy/assignment and
+snapshot references, scope, forecast points/intervals and an analysis plan to freeze
+before treatment outcomes. Reconciliation compares measured causal effects at
+matching population, units and horizon, preserves the forecast, and reports
+forecast error/uncertainty and assumptions of separately versioned updates.
+Executable assignment/calendar, power calculation, washout/stopping choices
+and A/A logs belong to Weeks 4–5,
+when supporting inputs and authorization exist. GSM data is unavailable: the
+plans remain unevaluated, synthetic tests remain evidence C, and actual GSM
+split/calendar/power and causal effects remain unconfirmed or `not_evaluated`.
+Pending decisions are recorded below rather than
+inventing sample sizes, thresholds, ownership or dates.
+
+### Freeze the business objective
+
+Confirm and preregister the following register before GSM policy selection or
+final evaluation. Its current entries remain pending:
+
+| Decision | Required confirmation | Current state |
+|---|---|---|
+| Primary metric | Named outcome/estimand, definition, units and denominator; no default profit objective | `pending_gsm_confirmation` |
+| Minimum worthwhile effect | Business-relevant effect in declared units, decision rule and owner | `pending_gsm_confirmation` |
+| Scope and service ownership | Native cluster/services, eligible populations, controllable policies and ownership; one cluster/two services is the proposed initial scope | `pending_gsm_confirmation` |
+| Accounting | Outcome-specific revenue/cost coverage, currency, recognition/allocation rules and finance approval where required | `pending_gsm_confirmation` |
+| Guardrails | Waiting, cancellation, driver income and budget definitions and limits | `pending_gsm_confirmation` |
+| Action bounds | Allowed price/incentive candidates, operational limits and responsible owner; the controlled price grid is not a GSM approval | `pending_gsm_confirmation` |
+| Measurement horizon | Assignment/exposure period, effect horizon, carryover/washout assumptions and comparable measurement window | `pending_gsm_confirmation` |
+
+Each guardrail needs its definition, population/denominator, threshold,
+measurement window, action on breach and responsible owner. Each register entry
+also needs the source of confirmation, owner and version/date when confirmed;
+these values remain unset until GSM supplies them. Week 1 may deliver the
+specification with pending items recorded, but cannot close the corresponding
+GSM selection or experiment gates. No financial threshold or safety limit is
+invented to complete the register.
+
+Report demand, labor supply, substitution, completed trips, fulfillment, wait,
+cancellation and idle vehicle-hours as causal/operational outcomes as supported;
+their priority depends on that declared decision criterion. Evaluate revenue,
+contribution margin, profit or ROI only when the corresponding measurement inputs
+and accounting definitions qualify. If Y is a competitor, keep its price
+fixed and exclude its bookings from GSM revenue. If both services belong to GSM,
+include substitution between them. Missing financial inputs leave the respective
+economic outcome unavailable; operational improvements or booking value do not
+establish a financial success claim.
+
 ## 1. Method benchmark
 
 Keep the existing naive OLS, adjusted OLS and LinearDML comparison. Use identical
@@ -118,30 +251,16 @@ or uncertainty for one deployed policy. Failed values retain attempted/expected
 denominators; fallback values retain learning failures and reasons. Zero or
 negative uplifts and ties are kept.
 
-### Freeze the business objective
-
-Specify which services GSM owns, which prices it can change, baseline fares,
-and currency. Before GSM policy selection and final evaluation, confirm and
-preregister the primary business criterion, its minimum worthwhile improvement,
-service-quality, driver-income and budget guardrails, and the measurement period.
-Report demand, labor supply, substitution, completed trips, fulfillment, wait,
-cancellation and idle vehicle-hours as causal/operational outcomes as supported;
-their priority depends on that declared decision criterion. Evaluate revenue,
-contribution margin, profit or ROI only when the corresponding measurement inputs
-and accounting definitions qualify. If Y is a competitor, keep its price
-fixed and exclude its bookings from GSM revenue. If both services belong to GSM,
-include substitution between them. Missing financial inputs leave the respective
-economic outcome unavailable; operational improvements or booking value do not
-establish a financial success claim.
+### Controlled booking-value objective
 
 The executed controlled pricing-policy protocol above remains frozen: normalized
 fares, fixed quote population and simulated gross booking value are its declared
 objective. The broader GSM decision criterion does not rewrite that protocol,
 its selected policies or its results.
 
-Until these inputs are supplied, monetary results are unavailable. A toy study
-may use explicitly declared illustrative fares or normalized price units, with
-the output named **simulated gross booking value**. TLC fares must not silently
+GSM monetary outcomes remain unavailable until their required inputs qualify.
+The controlled study uses illustrative normalized fares and reports
+**simulated gross booking value**. TLC fares must not silently
 be substituted for hypothetical X/Y fares.
 
 For that controlled study, value is:
@@ -171,13 +290,9 @@ probability validity for every candidate. Include:
 6. The oracle's best policy within the same action/constraint set, as an upper
    reference available only in a controlled benchmark.
 
-Fit on training days; use validation days to choose the policy and any tuning
-settings. Freeze it before final-test evaluation. Learners cannot access oracle
-parameters or probabilities. Only the evaluator may score the frozen policies
-using held-out oracle outcomes. Evaluating a policy only with the same fitted
-model that selected it would make the benchmark circular. Policy learning and
-independent value evaluation have distinct roles; see
-[Athey and Wager](https://arxiv.org/abs/1702.02896).
+Apply the [learner/evaluator separation](#baselines-and-learnerevaluator-separation)
+specified above; the executed protocol retains its training/validation/test and
+oracle separation as recorded in this section.
 
 Report on the same test contexts for all policies:
 
@@ -192,27 +307,16 @@ Report on the same test contexts for all policies:
   seeds. Separate variability across independent simulated seeds from day
   resampling within one dataset.
 
-Bootstrap the complete fit-and-select procedure if the target is performance of
-the learning procedure. Resampling outcomes for an already frozen policy measures
-a different uncertainty target. Name the target explicitly and keep final-test
-data out of policy selection.
-
-Do not change the DGP, seed list or constraints after seeing final results to
-obtain positive uplift. The current DGP may give several estimators the same best
-grid action; then their policy values tie even if coefficient RMSE differs.
-More challenging cases must be motivated and declared before fresh evaluation.
+The current DGP may give several estimators the same best grid action; then their
+policy values tie even if coefficient RMSE differs.
+Revisions follow the [fresh-evaluation and inference rules](#split-inference-and-horizon-specification).
 
 ## 3. GSM offline validation
 
-Core response/policy inputs include nonbooking quote sessions, displayed options
-and prices, policy assignments and their probabilities/rules, completion/cancellation
-events, eligible participation/shift records, predecision compensation/incentives,
-trip offers and operational availability. Financial outcomes additionally require
-recognized revenue/payment adjustments, promotions, driver payroll and incentives,
-and the direct/shared expense and allocation sources required by their declared
-scope. Agree join keys, feature availability and the applicable accounting scope,
-currency, recognition periods and cost categories before evaluation. Completed TLC
-trips cannot supply this.
+Validate GSM source mappings, join keys and predecision feature availability
+against the [research schemas](ARCHITECTURE.md#research-table-schemas) and
+[decision register](#freeze-the-business-objective). Completed TLC trips cannot
+supply the required quote, driver-decision or financial histories.
 
 When financial and accounting data become available from GSM, the full economic
 comparison may evaluate the preregistered outcome at its supported accounting
@@ -234,46 +338,38 @@ incremental incentive cost is positive. A combined price/incentive policy needs
 the price-only policy as its comparator for this ratio. Profit already subtracts
 incentives once. Missing cost pools, coverage or allocation rules leave profit
 and profit-based ROI `not_evaluated` with reasons, without invalidating completed
-operational and demand benchmarks; a supported partial margin
-must keep its own label. The toy policy benchmark reports simulated gross
-booking value; it does not measure GSM contribution margin, profit, ROI or
-economic impact.
+operational and demand benchmarks; a supported partial margin must keep its own label.
 
 When assignment propensities and the identification assumptions are credible,
 use an independent policy evaluator with inverse-propensity and doubly robust
-estimates, overlap diagnostics, effective sample size and clustered uncertainty.
-Keep policy learning and final evaluation separate. Doubly robust evaluation
+estimates, overlap diagnostics and effective sample size, under the
+[separation](#baselines-and-learnerevaluator-separation) and
+[inference specification](#split-inference-and-horizon-specification). Doubly robust evaluation
 combines outcome and assignment models; it does not remove missing support or
 hidden confounding. See the original
 [Dudik, Langford and Li paper](https://www.microsoft.com/en-us/research/publication/doubly-robust-policy-evaluation-and-learning-2/).
 
-The current discrete price grid is convenient for this comparison. Arbitrary
-continuous prices need an explicitly justified evaluation approach; exact action
+GSM actions require confirmed bounds from the [decision register](#freeze-the-business-objective)
+and support in GSM logs; the controlled grid above is not a GSM-approved action
+set. Arbitrary continuous prices need an explicitly justified evaluation approach; exact action
 matching and discrete inverse-propensity formulas do not automatically apply.
 If logs cannot support the proposed actions, report value as unidentifiable.
 
 ## 4. GSM profit-impact experiment
 
-This section specifies a profit-specific experiment when GSM confirms profit as
-the primary business criterion and the complete financial measurement qualifies.
-For another declared criterion, preregister its estimand, measurement and minimum
-worthwhile improvement instead; every experiment still needs service-quality,
-driver-income and budget guardrails and a frozen forecast for reconciliation.
+This optional profit-specific experiment applies only when GSM confirms profit
+in the [decision register](#freeze-the-business-objective) and complete financial
+measurement qualifies. It follows the [experiment strategy and gates](#prospective-statistical-gates-and-experiment-strategy);
+the register governs guardrails and any other primary criterion.
+Execution must meet the core design's
+[A/A and pilot requirements](reference/CORE_ENGINE_DESIGN.md#152-aa-and-pilot)
+and [immutable prediction-ledger requirements](reference/CORE_ENGINE_DESIGN.md#153-prediction-ledger).
 
 Compare the frozen candidate policy against existing pricing using a randomized
 design appropriate for the marketplace. A zone/time switchback is a candidate;
 interference between zones and carryover determine whether it is suitable.
 Block duration, washout and inference require design, not a generic A/B toggle.
 See [Bojinov, Simchi-Levi and Zhao](https://arxiv.org/abs/2009.00148).
-
-Pre-register incremental GSM profit in the declared scope as the primary
-business outcome, its minimum worthwhile uplift, accounting/coverage rules,
-power calculation, assignment unit, analysis period, uncertainty method and
-stopping rule. Use an A/A logging, ledger-reconciliation and assignment check
-before the treatment comparison. Freeze response/scenario versions, policy and
-assignment references, forecast points/intervals, scope and analysis plan before
-observing treatment outcomes. Match block duration and follow-up to the response
-being tested; a short price switchback may not identify shift-participation effects.
 
 Measure profit over comparable assigned zones/blocks or a declared common
 exposure period. Include all owned-service revenue to capture substitution and
@@ -284,20 +380,14 @@ are explanatory outcomes or guardrails. Revenue per quote may also be useful,
 but quote traffic may itself respond to pricing; do not silently hold that
 denominator fixed.
 
-Report profit uplift with its confidence interval and cost bridge. A business
-success criterion requires the agreed worthwhile profit gain and acceptable
-guardrails. A positive point estimate with an interval spanning zero is
-inconclusive. If complete financial measurement is unavailable, report the
-profit outcome as unavailable rather than declaring success from trips or
-revenue alone. A losing policy is a valid benchmark outcome.
+Report profit uplift with its confidence interval and cost bridge against the
+confirmed register. A positive point estimate with an interval spanning zero is
+inconclusive; incomplete financial measurement leaves profit unavailable and
+cannot establish profit success from trips or revenue alone.
 
 Only an executed, appropriately analyzed GSM study can support a claim about
 GSM profit impact in the population, prices and operating conditions tested.
 Neither synthetic recovery nor simulated policy uplift establishes that claim.
-Reconcile the measured causal effects with the frozen forecasts at matching
-population, units and horizon. Preserve the original forecast and report forecast
-error, uncertainty and assumptions behind any model update; do not relabel a
-post-experiment refit as the original prediction.
 
 ## Core engine validation protocol
 

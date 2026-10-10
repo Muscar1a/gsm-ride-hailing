@@ -1,22 +1,39 @@
 # Tài liệu GSM Causal Marketplace PoC
 
 Đọc tài liệu theo thứ tự: tiến độ hiện tại → roadmap → contract → thiết kế hoặc
-hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **10/10/2026**;
+hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **11/10/2026**;
 kết quả reporting tuần 2 chốt lúc **17:13:28 ngày 07/10/2026, Asia/Bangkok**.
 
-Mục tiêu chính là ước lượng và kiểm chứng nhân quả **độ nhạy giá khách hàng, cung lao động
-tài xế và thay thế giữa dịch vụ**, rồi dự báo tác động chính sách, đánh giá quyết định
-và đối chiếu bằng thí nghiệm. Kết quả có khoảng tin cậy, phạm vi áp dụng, bằng chứng
-và tiêu chí kinh doanh cùng giới hạn chất lượng dịch vụ/thu nhập tài xế được chốt trước.
-Simulator, core engine, dashboard và exports hỗ trợ các đầu ra này. Doanh thu,
-contribution margin, lợi nhuận và ROI thực cần định nghĩa và dữ liệu GSM tương ứng;
-chỉ tiêu thiếu đầu vào giữ `not_evaluated`. Engine chạy độc lập với UI, có kiểm chứng
-mô hình, vận hành, failure handling, tái lập và benchmark tải.
-Dashboard và exports dùng cùng kết quả có version từ engine. Tiêu chuẩn đích nằm trong
-[core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard);
-trạng thái bên dưới mô tả phần đã triển khai, không mặc định các tiêu chuẩn đã đạt.
+Mục tiêu là ước lượng và kiểm chứng nhân quả **độ nhạy giá khách hàng, cung lao động
+tài xế và thay thế giữa dịch vụ**, rồi dự báo, đánh giá chính sách và đối chiếu
+bằng thí nghiệm. [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) quản lý
+mục tiêu/phạm vi; [core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard)
+quản lý thuật toán và tiêu chuẩn hỗ trợ. Các đặc tả và trạng thái hiện hành được
+dẫn bên dưới; kết quả thiếu dữ liệu hoặc nhận diện giữ `not_evaluated`.
 
 ## Tiến độ hiện tại
+
+**Đặc tả Week 1 được Bun duyệt ngày 11/10/2026.** Phạm vi duyệt gồm
+câu hỏi/estimand trong [IDENTIFICATION.md](IDENTIFICATION.md), đặc tả trạng thái
+nguồn và mapping trong [ARCHITECTURE.md](ARCHITECTURE.md#research-table-schemas),
+khung xác nhận tiêu chí kinh doanh và kế hoạch đánh giá trong [BENCHMARK.md](BENCHMARK.md).
+Điều kiện đóng tuần nằm trong
+[roadmap tuần 1](ROADMAP.md#week-1-specification-and-closure).
+
+Rà soát ngày 11/10 xác nhận nền public/synthetic có thể tái sử dụng: run
+`20261003T131251-0b5e2209` có tám artifact ingest/build tồn tại và khớp checksum,
+silver/mart cùng đối soát **970.940 chuyến**, và split của choice run
+`20261003T130951-df24a7e4` có 4.800/1.200/1.440 block train/validation/test,
+không trùng ngày. **49 kiểm thử liên quan** về dữ liệu, độ phủ, generator,
+estimation và artifact/CLI đạt trong lần rà soát; thư mục tạm được đặt trong
+workspace. Số liệu lịch sử nằm trong [validation 03/10](submission/days/20261003/validation.md).
+Các kiểm tra này xác nhận phạm vi TLC và controlled choice, chưa xác nhận
+mapping/coverage GSM hoặc độ bao phủ khoảng tin cậy của mọi đáp ứng.
+
+Theo xác nhận của Bun ngày 11/10, GSM đang xử lý và chưa bàn giao dữ liệu.
+Mapping/độ phủ thực chưa được kiểm chứng; tiêu chí kinh doanh, mức cải thiện
+đáng thử, biên độ chính sách và ngưỡng chờ/hủy/thu nhập/ngân sách còn chờ GSM
+xác nhận. **Week 1: đặc tả đã duyệt; phần GSM chờ dữ liệu và xác nhận nghiệp vụ**.
 
 **Week 2 đã hoàn tất compute và rà soát số liệu, chưa nghiệm thu đầy đủ.**
 Reporting hoàn thành 500/500 seed jobs; Swissmetro và policy-value development
@@ -26,8 +43,8 @@ bundle demand/choice cùng rerun/resume, và xác nhận nghiệm thu thực t�
 [Hồ sơ nghiệm thu](submission/days/20261007/acceptance_review.md) là nguồn kết
 luận các gate; [rà soát thống kê](submission/days/20261007/statistical_review.md)
 giải thích metrics. Kế hoạch thực hiện phần còn lại nằm trong [ROADMAP.md](ROADMAP.md).
-Dữ liệu GSM chưa có; kết quả hành vi/vận hành mô phỏng vẫn là evidence C và lợi
-nhuận thực của GSM chưa được đánh giá.
+Kết quả hành vi/vận hành mô phỏng là evidence C; các kết luận GSM giữ trạng thái
+theo dữ liệu và nhận diện tương ứng.
 
 Week 3 bước 1 đã triển khai: `prepare-demand` đóng gói choice run đã kiểm tra
 checksum, xuất request rates theo zone/block/service và snapshot fleet dùng chung.
@@ -47,11 +64,11 @@ và equilibrium vẫn còn phía trước.
 | Tài liệu | Đọc khi cần |
 |---|---|
 | [USAGE.md](USAGE.md) | Cài đặt, CLI, profiles, exports, đọc status và repository checks |
-| [ROADMAP.md](ROADMAP.md) | Yêu cầu I/O theo tuần, chốt tuần 2, triển khai tuần 3 và định hướng tuần 4–5 |
+| [ROADMAP.md](ROADMAP.md) | Đặc tả/điều kiện đóng tuần 1, yêu cầu theo tuần, chốt tuần 2 và định hướng tuần 3–5 |
 | [GSM_DATA_CONTRACT.md](GSM_DATA_CONTRACT.md) | Request dữ liệu gửi GSM: nguồn, phạm vi, định dạng, khóa và đơn vị |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Pipeline, schema nghiên cứu, quy ước artifacts, ranh giới oracle và dashboard |
-| [IDENTIFICATION.md](IDENTIFICATION.md) | Nguồn/evidence, estimand, DGPs, OLS/DML, inference và giới hạn kịch bản giá |
-| [BENCHMARK.md](BENCHMARK.md) | Protocol, ngưỡng đánh giá phương pháp/choice/policy và quy tắc diễn giải kinh tế |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Pipeline, schema và trạng thái mapping/coverage, quy ước artifacts, ranh giới oracle và dashboard |
+| [IDENTIFICATION.md](IDENTIFICATION.md) | Ba câu hỏi nhân quả, estimand/nhận diện, DGP demand/choice và giới hạn bằng chứng |
+| [BENCHMARK.md](BENCHMARK.md) | Kế hoạch đánh giá theo estimand, quyết định kinh doanh còn chờ xác nhận và protocol/ngưỡng hiện có |
 
 ## Thiết kế và hồ sơ
 
