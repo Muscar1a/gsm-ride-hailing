@@ -3,7 +3,8 @@
 An end-to-end proof of concept under development for causal modeling and scenario
 evaluation in a ride-hailing marketplace, built on a reusable core engine.
 The target combines demand/choice, compensation and supply, operational simulation,
-equilibrium and traceable uncertainty, demonstrated through a dashboard and exports.
+equilibrium and financial accounting to compare GSM profit after all in-scope
+costs, with traceable uncertainty in a dashboard and exports.
 The code builds NYC TLC completed-trip marts, generates controlled X/Y/NONE
 choices, compares OLS and DML, evaluates known effects, and exposes supported
 price scenarios in Streamlit. The demand bridge converts choice forecasts into
@@ -13,7 +14,7 @@ trajectories, completed trips, waiting times and idle vehicle-hours.
 
 Synthetic and semi-synthetic behavior is evidence C. Public TLC trips provide
 operational context; current results do not establish GSM elasticity, supply
-response or ROI. The [documentation index](docs/README.md) describes scope,
+response, profit or ROI. The [documentation index](docs/README.md) describes scope,
 progress, technical specifications and submission evidence.
 
 ## Code structure

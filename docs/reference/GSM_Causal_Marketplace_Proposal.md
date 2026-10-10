@@ -20,9 +20,11 @@ correlation alone does not identify the three responses needed for policy decisi
 | Cross-service substitution | How do X/Y requests and nonbooking probability change when one price changes? | Services share demand shocks; net changes do not identify individual customer switches |
 
 Build causal response models and combine them in a marketplace simulator. The
-reference question is: **If service X price rises 10% in one zone/time window,
-how do demand, serviceable supply, service choice, and idle supply change?**
-Supply response depends on compensation and the decisions drivers can adjust.
+reference business question is: **If service X price rises 10% in one zone/time
+window, how much does GSM's profit change after driver pay, incentives and all
+other in-scope costs?** Demand, serviceable supply, service choice and idle
+supply explain the profit change and constrain the policy decision. Supply
+response depends on compensation and the decisions drivers can adjust.
 
 Deliver an end-to-end PoC built on a reusable core engine with verified
 state/accounting, model validity, explicit failure handling, reproducible execution
@@ -33,6 +35,7 @@ using engine results; delivery quality follows the
 
 | Forecast | Interpretation | Dependency |
 |---|---|---|
+| GSM incremental profit (primary) | Target minus baseline profit after all in-scope costs for the declared market/horizon | Recognized GSM revenue, complete cost ledger and approved allocations, plus all responses and operations |
 | Demand | Change in requests | Customer price sensitivity |
 | Supply | Change in serviceable vehicle-hours under offered compensation | Driver supply response |
 | Service choice | Net X/Y/nonbooking changes within the observation window | Cross-service response |
@@ -49,8 +52,9 @@ geographic cluster and time block, with frozen forecasts compared to outcomes.
 | Validation | Switchback design and forecast reconciliation ledger; cluster pilot subject to GSM approval | Broad rollout |
 | Delivery | End-to-end PoC with a validated core engine, headless scenario execution, dashboard and CSV/JSON | Production trip-level dispatch optimization |
 
-Expected use: support pricing and incentive decisions with traceable economics
-and uncertainty, and explain policy impacts to GSM leadership and regulators.
+Expected use: choose pricing and incentive policies by incremental GSM profit
+after all in-scope costs, with traceable accounting and uncertainty, and explain
+customer and driver impacts to GSM leadership and regulators.
 These are objectives, not measured benefits.
 
 ## System and data
@@ -81,14 +85,14 @@ research tables; field/grain requirements follow the data contract.
 | Matching & Operations | Dispatch, pickup/service/cancel, charging calibration |
 | Customer Choice / Cross-service | Choice sets, nonbookers, own/cross effects |
 | Policy & Context | Assignment, identification, support, context |
-| Finance & Cost | Revenue, variable costs, contribution margin, ROI |
+| Finance & Cost | Recognized revenue, direct/fixed/shared costs, approved allocation, incremental profit, contribution margin and ROI |
 
 | Block/contract stage | Input | Output |
 |---|---|---|
 | `prepare_data` | Labeled raw/public/synthetic sources, metadata, mapping | Parquet research tables, quality report, JSON manifest |
 | `fit_demand_choice`, `fit_supply`, `validate_benchmarks` | Choice/assignment or offer/state tables, estimands, splits | Model bundles, baselines, effect matrix/supply response, diagnostics, independent benchmarks |
 | `calibrate_baseline`, `simulate_marketplace`, `solve_equilibrium` | Request rates, admission plan, snapshot/rules/calibration, seed/budget | Trajectories, operational metrics, equilibrium or nonconvergence status |
-| `compare_scenarios` | Common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Scenario CSV/JSON for demand/supply/choice/operations and supported economics/intervals |
+| `compare_scenarios` | Common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Scenario CSV/JSON led by incremental profit when complete financial inputs exist, with demand/supply/choice/operations, cost bridge, evidence and intervals |
 | `design_switchback`, `reconcile_experiment`, `handoff` | Supported actions, experiment spec, frozen forecast; actual logs where available | Schedule/ledger, valid experimental reconciliation, dashboard, reproducible package |
 
 Request input is requests/hour. Supply is serviceable vehicle-hours; idle hours
@@ -159,11 +163,12 @@ errors. Without GSM logs, validation is against synthetic truth only.
 
 | Metric | Definition | Requirement |
 |---|---|---|
+| Incremental GSM profit (primary) | Difference in recognized revenue less every applicable direct and allocated cost between target and baseline | Finance-approved scope, complete cost coverage, consistent allocation and uncertainty; unavailable otherwise |
 | Idle supply | Idle vehicle-hours or eligible idle vehicles at a point in time | State-time accounting; charging/ineligible separate; request-capacity gap is only a proxy |
 | Completed trips | Simulator outcome from requests and supply | Apply elasticity to requests once, never again to completion |
 | Wait/cancellation | Matching trajectories | Validate against separate baseline data |
-| Incremental contribution margin | Policy difference after driver pay and applicable variable costs | Confirm ledger and shift cost allocation with GSM |
-| Incentive ROI | Incremental net benefit / incremental incentive cost | Positive denominator and complete costs; otherwise unavailable |
+| Incremental contribution margin (secondary) | Policy difference after applicable variable costs | Confirm variable-cost classification and ledger with GSM; never label it total profit |
+| Incentive ROI (secondary) | Incremental GSM profit / incremental incentive cost for a fixed-price incentive contrast | Positive denominator, complete profit accounting and an isolated incentive comparison; otherwise unavailable |
 
 Resample appropriate clusters/time blocks, refit models, and rerun paired
 baseline/target simulations. Separate statistical uncertainty, simulation
@@ -199,7 +204,7 @@ Source data requests follow the [GSM data request](../GSM_DATA_CONTRACT.md).
 | 4 | Full model/snapshot/scenario, accounting/uncertainty, movement/carryover/power | Full-chain intervals, supported economics, dashboard/export, experiment spec, frozen prediction ledger |
 | 5 | Completed artifacts/acceptance; actual experiment logs if available | Reproducible package, instructions, gate status; conditional reconciliation/A/A/pilot and next steps |
 
-Without GSM, real calibration, causal effects, and economics stay `not_evaluated`.
+Without GSM, real calibration, causal effects, profit and ROI stay `not_evaluated`.
 Synthetic recovery/coverage establishes only performance under tested conditions,
 with evidence C. Approval alone is not A. GSM data/pricing/driver-operations
 contacts confirm business definitions. A week-5 pilot prioritizes process checks;
@@ -210,7 +215,7 @@ power requirements may extend impact evaluation beyond five weeks.
 | System | End-to-end PoC backed by a reusable core engine, versioned models, one-cluster simulator, headless scenarios, benchmark evidence, dashboard and CSV/JSON | No; controlled sources support technical development and validation within their declared conditions |
 | Design | Identification, switchback, frozen forecast ledger | No |
 | Documentation | Code/configuration, rerun instructions, assumptions | No |
-| GSM results | Causal effects, real calibration, ROI, experimental impact | Yes |
+| GSM results | Causal effects, real calibration, profit, ROI, experimental impact | Yes |
 
 Outputs declare zone/service/horizon, uncertainty, support, evidence, and missing
 sources. Unsupported components include a collection/experiment plan.

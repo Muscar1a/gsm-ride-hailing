@@ -21,6 +21,12 @@ gsm-ride-hailing/
 └── runs/                     # Execution runs, manifests, bundles, and diagnostics
 ```
 
+## Current implemented flow
+
+The following flow describes the current demand/choice PoC and fixed-roster
+simulator. Driver participation, compensation-aware trip acceptance and the
+income-supply solver below are target capabilities, not implemented stages.
+
 ```mermaid
 flowchart TD
   TLC[TLC Parquet + zone lookup] --> Ingest[Ingest + source manifest]
@@ -89,6 +95,84 @@ window. Supply response, energy/charging, operational calibration and the solver
 remain later work. Execution instructions and artifact-reading guidance are in
 [USAGE.md](USAGE.md).
 
+## Target customer and driver architecture
+
+The [core engine design](reference/CORE_ENGINE_DESIGN.md) owns the target
+algorithms, estimands and validation rules. Extend the existing packages through
+versioned interfaces rather than treating the current fixed-supply trajectory
+as a complete price/incentive forecast.
+
+| Package | Target responsibility |
+|---|---|
+| `data/` | Map native sources to validated quote, eligibility, shift, trip-offer, state and finance ledger tables; retain nonparticipants, zero outcomes and cost-source coverage |
+| `causal/` | Fit and independently validate demand/choice, driver participation/conditional hours and trip-acceptance models; export separate estimands, support and evidence in model bundles |
+| `simulation/` | Apply compensation rules; construct physical driver/vehicle schedules; dispatch offers, resolve acceptance and operate the state simulator; produce individual earnings ledgers and bounded income-supply trials |
+| `pipeline/` | Freeze compatible model/calibration/policy/snapshot/accounting inputs; orchestrate bounded jobs, paired baseline/target scenarios, profit evaluation, uncertainty and exports |
+| `core/` | Define shared contracts, units, versions, support/status checks, seeds, budgets and artifact lifecycle |
+| `ui/` | Read completed scenario artifacts and expose the same values, evidence, limitations and statuses as headless execution and CSV/JSON |
+
+```mermaid
+flowchart TD
+  Sources[Native sources + coverage] --> Offline[Offline mapping, estimation and independent calibration]
+  Offline --> Version[Versioned response bundles, support and operational rules]
+  Version --> Runner[Bounded paired scenario runner]
+  Policy[Customer price + driver incentive policy] --> Runner
+  Snapshot[Common initial snapshot + roster + seed plan] --> Runner
+  Runner --> Demand[Customer prices to X/Y/NONE choice and request flows]
+  Runner --> Terms[Compensation rules to predecision driver terms]
+  Terms --> Participation[Participation and conditional-hours response]
+  Participation --> Admission[Physical driver/vehicle admission schedule]
+  Terms --> Acceptance[Trip-acceptance response conditional on an actual offer]
+  Demand --> Simulator[Dispatch offers and request/driver/vehicle state simulation]
+  Admission --> Simulator
+  Simulator -->|Actual trip offer| Acceptance
+  Acceptance -->|Decision| Simulator
+  Terms --> Ledger[Individual realized earnings ledger]
+  Simulator --> Ledger
+  Ledger --> Solver[Bounded income-supply solver]
+  Solver --> Participation
+  Simulator --> Finance[Recognized GSM revenue and all-cost ledger]
+  Ledger --> Finance
+  Finance --> Results[Paired GSM profit, uncertainty, evidence and status]
+  Solver --> Results
+  Simulator --> Results
+  Results --> Artifacts[Completed scenario artifacts]
+  Artifacts --> UI[Dashboard and CSV/JSON]
+```
+
+Offline fitting and calibration precede scenario execution. A frozen model
+version links the demand/choice, participation and acceptance bundles, calibration,
+compensation rules, units, support and evidence. Scenario trials use those inputs;
+they do not fit responses from their own simulated outcomes.
+
+Customer prices and driver compensation are separate policy paths. A tariff
+change affects offered driver pay only through an explicit compensation rule.
+Predecision terms and information feed driver decisions; realized earnings are
+ledger outcomes. Participation predicts who joins a shift and conditional hours;
+the admission schedule enforces physical roster/shift constraints. Trip acceptance
+models a decision after dispatch makes an eligible offer. Not receiving an offer
+is not rejection, and rejection does not mechanically remove idle serviceable
+hours. The shared X/Y fleet is counted once throughout.
+
+The solver reconciles expected income, participation/serviceable hours and
+simulated utilization under fixed compensation rules. Each trial restarts from
+the same initial snapshot; iterations are not consecutive operating windows.
+Per-trip pay divided by pickup/trip duration may describe an offer, but is not
+shift-level expected income because it excludes idle time and offer opportunity.
+Use the declared decision denominator and explicit failure/nonconvergence status.
+
+The finance evaluator turns each completed scenario into recognized GSM revenue
+and a complete, nonduplicated cost bridge under the same approved accounting
+scope. Baseline/target profit and incremental profit are the decision outputs;
+completed trips, wait and supply explain them. If source coverage or shared-cost
+allocation is missing, profit remains unavailable even when operations run.
+
+The initial demand mode remains `reduced_form_policy`: do not apply simulated
+wait/ETA effects to booking again. A separately identified `structural_choice`
+mode may add ETA/availability feedback later. Paired comparisons use a common
+initial scope and seed plan, with independent replicates and uncertainty/evidence
+statuses; a single trajectory is not an estimated policy effect.
+
 ## Research table schemas
 
 The following are proposed logical schemas for researcher-built GSM tables.
@@ -102,9 +186,11 @@ be validated before these grains are used.
 | `quote_option` | One option per display/refresh / quote-set + quote + display-event key | Service, displayed/available, visible price/discount/ETA/position, policy version |
 | `booking_event` | One native status event / source + event key | Request/booking/trip/session links, status/time, cancel actor/reason, retry/parent |
 | `policy_assignment` | One assignment / assignment key | Unit/time, arm, offered/assigned/applied, probability/rule, exposure/override |
-| `driver_offer_shift` | One offer/shift decision event / native decision key | Driver/shift, eligibility, terms known before decision, acceptance/rejection, outcome |
+| `driver_shift_eligibility` | One eligible driver × decision window or shift opportunity / eligibility key | Eligible population including drivers receiving no offer/incentive and nonparticipants; contract/vehicle/service eligibility, effective periods, exposure/coverage and recorded participation or unknown outcome |
+| `driver_offer_shift` | One shift offer/decision event / native decision key | Driver/shift/eligibility links, terms known before the shift decision, offered/received/accepted/declined/absent status and participation/hours outcome; distinct from trip dispatch |
+| `driver_trip_offer` | One actual driver dispatch offer / source + offer key, linked to dispatch attempt | Request/driver/vehicle/shift, sent/received/deadline/response times, pending/accepted/rejected/timed_out/withdrawn status and observation coverage; immutable predecision displayed pay/conditions, known pickup/trip estimates, compensation/policy versions and source references |
 | `driver_vehicle_state` | Native state event or constructed interval / source + event/interval key | Driver/vehicle/shift, zone, state/eligibility/SOC, gaps/coverage |
-| `payment_cost` | One ledger item / source + native ledger key | Business links, revenue/refund/pay/bonus/cost/funder/currency, rule version |
+| `payment_cost` | One ledger item / source + native ledger key | Business links, recognized revenue/refund/pay/bonus/direct/shared cost/funder/currency, recognition period, cost category and allocation version |
 | `operational_event` | One dispatch/trip/charging event / source + native event key | Attempts/responses, timestamps/duration/distance, station/energy, matching version |
 | `demand_block` | Zone × time block × service | Quote exposure, requests, conversion, pretreatment context, completeness |
 | `baseline_snapshot` | One baseline window / snapshot version | Initial states, roster, request rates, calibration/rules, quality |
@@ -113,6 +199,14 @@ Mappings preserve raw data and record source/schema versions, grain, quality
 flags and denominators. Check join cardinality, effective periods, retries/parents
 and failed links; nearest-time joins need uncertainty labels. Distinguish observed
 zero, missing, unknown and not applicable. No trips does not establish offline state.
+
+Trip offers preserve the terms and information actually available at offer time,
+separately from final fare/pay and later trip outcomes. If terms must be
+reconstructed, retain the applicable rule version, timestamped source inputs,
+join provenance and reconstruction status; missing historical inputs leave terms
+unavailable. Do not replace them with realized earnings. Shift participation,
+trip acceptance conditional on an offer and dispatch exposure have separate
+populations and denominators; missing exposure/response is not a recorded zero.
 
 The controlled PoC currently writes `synthetic_policy_block`,
 `synthetic_quote_session` and `choice_block` under `observed/`. The estimation
@@ -124,15 +218,22 @@ These generated tables do not establish a mapping from GSM native schemas.
 | Artifact | Current support | Content/convention |
 |---|---|---|
 | `demand_plan` | Implemented choice-to-request bridge | Zone/service, block start/end, requests/hour, model/source references, fixed quote exposure and support; baseline rates accompany target rates |
-| `admission_plan` | Proposed supply interface | Driver/vehicle/shift keys, shift start/end, service eligibility, roster reference, target serviceable hours, compensation version |
-| `scenario_result` | Choice scenarios implemented; full marketplace comparison proposed | Scenario/run/model references and scope; baseline/target/delta, unit/population/denominator, source/evidence, interval/support/status/reason; snapshot references for operational comparisons |
+| `driver_response_bundle` | Proposed participation and acceptance interfaces | Separate participation/conditional-hours and offered-trip acceptance models, decision populations, predecision features, estimands, units, splits, support, diagnostics and evidence |
+| `compensation_spec` | Proposed driver-pay interface | Versioned offered terms and applicable pay/incentive rules, eligibility/effective periods, currency/decision basis, payment conditions and source/evidence; separate from customer tariff |
+| `admission_plan` | Proposed physical supply interface | Eligible-population/model references, participation decisions, driver/vehicle/shift keys, shift start/end, service eligibility, roster reference, target and feasible serviceable hours, capacity gaps and compensation version |
+| `trip_offer_log` | Proposed simulator decision trace | Offer/request/dispatch/driver/vehicle/shift keys, immutable predecision terms/version, exposure and response events, acceptance-model reference and seeded decision provenance; preserve unaccepted offers |
+| `earnings_ledger` | Proposed compensation outcome | Individual driver/shift/trip pay, bonus/deduction and currency entries under frozen rules; offered-term references, earned/paid basis and zero-trip outcomes; separate from rider-payment and cost entries |
+| `economic_ledger` | Proposed GSM accounting outcome | Recognized revenue and nonoverlapping direct/allocated cost entries by policy and scope; category totals, source/coverage, recognition/allocation versions and reconciliation to GSM references; no profit value when required costs are missing |
+| `equilibrium_result` | Proposed income-supply interface | Expected/realized income and hours by decision group, unit/denominator, residuals, iteration/replicate budgets and convergence/failure status; references to the common initial snapshot |
+| `operational_checkpoint` | Implemented fixed-supply continuation; driver-decision extension proposed | Current `end_snapshot.json` preserves arrivals, requests, vehicles and pending events; future versions must also preserve offer attempts/decisions, remaining driver activity and compatible model/compensation references |
+| `scenario_result` | Choice scenarios implemented; full marketplace comparison proposed | Scenario/run/model references and scope; baseline/target/delta profit as the primary decision fields when supported, recognized revenue and cost bridge, operational explanations/guardrails, unit/population/denominator, source/evidence, interval/support/status/reason; snapshot references |
 | `prediction_record` | Proposed experiment record | Frozen model/snapshot/policy/assignment references, forecast and analysis plan; reconciliation appends results without overwriting the frozen forecast |
 
 Current model bundles use trusted local `.joblib` files and retain feature,
 outcome and treatment order, baseline model and support diagnostics. A full
-demand/supply/calibration response bundle remains a target interface. New logical
-schemas require explicit versioning and implementation mapping; current manifests
-provide run/source/configuration references and checksums.
+demand/participation/acceptance/calibration model version remains a target
+interface. New logical schemas require explicit versioning and implementation
+mapping; current manifests provide run/source/configuration references and checksums.
 
 Research durations, distances and energy use seconds, km and kWh, with SOC in
 `[0,1]`. Preserve original TLC miles/USD alongside normalized distance; currency

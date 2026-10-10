@@ -13,8 +13,11 @@ current progress and executed evidence are indexed in [docs README](../README.md
 ## 1. Objectives and required outputs
 
 Given a price/incentive policy, baseline market, and versioned response models,
-forecast the resulting market, compare with current policy, and freeze predictions
-for experimental reconciliation.
+estimate how much GSM's profit changes after all costs in the declared market,
+accounting scope and horizon. Compare baseline and target profit with uncertainty;
+forecast customer, driver and operational outcomes to explain the change and
+enforce guardrails. Freeze predictions for experimental reconciliation. A completed
+trip count alone is not a business-value measure.
 
 Reference scenario: **raise service X price 10% in a cluster/time window**.
 Report demand, serviceable supply, service choice, and idle supply. Customer
@@ -24,10 +27,11 @@ price changes affect supply through compensation and adjustable driver decisions
 |---|---|---|
 | Customer price sensitivity | Request response; quote conversion separately; explicit unit/population | DemandResponse |
 | Cross-service response | Supported own/cross 2x2 matrix by zone/time/service | ChoiceResponse |
-| Supply | Serviceable vehicle-hours versus expected income/incentives; extra hours versus relocation | SupplyResponse |
+| Driver participation and supply | Participation, feasible shifts and serviceable vehicle-hours versus expected income/incentives; extra hours versus relocation | DriverParticipation, ScheduleBuilder |
+| Driver trip acceptance | Acceptance conditional on an actual offer; rejection, timeout and offer exposure separately | DriverAcceptance |
 | Equilibrium | Consistent income/supply/utilization or nonconvergence status | EquilibriumSolver |
 | Operations | Completed trips, wait, cancellation, idle, charging | MarketplaceSimulator |
-| Economics | Revenue, costs, incremental contribution margin, supported ROI | EconomicEvaluator |
+| Economics (primary decision output) | Recognized GSM revenue, complete cost bridge, baseline/target profit and incremental profit; contribution margin and supported ROI separately | EconomicEvaluator |
 | Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output | UncertaintyEngine, EvidenceRegistry |
 | Validation | Switchback schedule, frozen forecasts, reconciliation ledger | ExperimentInterface |
 | Handoff | Scenario dashboard, CSV/JSON, reproducible versions | ScenarioRunner, ArtifactStore |
@@ -66,13 +70,26 @@ substitute for evidence. The benchmark protocol and release gates are in
 
 Use a structural marketplace model for forecasting. DML, DiD, or experiments
 estimate responses; simulation combines them with operations and compensation.
-DML alone does not produce completed trips, idle vehicles, or ROI.
+DML alone does not produce completed trips, idle vehicles, GSM profit or ROI.
+
+The target extends the existing customer-response engine with two driver
+decisions: participation/working hours and acceptance of an individual trip offer.
+Dispatch determines offer exposure; it is not another name for either decision.
+Use `rider_price`, `customer_id` and `driver_id` for these concepts; X/Y remain
+service alternatives throughout the existing demand model.
+
+Offline fitting produces separate demand/choice, participation and trip-acceptance
+bundles, plus operational calibration. Each retains its estimand, decision
+population, predecision information, split plan, support and evidence. Freeze them
+in a compatible `ModelVersion` before scenario execution. This is target
+architecture; current implementation and executed gates remain in the
+[progress index](../README.md#tiến-độ-hiện-tại).
 
 ```mermaid
 flowchart TD
     Sources["GSM / labeled validation sources"] --> Data["Mapping, quality, research tables"]
     Data --> Identification["Estimand, DAG, assignment, support"]
-    Identification --> Responses["Demand, cross-service, supply responses"]
+    Identification --> Responses["Customer choice, driver participation, trip acceptance"]
     Data --> Calibration["Baseline: matching, times, cancel, charging, pay"]
     Responses --> Version["ModelVersion: parameters, support, evidence"]
     Calibration --> Version
@@ -81,7 +98,7 @@ flowchart TD
     Runner --> Solver["Income-supply equilibrium"]
     Solver --> Simulator["One-cluster simulator"]
     Simulator --> Solver
-    Solver --> Economics["Operations and economics"]
+    Solver --> Economics["Operations, GSM profit and cost bridge"]
     Economics --> Uncertainty["Uncertainty, sensitivity, status"]
     Uncertainty --> Output["Dashboard / CSV / JSON / frozen forecast"]
     Output --> Experiment["Approved switchback and reconciliation"]
@@ -90,7 +107,7 @@ flowchart TD
 
 ### 2.2 Technology and execution
 
-Use Python/SQL batch jobs, DuckDB/Parquet tables, EconML DML, and proposed SimPy
+Use Python/SQL batch jobs, DuckDB/Parquet tables, EconML DML, and SimPy
 discrete-event simulation. SimPy supplies event/process scheduling; marketplace
 rules must be implemented explicitly. Streamlit reads completed artifacts.
 
@@ -98,6 +115,54 @@ Fitting, calibration, bootstrap, and equilibrium run as bounded jobs. Display
 changes read results; new scenarios create finite jobs with explicit status.
 Avoid fitting/bootstrap during rendering. Kafka, a separate registry service,
 and automated policy deployment are unnecessary for one cluster.
+
+### 2.3 Customer and driver execution
+
+`ScenarioRunner` evaluates baseline and target separately with the same initial
+snapshot, horizon, exogenous conditions and paired random streams. Within each
+policy trial, the following components execute using the frozen model version:
+
+```mermaid
+flowchart TD
+    Policy["Price and incentive policy"] -->|Rider price| Demand["Customer response / demand plan"]
+    Policy --> Pay["Compensation rules"]
+    Pay -->|Shift terms| Participation["Driver participation"]
+    Expectations["Expected income per presence-hour or paid shift"] --> Participation
+    Participation --> Admission["Feasible driver / vehicle schedule"]
+    Demand --> Simulator["Dispatch and marketplace simulation"]
+    Admission --> Simulator
+    Simulator -->|Actual trip offer| Acceptance["Driver trip acceptance"]
+    Pay -->|Frozen offer terms| Acceptance
+    Acceptance -->|Accept / reject / timeout| Simulator
+    Simulator --> Ledger["Realized driver earnings ledger"]
+    Pay --> Ledger
+    Ledger -. Bounded income-supply solver .-> Expectations
+    Simulator --> Finance["Recognized revenue and all-cost accounting"]
+    Ledger --> Finance
+    Finance --> Compare["Paired GSM profit, operations and uncertainty"]
+    Simulator --> Compare
+    Compare --> Artifacts["Completed artifacts / PoC / exports"]
+```
+
+| Component | Responsibility and boundary |
+|---|---|
+| CompensationModel | Translate policy into terms known before each decision; settle actual earnings under the same versioned rules. Rider payment and driver pay are distinct. |
+| CustomerResponse | Predict service choice and requests within the declared exposure/demand mode; retain the existing demand bridge. |
+| DriverParticipation | Predict participation and conditional hours, or an identified aggregate hours response, over the eligible population and feasible decision horizon. |
+| ScheduleBuilder | Convert the response into physical driver/vehicle shifts; enforce roster, contract and availability limits and report capacity gaps. |
+| DriverAcceptance | Predict a decision only after an actual trip offer, using its frozen terms and predecision context. |
+| MarketplaceSimulator | Own dispatch, offer reservations, request/vehicle transitions, cancellation, deadlines and carryover. |
+| EarningsLedger and EquilibriumSolver | Reconcile realized driver earnings and update income expectations in bounded trials from the same initial state. |
+| EconomicEvaluator | Reconcile recognized revenue and every in-scope direct or allocated cost against a finance-approved accounting definition; calculate profit only when coverage is complete. |
+| ScenarioRunner and evaluation | Compare policies, propagate uncertainty and evidence, and publish validated artifacts consumed by both the PoC and exports. |
+
+These are logical responsibilities within the existing packages, not requirements
+for separate services or one file per component. Package ownership and internal
+schemas are maintained in [ARCHITECTURE.md](../ARCHITECTURE.md).
+Driver rejection can change matching and utilization while leaving serviceable
+hours unchanged. Never approximate physical supply as serviceable hours multiplied
+by trip-acceptance probability. ETA-to-choice feedback is a separate model mode
+under [section 6.5](#65-eta-and-operational-feedback).
 
 ## 3. Market scope, time, and units
 
@@ -138,6 +203,15 @@ Preserve session -> quote-set -> quote -> request/booking -> trip and
 request -> dispatch -> driver/vehicle -> shift/charging-session links.
 Nearest-time joins require error assessment and uncertainty labels.
 
+The existing raw source groups cover the customer and driver architecture;
+coverage of a schema does not establish data availability or causal identification.
+At mapping time, verify that the exact pay/conditions known at each dispatch offer
+are logged or reconstructible from as-of rule versions, inputs and eligibility.
+Final trip payments alone cannot reconstruct these terms. Missing offer terms or
+eligible nonparticipants limit the corresponding driver model; they are not zero
+pay or zero participation. Keep raw GSM requests in the data contract and derived
+model interfaces here and in the architecture document.
+
 ### 4.2 Internal interfaces
 
 The following are proposed research interfaces built from
@@ -150,7 +224,8 @@ functions, parameters, tables, and artifacts use snake_case.
 | Engine input | Contract tables | Content |
 |---|---|---|
 | Demand/choice | `quote_session`, `quote_option`, `booking_event`, `policy_assignment`, `demand_block` | Prechoice display/availability/price/ETA, outcome/censoring, exposure/requests, assignment |
-| Supply | `driver_offer_shift`, `driver_vehicle_state`, `policy_assignment` | Offered terms/eligibility, shift decisions, vehicle-hours/state/SOC, compensation |
+| Driver participation | `driver_shift_eligibility`, `driver_offer_shift`, `driver_vehicle_state`, `policy_assignment` | Eligible population including nonparticipants, offered shift terms, participation/conditional hours and predecision income information |
+| Driver trip acceptance | `driver_trip_offer`, `driver_vehicle_state`, `policy_assignment` | Actual dispatch offers, immutable terms/context, accept/reject/timeout, observation coverage and dispatch exposure |
 | Calibration | `operational_event`, `booking_event`, `driver_vehicle_state`, `payment_cost` | Matching/timing/cancel/charging/earnings/cost rules |
 | Simulation | `baseline_snapshot`, `demand_plan`, `admission_plan` | Initial states/roster/rates/rules, requests/hour, shift/serviceable-hour plans |
 
@@ -197,6 +272,15 @@ DAGs distinguish pretreatment $W$, offered price/incentives, displayed income
 information, choice, post-treatment operational states, and realized ledgers.
 Realized earnings and policy-affected ETA are outcomes/mediators, not automatic
 confounder features.
+
+Driver estimation respects both decision horizons and the dispatch selection
+mechanism. Fit acceptance from actual offers, including unsuccessful ones, and
+participation from the eligible population, including nonparticipants. A good
+acceptance predictor does not identify a causal pay response: offer assignment,
+price/incentive variation and overlap need their own checks. Start with simple
+baselines; logistic or other behavioral models do not inherit the demand DML
+model's evidence. Unidentified driver responses remain explicit C sensitivity
+assumptions or unavailable, even when all requested columns exist.
 
 ## 6. Demand and cross-service engine
 
@@ -304,20 +388,29 @@ identifying direct/mediated relationships and revising the DAG/estimand. Modes
 cannot mix in one run. The initial income-supply loop does not require an
 identified ETA-choice feedback model.
 
+Changing compensation or acceptance rules can change the policy mechanism under
+which a reduced-form demand response was identified. Check that compatibility for
+the full scenario; passing a price-support gate alone is insufficient. Holding
+the existing request response fixed under an unvalidated driver mechanism is an
+explicit C sensitivity assumption, not an identified total marketplace effect.
+
 ## 7. Supply response engine
 
 ### 7.1 Outcomes and treatment
 
 Primary outcome is $H_{\text{serviceable}}$ for eligible drivers/vehicles over
-the horizon, not trips worked. Shift acceptance, offers, trip acceptance,
-relocation, and charging timing may need separate models/estimands.
+the horizon, not trips worked. `DriverParticipation` models entry/shift decisions
+and conditional hours; `DriverAcceptance` models a trip decision conditional on
+an actual dispatch offer. Offer exposure is generated by matching. Relocation
+and charging timing have separate estimands when modeled.
 
 Treatments are offered compensation/incentives and income information known
 before decisions. Fixed contracts may imply zero extra hours; additional shifts,
 acceptance, and charging timing remain possible responses. Never use the same
 shift's realized earnings to manufacture a pretreatment expectation.
 
-For positive baseline income and identified expected-income response:
+One possible aggregate-hours specification, for positive baseline income and an
+identified expected-income response, is:
 
 $$
 H^*_{\text{serv},g}=H_{\text{serv},0,g}\exp\left(
@@ -331,6 +424,19 @@ Zero baseline income/bonus requires amount or categorical treatments.
 
 Zero baseline hours and discrete shifts need participation/shift-acceptance
 models plus conditional hours. Retain nonparticipants and valid zero outcomes.
+An aggregate hours response and a participation-plus-hours response are alternative
+supply specifications; do not apply both as successive multipliers. The candidate
+roster includes eligible nonparticipants, with driver/vehicle assignments and
+feasible shift choices. Fixed attendance is an explicit mode with no additional
+participation response.
+
+Expected income must match the work decision: presence-hour or paid shift,
+including expected idle time, offer frequency, fixed pay and applicable bonuses.
+Net pay divided by pickup-plus-trip time describes one proposed trip and is not
+an income expectation for a whole shift. Participation features use information
+available before the decision, including opportunity costs only when measured or
+explicitly assumed. The simulator measures actual serviceable hours from the
+admitted physical schedules rather than treating expected hours as physical cars.
 
 ### 7.2 CompensationModel
 
@@ -342,6 +448,20 @@ compensation do not enter supply directly.
 Income feedback follows fixed compensation rules, not customer payments.
 Threshold bonuses use individual driver/shift outcomes, not market-average fares.
 Income denominators match the decision basis: presence hours, work hours, or paid shifts.
+
+Freeze `rider_price` and driver-visible terms independently at their quote/offer
+times. Each trip offer records its pay basis/currency, conditions, eligibility and
+bonus progress where applicable, compensation version and information available
+to that driver. A fixed piece rate can leave trip pay unchanged after a rider
+price change; a declared revenue-share rule can transmit it. Even with fixed
+trip pay, changes in offer frequency and idle time may affect shift income.
+Demand price multipliers do not define monetary fares or driver pay: synthetic
+runs need an explicit tariff/pay fixture and cannot infer GSM currency values.
+
+Keep offered terms, realized driver earnings and rider payments as separate
+records. Settle completed/canceled trips, guarantees and bonuses under their
+applicable rules; do not pay an offer merely because it was created or accepted.
+Do not use realized end-of-trip or end-of-shift earnings as offered treatment.
 
 ### 7.3 Hours to driver/vehicle schedules
 
@@ -359,6 +479,30 @@ Track cluster and neighbor totals. Relocation redistributes hours; only added
 shifts/hours increase total supply. A shared `FleetPool` manages X/Y without
 duplicating vehicle IDs.
 
+### 7.4 Trip acceptance model
+
+Model $P(\mathrm{accept}\mid\mathrm{actual\ offer},\mathrm{predecision\ context})$.
+The context includes driver-visible pay/conditions, pickup and trip estimates,
+service/zone/time, and measured or declared driver characteristics. It excludes
+future demand, realized travel time and realized earnings. Not receiving an offer
+is not a rejection, and a timeout is not automatically a deliberate refusal.
+
+Retain immediate acceptance as the legacy reference and a constant-probability
+baseline. A candidate behavioral model is a calibrated logistic response to
+offered pay and known pickup/trip conditions. Net hourly pay for that trip may be
+a feature only with positive duration and available cost assumptions; it must not
+be reused as shift income. Specify feature units, missing-data behavior, response
+latency/timeout rules and parameter provenance in the model card. Synthetic
+coefficients test declared mechanisms at C, not GSM behavioral effects.
+
+In counterfactual execution, evaluate the probability once for each immutable
+offer and use a seeded decision keyed to its stable identity. Persist the offer,
+decision and attempted driver/request pairs through continuation. Never repeatedly
+resample an unchanged rejected offer until it happens to be accepted. Increased
+pay implies monotone conditional acceptance only when that property is part of
+the declared model and all other offer features are held fixed; the aggregate
+acceptance rate can still change with offer composition.
+
 ## 8. One-cluster simulator
 
 ### 8.1 Entities and states
@@ -366,6 +510,7 @@ duplicating vehicle IDs.
 | Entity | States/properties | Invariant |
 |---|---|---|
 | Request | `created`, `queued`, `assigned`, `pickup`, `on_trip`, `completed`, `canceled`, `expired` | One state at a time; explicit terminal reason |
+| Trip offer | `pending`, `accepted`, `rejected`, `timed_out`, `withdrawn`; request/driver/vehicle/attempt keys | Immutable terms; one final resolution; open offers retain censoring |
 | Driver/shift | `off_shift`, `scheduled`, `present`, `break`, `ended` | Eligibility/shift constraints respected |
 | Vehicle | `offline`, `idle`, `reserved`, `to_pickup`, `on_trip`, `charging_queue`, `charging`, `unavailable` | One trip/reservation at a time |
 | Station | Capacity, charger availability, queue, outage | Active-port capacity respected |
@@ -392,9 +537,19 @@ charged. Initial versioned ranking minimizes ETA within declared radius/threshol
 otherwise queue or terminate by deadline. Calibrate this rule before claiming
 GSM dispatch fidelity.
 
-Offers expire. Calibrated acceptance/rejection or replay governs responses;
-reserved vehicles cannot take another request. Bound attempts and overall deadlines.
-Handle requeue/cancellation/responses in timestamp order with declared tie-breaking.
+Start with sequential offers in the versioned candidate order. Create an offer,
+freeze compensation/context and reserve the driver/vehicle while a response is
+pending. Assignment and pickup begin only after acceptance. Rejection or timeout
+releases the reservation and allows another eligible candidate; the original
+request and its deadline remain unchanged. Record attempts and bound their count
+and total time. No eligible candidate produces no offer, rather than a rejection.
+
+Reserved drivers/vehicles cannot take another request. Cancellation/expiry
+withdraws a pending offer and releases its reservation; late responses cannot
+revive the request. Order simultaneous responses, deadlines and cancellations
+explicitly. Distinguish a genuinely new offer with changed terms from an unchanged
+offer already declined. Immediate decisions with zero latency remain a supported
+reference mode; response latency requires its own calibrated or assumed rule.
 
 Pickup/service distributions follow OD/time/service. Keep displayed ETA, dispatch
 ETA, and actual pickup separate. Prepickup cancellations may incur travel/costs.
@@ -410,12 +565,24 @@ Initial kWh/km and capped fixed charging power are declared assumptions. Calibra
 telemetry/logs before interpreting GSM results. Enforce SOC in [0,1], capacity,
 and energy conservation without clipping away errors.
 
+Energy/charging is an operational availability constraint. The first driver-response
+integration retains the current fixed shifts/static-SOC assumptions while adding
+compensation and trip acceptance; participation and income-supply feedback follow
+with explicit availability assumptions. Detailed energy/station behavior remains
+a separately validated extension and is not evidence of a driver pay response.
+
 ### 8.5 Boundaries and carryover
 
 Keep trips picked up inside and dropped off outside. Use monitored buffer zones
 or a declared boundary entry/return model. `closed_cluster` is C validation only.
 Relocation, charging, and ongoing trips create carryover preserved in trajectories
 and considered in experiment design.
+
+Driver-aware checkpoints also preserve pending offers/reservations, resolved offer
+identities, prior refusals, frozen compensation/model versions, applicable bonus
+progress and ledger state. Window boundaries cannot redraw decisions, forget a
+reservation or settle the same earnings twice. Reject incompatible continuation
+inputs; a new policy scenario starts from its declared initial snapshot.
 
 ### 8.6 Accounting
 
@@ -440,6 +607,19 @@ Terminal counts are events within the horizon. Separate created-request cohorts
 from carry-in when defining wait/cancel denominators. Export end-horizon censoring;
 never count it as cancellation. Declare quantile methods. Request-capacity gaps
 in trips/hour are diagnostic proxies, not idle vehicles or hours.
+
+Reconcile pending offers at the start plus newly created offers against accepted,
+rejected, timed-out, withdrawn and pending offers at the end. Offer attempts do
+not add to request counts. For the declared offer cohort, report acceptance as
+accepted / (accepted + rejected + timed-out), with withdrawals and unresolved
+offers reported separately; a zero denominator is unavailable. Preserve explicit
+rejection and timeout rates. Report offered-driver exposure separately from this
+conditional rate, and distinguish expected probabilities from sampled outcomes.
+
+Participation rates use the eligible decision population, including nonparticipants;
+income per presence-hour includes present drivers with zero trips. Keep numerator,
+denominator, cohort/window and carry-in handling with each metric. Rejecting a trip
+does not itself remove idle time from serviceable hours.
 
 ## 9. Baseline calibration
 
@@ -478,6 +658,14 @@ income undefined; return meaningful failure/inactivity rather than fabricated ze
 
 Fixed supply takes one pass with `fixed_supply`. Separately identified ETA feedback
 may add choice/ETA equations and residuals.
+
+Inside each trial, participation creates the admission plan, dispatch creates
+actual offers and acceptance governs assignments. The compensation ledger then
+produces the income summary on the decision's declared hour/shift basis, including
+idle time and zero-trip drivers. Fixed attendance with behavioral trip acceptance
+is still fixed supply and needs no participation-equilibrium claim. The first
+driver upgrade keeps `reduced_form_policy` demand; the income-supply solver must
+not append another operational ETA effect to those request rates.
 
 ### 10.2 Bounded damped iteration
 
@@ -527,29 +715,62 @@ Solve baseline and target separately with common horizon, initial snapshot,
 exogenous conditions, and paired seeds. Compare two simulated measurements;
 observed totals validate baseline rather than serve as an incompatible comparator.
 
-Version prices/promotions/bonuses by quote/offer. Create ledger entries for
-payments/refunds, driver pay, incentives, electricity, fees, and agreed variable
-costs. Cancellation costs/revenue follow rules. Fixed salaries change only through
-defined shifts or allocation.
+Evaluate rider-price-only, driver-incentive-only and combined changes against a
+common baseline within joint support. Declare whether the compensation rule passes
+rider price through to driver pay; do not silently hold it fixed or assume a share.
+Separate conditional offer-response checks from market comparisons where the
+number and composition of offers change. A common seed alone is insufficient if
+event ordering changes: use stable entity/event random streams and independent
+replicates, preserving failed or unsupported runs in diagnostics.
+
+Version prices/promotions/bonuses by quote/offer. Finance must confirm the profit
+definition, GSM-owned services, recognition period, accounting scope, cost
+classification and allocation rules before a GSM monetary forecast is supported.
+Create reconciled ledger entries for recognized revenue, refunds/adjustments,
+driver wages or trip pay, bonuses/incentives, energy, payment fees, vehicle costs
+and every other applicable direct or shared expense. Include pay for shifts with
+zero trips. Apply the same approved recognition and allocation rules to both
+policies; a change in completed-trip count must not by itself reallocate shared
+costs into an artificial profit gain.
+
+For the declared scope and horizon, partition costs into nonoverlapping classes
+whose union covers every expense in the agreed profit definition:
 
 $$
-\text{CM}(\pi)=R_{\text{GSM}}(\pi)-C_{\text{variable}}(\pi),\qquad
-\Delta\text{CM}=\text{CM}(\pi_1)-\text{CM}(\pi_0).
+P_{\text{GSM}}(\pi)=R_{\text{recognized,GSM}}(\pi)
+-\sum_{c\in\mathcal{C}_{\text{all in-scope}}}C_c(\pi),\qquad
+\Delta P=P_{\text{GSM}}(\pi_1)-P_{\text{GSM}}(\pi_0).
 $$
+
+**Incremental profit $\Delta P$ is the primary policy decision measure.** Report
+baseline and target profit, the revenue and cost-category bridge, coverage,
+uncertainty and operating guardrails. Fixed costs that truly remain identical
+cancel in $\Delta P$, but still belong in absolute profit; policy-dependent shift,
+fleet or shared costs must change according to approved rules. A cluster result
+is profit for its declared accounting scope, not GSM-wide net income.
 
 Finance confirms revenue definitions; gross customer payment is not automatically
-GSM revenue. Reconcile taxes/tolls/refunds/subsidies/funders/driver pay without
-double counting. Missing required costs leave CM unavailable; independently
-supported operations/revenue may still be reported.
+GSM revenue. Reconcile taxes/tolls/refunds/subsidies/funders and all expense
+sources without double counting. A bonus already contained in payroll or driver
+pay is subtracted once. Missing costs, source coverage or allocation rules leave
+GSM profit and $\Delta P$ `not_evaluated`, not zero. Independently supported
+operations and revenue remain reportable. When variable costs are complete,
+report the narrower contribution margin separately:
 
 $$
-\text{ROI}=\Delta\text{CM}/\Delta C_{\text{incentive}},\qquad
-\Delta C_{\text{incentive}}>0.
+\text{CM}(\pi)=R_{\text{recognized,GSM}}(\pi)-C_{\text{variable}}(\pi).
 $$
 
-CM already subtracts incentives; do not subtract again from the numerator.
-Report baseline/target costs and denominators. Missing/nonpositive denominators
-leave ROI unavailable. Assumed-price toy metrics remain explicitly simulated.
+Only when profit and a positive incremental incentive expense are supported may
+the optional net-benefit ratio use
+$\text{incentive ROI}=\Delta P/\Delta C_{\text{incentive}}$.
+Use an incentive-only contrast at fixed customer price; for a combined change,
+compare combined policy with its price-only counterpart before attributing the
+incremental profit to incentives.
+Profit already subtracts incentives; do not subtract them again from the
+numerator. Report the denominator and any changes in other costs. Missing or
+nonpositive denominators leave ROI unavailable. Assumed-price or assumed-cost
+toy metrics remain explicitly simulated and never claim measured GSM profit.
 
 ## 12. Uncertainty and sensitivity
 
@@ -612,8 +833,8 @@ available, demand mode, seeds, budgets, and uncertainty. Pass assumptions explic
 | Identity | `scenario_id`, `market_id`, `model_version`, `baseline_snapshot_id` |
 | Scope | `zone_ids`, services, start/end, timezone, horizon, warm-up |
 | Policy | `baseline_policy_id`, `target_price_schedule`, `bonus_rule`, `effective_price_definition` |
-| Assumptions | `demand_mode`, `compensation_mode`, `boundary_mode`, initialization |
-| Compute | `seed_plan_id`, `max_iterations`, `max_events`, `wall_time_budget`, replicate/draw budgets |
+| Assumptions | `demand_mode`, `compensation_mode`, `participation_mode`, `acceptance_mode`, `boundary_mode`, initialization |
+| Compute | `seed_plan_id`, `max_iterations`, `max_events`, `max_offers_per_request`, `wall_time_budget`, replicate/draw budgets |
 | Evaluation | `interval_target`, level, support policy, `sensitivity_only` |
 
 +10% applies to baseline effective price for the correct service/group, not
@@ -625,18 +846,23 @@ announcement/effectiveness and shift-decision horizon, not payment time alone.
 1. Validate schema, scope, units, policy, version compatibility, and budgets.
 2. Check required identification/support and calibration quality.
 3. Produce request flows, construct supply schedules, solve baseline/target.
-4. Reconcile requests, vehicle-hours, SOC, and ledgers in each trajectory.
-5. Compute operations/economics and paired differences.
+4. Reconcile requests, offers, driver/vehicle-hours, ledgers and any modeled energy in each trajectory.
+5. Reconcile GSM revenue and all in-scope costs, then compute paired profit differences when accounting coverage permits; retain operational outcomes and guardrails.
 6. Run bounded uncertainty/sensitivity, retaining every draw's status.
 7. Atomically publish artifacts/manifests; expose forecasts only after gates pass.
 
 ### 13.3 Results and status
 
 `scenario_result` includes baseline/target/delta, unit/population/denominator,
-source/evidence/support/status per metric, with separate interval status. Outputs:
-demand X/Y/total, net choices, serviceable/idle hours, completed trips, wait/cancel,
-charging. Week 3 validates operations at C; week 4 adds full-chain uncertainty and
-supported economics. Missing revenue/CM/ROI retain reasons.
+source/evidence/support/status per metric, with separate interval status. Its
+primary decision fields are GSM profit and incremental profit, with recognized
+revenue, each nonoverlapping cost category, cost coverage and accounting version.
+Demand X/Y/total, net choices, participation, offer exposure/acceptance,
+serviceable/idle hours, completed trips, wait/cancel, driver earnings and charging
+when modeled explain the result and serve as guardrails. Week 3 validates
+operations at C; week 4 adds full-chain uncertainty and supported economics.
+Missing profit, revenue, CM or ROI retain distinct reasons; an operationally
+complete scenario cannot be labeled financially evaluated when profit is missing.
 
 Stage execution: `pending/running/succeeded/failed`. Module/metric behavior:
 
@@ -664,12 +890,17 @@ These are implementation contracts, not existing APIs:
 prepare_data(source_refs, mapping, quality_contract) -> ResearchDataset
 fit_demand_choice(dataset, estimand_specs, split_plan) -> DemandChoiceBundle
 validate_benchmarks(models, benchmark_spec, observed_data, evaluator_inputs) -> BenchmarkReport
-fit_supply(dataset, compensation_spec, estimand_spec, split_plan) -> SupplyBundle
+fit_driver_participation(dataset, compensation_spec, estimand_spec, split_plan) -> ParticipationBundle
+fit_driver_acceptance(offer_dataset, estimand_spec, split_plan) -> AcceptanceBundle
 calibrate_baseline(dataset, calibration_spec, split_plan) -> BaselineModel
 check_support(model_version, scenario_spec) -> SupportReport
 predict_demand(response_bundle, scenario_context, policy) -> DemandPlan
-predict_supply(response_bundle, expectations, policy, roster) -> AdmissionPlan
-simulate_marketplace(demand_plan, admission_plan, initial_state, policy, seed_plan, limits) -> Trajectory
+predict_participation(participation_bundle, expectations, offered_shift_terms, roster) -> ParticipationPlan
+build_admission_plan(participation_plan, roster, availability_rules) -> AdmissionPlan
+create_driver_offer(request, driver_context, compensation_spec, policy, offered_at) -> DriverOffer
+predict_driver_acceptance(acceptance_bundle, driver_offer) -> AcceptancePrediction
+simulate_marketplace(demand_plan, admission_plan, initial_state, policy, model_version, seed_plan, limits) -> Trajectory
+settle_driver_earnings(trajectory, compensation_spec) -> EarningsLedger
 solve_equilibrium(model_version, snapshot, policy, seed_plan, limits) -> EquilibriumResult
 evaluate_economics(trajectory, accounting_rules) -> EconomicLedger
 compare_scenarios(model_version, snapshot, scenario_spec) -> ScenarioResult
@@ -679,8 +910,9 @@ reconcile_experiment(prediction_record, observed_outcomes, analysis_spec) -> Rec
 handoff(artifact_refs, acceptance_spec) -> DeliveryManifest
 ```
 
-`ModelVersion` combines responses, baseline/calibration, taxonomy, support,
-compensation/accounting, state/boundary conventions, and model cards. Check
+`ModelVersion` combines demand/choice, participation and acceptance bundles,
+baseline/calibration, taxonomy, support, compensation/accounting,
+state/boundary conventions, and model cards. Check
 compatibility when zones/services/currency/horizon/causal conventions change.
 A DML file alone is insufficient.
 
@@ -689,6 +921,12 @@ implementation bundles (`.joblib` in the PoC); handoff CSV/JSON. Mobility Assist
 `effects.csv` retains outcome/treatment/unit/resolution/horizon, baseline denominator,
 interval/support/evidence. Supply outputs retain compensation, eligibility,
 battery/charging, and vehicle-hours.
+
+Trip-offer artifacts retain decision-time terms/context, linked request/driver/
+vehicle/shift IDs, dispatch exposure, predicted probability, response timing and
+terminal status. Ledger items retain the frozen rule and source event and settle
+once. Exact grains and required metadata are maintained in
+[architecture schemas](../ARCHITECTURE.md#research-table-schemas).
 
 `ArtifactStore` records source hashes, revision, lock/environment, effective config,
 splits, seeds, stage timings, and checksums. Reuse requires compatible dependencies
@@ -765,10 +1003,12 @@ without GSM; real forecasts/calibration/economics require corresponding sources.
 | Identification | Reject collinear full matrices and unidentified scenario effects |
 | Leakage | No oracle/future outcomes in fitting; original units preserved in splits/folds |
 | Supply | Relocation adds no hours; shared fleet/charging counted once |
+| Driver decisions | No offer is not a rejection; acceptance does not scale physical hours; eligible nonparticipants and zero-trip drivers remain in their applicable populations |
+| Offers | One resolution per offer; immutable terms, bounded attempts, no double reservations, no late-response revival and no redraw across windows |
 | Simulator | No double assignment; correct request partition; retain censoring |
 | Energy | Consistent SOC/kWh/station capacity/eligibility |
 | Solver | Explicit zero-denominator, oscillation, budget, nonconvergence handling |
-| Finance | Reconciled ledgers; no duplicate refunds/pay/incentives; valid ROI denominator |
+| Finance | Reconciled revenue and complete in-scope cost bridge, including zero-trip pay and approved shared-cost allocation; no duplicate refunds/pay/incentives; profit unavailable if coverage fails; valid ROI denominator |
 | Artifacts | Versions/checksums, atomic completion, seeded reproducibility |
 
 ### 17.2 Benchmarks
@@ -779,6 +1019,23 @@ protocols in the same document retain simple baselines, independent evaluators
 and frozen holdouts. Declare truths/assumptions and retain all rejected/failed
 attempts in their applicable denominators.
 
+Driver integration adds controlled checks before market-level evaluation:
+
+- With zero response latency and fixed attendance, 100% acceptance reproduces
+  existing assignments, request events and hour accounting; 0% acceptance produces
+  no assignments, preserves idle hours and terminates within offer/request budgets.
+- Holding driver-visible terms and context fixed prevents rider-price metadata
+  from directly changing the acceptance prediction. A declared monotone pay
+  response is checked on the same offer contexts and paired random draws.
+- No eligible driver produces no offer; rejection followed by another driver's
+  acceptance cannot double-assign a shared vehicle or restart the request deadline.
+- Fixed attendance retains its schedule; behavioral participation cannot exceed
+  eligible driver/vehicle/shift capacity or manufacture hours through relocation.
+- Continuous and split trajectories agree on offer decisions/reservations,
+  request/vehicle accounting and earnings settlement; incompatible checkpoints fail.
+- Price-only, incentive-only and combined scenarios use independent repeated runs,
+  with separate synthetic recovery, baseline calibration and causal evidence gates.
+
 ### 17.3 Acceptance gates
 
 | Gate | Requirement |
@@ -786,7 +1043,8 @@ attempts in their applicable denominators.
 | Headless execution | End-to-end Python/CLI scenarios use declared interfaces without dashboard execution |
 | PoC integration | A supported scenario walkthrough uses the same versioned results in headless execution, dashboard and CSV/JSON, preserving units, denominators, evidence and statuses |
 | Reproducibility | Same versions/data/config/seeds agree within declared tolerance |
-| Complete outputs | +10% price X and increased incentives traverse demand/supply/simulation/equilibrium/metrics across independent seeds and supported contexts |
+| Complete outputs | Price-only, incentive-only and combined policies traverse customer choice, driver participation/acceptance, compensation, simulation and applicable equilibrium across independent seeds and supported contexts |
+| Business outcome | Profit and incremental profit lead supported policy comparisons; baseline/target revenue and every in-scope cost reconcile under one approved accounting definition, or financial results carry an explicit unavailable status |
 | State and failure handling | Invariants pass through carryover and supported operational transitions; deliberate invalid inputs, budget exhaustion and nonconvergence yield explicit failures |
 | Transparency | Evidence/interval/support/dependencies displayed and exported per metric |
 | Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
@@ -805,14 +1063,15 @@ remain visible even when the calendar milestone or dashboard demo is complete.
 Weekly requirements and expected outputs are maintained in the
 [roadmap](../ROADMAP.md#weekly-inputs-and-outputs); it also records current work
 and remaining acceptance gates. This design describes target algorithms rather
-than implementation progress. Without GSM, calibration/effects/ROI remain
+than implementation progress. Without GSM, calibration/effects/profit/ROI remain
 unevaluated while synthetic development and experiment design can continue.
 
 ## 19. Configuration and business decisions
 
 `EngineConfig` explicitly declares taxonomy/timezone, horizon/warm-up, demand
-mode, effect resolution/support, compensation/accounting, roster/initialization,
-matching deadlines, patience/acceptance, energy/charging/boundaries, solver limits,
+mode, effect resolution/support, compensation/accounting, participation/acceptance
+modes, roster/initialization, matching/offer deadlines and attempt limits,
+patience, energy/charging/boundaries, solver limits,
 uncertainty targets, and budgets. Defaults require documented development reasons;
 unknown observations/business rules cannot default to zero.
 
@@ -822,9 +1081,10 @@ unknown observations/business rules cannot default to zero.
 | Quote versus request estimand | Traffic forecast versus conditional conversion | DemandModeSpec |
 | Subscription/promotion | Displayed price, funder, treatment | EffectivePriceRule |
 | Driver contracts | Feasible response and expected-income basis | CompensationSpec |
+| Driver decisions and offers | Eligible decision population, predecision information, participation horizon, acceptance and response timing | DriverResponseSpec, OfferSpec |
 | Buffers/shared fleet | Relocation, capacity, interference | Boundary/FleetSpec |
 | State/charging coverage | Supported calibration/outputs | OperationalQualitySpec |
-| Revenue/cost/ROI | Consistent ledgers and denominators | AccountingSpec |
+| Profit, revenue, costs and ROI | GSM ownership/scope, recognition, complete cost coverage, allocation, consistent ledgers and denominators | AccountingSpec |
 | Safety/action support/power | Feasible scenarios/pilots | Acceptance/ExperimentSpec |
 
 Version these decisions. Synthetic assumptions remain declared; real forecasts

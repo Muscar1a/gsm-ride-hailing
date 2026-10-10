@@ -117,9 +117,11 @@ negative uplifts and ties are kept.
 ### Freeze the business objective
 
 Specify which services GSM owns, which prices it can change, baseline fares,
-currency, and the payment/cost definitions. If Y is a competitor, keep its price
-fixed and exclude its bookings from GSM revenue. If both services belong to GSM,
-include substitution between them in the total business objective.
+currency, and the recognized revenue, complete cost and allocation definitions.
+The decision target is incremental GSM profit after all costs in the declared
+market and horizon; completed trips and revenue alone are intermediate outcomes.
+If Y is a competitor, keep its price fixed and exclude its bookings from GSM
+revenue. If both services belong to GSM, include substitution between them.
 
 Until these inputs are supplied, monetary results are unavailable. A toy study
 may use explicitly declared illustrative fares or normalized price units, with
@@ -136,7 +138,8 @@ V(policy) = sum_contexts N(context) ×
 
 This assumes the quote population is fixed and each booking completes and pays
 the stated fare. It omits cancellations, capacity, traffic response, refunds and
-operating costs. It cannot be labeled realized GSM revenue or contribution margin.
+operating costs. It cannot be labeled realized GSM revenue, contribution margin
+or profit.
 
 ### Compare decisions fairly
 
@@ -187,21 +190,33 @@ More challenging cases must be motivated and declared before fresh evaluation.
 
 Required data include nonbooking quote sessions, displayed options and prices,
 policy assignments and their probabilities/rules, completion/cancellation
-events, collected payments/refunds, promotions, driver compensation, variable
-costs and operational availability. Agree join keys, currency, timestamps and
-feature availability before fitting. Completed TLC trips cannot supply this.
+events, recognized revenue/payment adjustments, promotions, driver payroll and
+incentives, other direct costs, fixed/shared expense sources and allocation
+inputs, plus operational availability. Agree join keys, accounting scope,
+currency, recognition periods, cost categories and feature availability before
+fitting. Completed TLC trips cannot supply this.
 
-Define the actual GSM revenue ledger measure and report contribution margin
-separately. Do not count competitor bookings, gross customer payments or driver
-payments as interchangeable revenue measures.
+The primary economic comparison is
+`delta_profit = profit(target) - profit(baseline)`.
+Each profit equals confirmed GSM-recognized revenue minus every applicable
+direct and allocated cost under one finance-approved
+definition. Reconcile category totals and source coverage in both arms, including
+zero-trip driver pay. Use the same approved allocation bases and versions; do
+not double-subtract bonuses already recorded in payroll. Do not count competitor
+bookings, gross customer payments or driver payments as interchangeable revenue.
+This is profit for the declared GSM scope, not company-wide net income.
 
-Use confirmed revenue and `contribution_margin = revenue - variable_cost`.
-Calculate `incentive_roi = delta_contribution_margin / delta_incentive_cost`
-only with positive incremental incentive cost and complete required costs.
-Contribution margin already subtracts incentives once; do not subtract them
-again from its delta. Missing costs or accounting rules leave economics
-unavailable with reasons. The toy policy benchmark reports only simulated gross
-booking value; it does not measure GSM contribution margin, ROI or economic impact.
+Report `contribution_margin = revenue - variable_cost` separately only when
+variable costs are complete. Calculate the optional
+`incentive_roi = delta_profit / delta_incentive_cost` only for an isolated
+incentive contrast at the same customer price, when profit is supported and
+incremental incentive cost is positive. A combined price/incentive policy needs
+the price-only policy as its comparator for this ratio. Profit already subtracts
+incentives once. Missing cost pools, coverage or allocation rules leave profit
+and profit-based ROI `not_evaluated` with reasons; a supported partial margin
+must keep its own label. The toy policy benchmark reports only simulated gross
+booking value; it does not measure GSM contribution margin, profit, ROI or
+economic impact.
 
 When assignment propensities and the identification assumptions are credible,
 use an independent policy evaluator with inverse-propensity and doubly robust
@@ -216,7 +231,7 @@ continuous prices need an explicitly justified evaluation approach; exact action
 matching and discrete inverse-propensity formulas do not automatically apply.
 If logs cannot support the proposed actions, report value as unidentifiable.
 
-## 4. GSM revenue-impact experiment
+## 4. GSM profit-impact experiment
 
 Compare the frozen candidate policy against existing pricing using a randomized
 design appropriate for the marketplace. A zone/time switchback is a candidate;
@@ -224,24 +239,30 @@ interference between zones and carryover determine whether it is suitable.
 Block duration, washout and inference require design, not a generic A/B toggle.
 See [Bojinov, Simchi-Levi and Zhao](https://arxiv.org/abs/2009.00148).
 
-Pre-register the primary outcome, minimum worthwhile uplift, power calculation,
-assignment unit, analysis period, uncertainty method and stopping rule. Use an
-A/A logging and assignment check before the treatment comparison.
+Pre-register incremental GSM profit in the declared scope as the primary
+business outcome, its minimum worthwhile uplift, accounting/coverage rules,
+power calculation, assignment unit, analysis period, uncertainty method and
+stopping rule. Use an A/A logging, ledger-reconciliation and assignment check
+before the treatment comparison.
 
-An economic outcome such as total GSM revenue per assigned zone/block hour
-captures changes in traffic as well as conversion. Revenue per quote is also
-useful, but quote traffic may itself respond to pricing; do not silently hold
-that denominator fixed in a field revenue claim. Track all owned-service revenue
-to capture substitution and use equal assignment exposure when comparing arms.
+Measure profit over comparable assigned zones/blocks or a declared common
+exposure period. Include all owned-service revenue to capture substitution and
+all applicable driver pay, incentives and other costs, including allocated
+fixed/shared expenses under the same approved basis. Revenue, contribution
+margin and completion, cancellation, wait, availability and customer effects
+are explanatory outcomes or guardrails. Revenue per quote may also be useful,
+but quote traffic may itself respond to pricing; do not silently hold that
+denominator fixed.
 
-Report revenue uplift with its confidence interval, contribution margin and
-completion, cancellation, wait, availability and customer guardrails. A business
-success criterion should require the agreed worthwhile benefit and acceptable
+Report profit uplift with its confidence interval and cost bridge. A business
+success criterion requires the agreed worthwhile profit gain and acceptable
 guardrails. A positive point estimate with an interval spanning zero is
-inconclusive. A losing policy is a valid benchmark outcome.
+inconclusive. If complete financial measurement is unavailable, report the
+profit outcome as unavailable rather than declaring success from trips or
+revenue alone. A losing policy is a valid benchmark outcome.
 
 Only an executed, appropriately analyzed GSM study can support a claim about
-GSM revenue impact in the population, prices and operating conditions tested.
+GSM profit impact in the population, prices and operating conditions tested.
 Neither synthetic recovery nor simulated policy uplift establishes that claim.
 
 ## Core engine validation protocol

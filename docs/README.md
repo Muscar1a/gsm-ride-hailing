@@ -1,12 +1,14 @@
 # Tài liệu GSM Causal Marketplace PoC
 
 Đọc tài liệu theo thứ tự: tiến độ hiện tại → roadmap → contract → thiết kế hoặc
-hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **09/10/2026**;
+hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **10/10/2026**;
 kết quả reporting tuần 2 chốt lúc **17:13:28 ngày 07/10/2026, Asia/Bangkok**.
 
-Mục tiêu bàn giao gồm PoC đầu cuối để thể hiện giá trị và core engine có kiểm chứng
-làm nền tính toán. PoC cung cấp kịch bản, dashboard và exports; engine chạy độc lập
-với UI, có kiểm chứng mô hình, accounting, failure handling, tái lập và benchmark tải.
+Mục tiêu bàn giao gồm PoC đầu cuối và core engine có kiểm chứng để so sánh **lợi
+nhuận GSM tăng hay giảm sau toàn bộ chi phí trong phạm vi đã chốt**. Số chuyến,
+nhu cầu và phản ứng của tài xế là kết quả giải thích/điều kiện ràng buộc. PoC cung cấp
+kịch bản, dashboard và exports; engine chạy độc lập với UI, có kiểm chứng mô hình,
+accounting, failure handling, tái lập và benchmark tải.
 Dashboard và exports dùng cùng kết quả có version từ engine. Tiêu chuẩn đích nằm trong
 [core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard);
 trạng thái bên dưới mô tả phần đã triển khai, không mặc định các tiêu chuẩn đã đạt.
@@ -21,7 +23,8 @@ bundle demand/choice cùng rerun/resume, và xác nhận nghiệm thu thực t�
 [Hồ sơ nghiệm thu](submission/days/20261007/acceptance_review.md) là nguồn kết
 luận các gate; [rà soát thống kê](submission/days/20261007/statistical_review.md)
 giải thích metrics. Kế hoạch thực hiện phần còn lại nằm trong [ROADMAP.md](ROADMAP.md).
-Dữ liệu GSM chưa có; kết quả hành vi/vận hành mô phỏng vẫn là evidence C.
+Dữ liệu GSM chưa có; kết quả hành vi/vận hành mô phỏng vẫn là evidence C và lợi
+nhuận thực của GSM chưa được đánh giá.
 
 Week 3 bước 1 đã triển khai: `prepare-demand` đóng gói choice run đã kiểm tra
 checksum, xuất request rates theo zone/block/service và snapshot fleet dùng chung.
