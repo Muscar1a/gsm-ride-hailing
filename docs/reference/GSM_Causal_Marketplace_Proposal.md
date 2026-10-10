@@ -21,10 +21,11 @@ correlation alone does not identify the three responses needed for policy decisi
 
 Build causal response models and combine them in a marketplace simulator. The
 reference business question is: **If service X price rises 10% in one zone/time
-window, how much does GSM's profit change after driver pay, incentives and all
-other in-scope costs?** Demand, serviceable supply, service choice and idle
-supply explain the profit change and constrain the policy decision. Supply
-response depends on compensation and the decisions drivers can adjust.
+window, how do demand, serviceable supply, service choice, completed trips, and idle
+supply change?** Supply response depends on compensation, offer dispatch, and the
+trip acceptance decisions drivers can adjust. Commercial outcomes (simulated gross
+booking value) are reported alongside operational service quality; real GSM profit
+and ROI require confirmed cost and financial policies from GSM and remain conditional.
 
 Deliver an end-to-end PoC built on a reusable core engine with verified
 state/accounting, model validity, explicit failure handling, reproducible execution
@@ -35,11 +36,13 @@ using engine results; delivery quality follows the
 
 | Forecast | Interpretation | Dependency |
 |---|---|---|
-| GSM incremental profit (primary) | Target minus baseline profit after all in-scope costs for the declared market/horizon | Recognized GSM revenue, complete cost ledger and approved allocations, plus all responses and operations |
 | Demand | Change in requests | Customer price sensitivity |
-| Supply | Change in serviceable vehicle-hours under offered compensation | Driver supply response |
 | Service choice | Net X/Y/nonbooking changes within the observation window | Cross-service response |
-| Idle supply | Vehicle-hours spent idle during the horizon | All responses and operational simulation |
+| Supply | Change in serviceable vehicle-hours under offered terms | Driver supply and attendance |
+| Trip acceptance | Acceptance probability conditional on an actual dispatch offer | Offer terms and driver acceptance response |
+| Completed trips & operations | Fulfilled trips, wait times, cancellations, and idle vehicle-hours | Marketplace simulation combining demand, supply, and matching |
+| Simulated gross booking value | Completed trips multiplied by effective policy fares | Operations and scenario tariff |
+| GSM incremental profit & ROI (conditional) | Policy difference after complete costs; unavailable without confirmed GSM financial policy | GSM-recognized revenue and finance-approved cost ledgers |
 
 Validate forecasts through switchback experiments alternating policies by
 geographic cluster and time block, with frozen forecasts compared to outcomes.
@@ -52,9 +55,9 @@ geographic cluster and time block, with frozen forecasts compared to outcomes.
 | Validation | Switchback design and forecast reconciliation ledger; cluster pilot subject to GSM approval | Broad rollout |
 | Delivery | End-to-end PoC with a validated core engine, headless scenario execution, dashboard and CSV/JSON | Production trip-level dispatch optimization |
 
-Expected use: choose pricing and incentive policies by incremental GSM profit
-after all in-scope costs, with traceable accounting and uncertainty, and explain
-customer and driver impacts to GSM leadership and regulators.
+Expected use: evaluate pricing and incentive policies by their operational and
+commercial marketplace impact, with traceable accounting and uncertainty, and explain
+customer, driver and service quality outcomes to GSM leadership and regulators.
 These are objectives, not measured benefits.
 
 ## System and data
@@ -92,7 +95,7 @@ research tables; field/grain requirements follow the data contract.
 | `prepare_data` | Labeled raw/public/synthetic sources, metadata, mapping | Parquet research tables, quality report, JSON manifest |
 | `fit_demand_choice`, `fit_supply`, `validate_benchmarks` | Choice/assignment or offer/state tables, estimands, splits | Model bundles, baselines, effect matrix/supply response, diagnostics, independent benchmarks |
 | `calibrate_baseline`, `simulate_marketplace`, `solve_equilibrium` | Request rates, admission plan, snapshot/rules/calibration, seed/budget | Trajectories, operational metrics, equilibrium or nonconvergence status |
-| `compare_scenarios` | Common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Scenario CSV/JSON led by incremental profit when complete financial inputs exist, with demand/supply/choice/operations, cost bridge, evidence and intervals |
+| `compare_scenarios` | Common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Scenario CSV/JSON with demand/supply/choice/operations, completion rate, simulated booking value, evidence and intervals; real profit/ROI conditional on GSM cost policies |
 | `design_switchback`, `reconcile_experiment`, `handoff` | Supported actions, experiment spec, frozen forecast; actual logs where available | Schedule/ledger, valid experimental reconciliation, dashboard, reproducible package |
 
 Request input is requests/hour. Supply is serviceable vehicle-hours; idle hours
@@ -163,12 +166,12 @@ errors. Without GSM logs, validation is against synthetic truth only.
 
 | Metric | Definition | Requirement |
 |---|---|---|
-| Incremental GSM profit (primary) | Difference in recognized revenue less every applicable direct and allocated cost between target and baseline | Finance-approved scope, complete cost coverage, consistent allocation and uncertainty; unavailable otherwise |
+| Completed trips | Simulator outcome from requests, supply, and acceptance | Apply elasticity to requests once, never again to completion |
 | Idle supply | Idle vehicle-hours or eligible idle vehicles at a point in time | State-time accounting; charging/ineligible separate; request-capacity gap is only a proxy |
-| Completed trips | Simulator outcome from requests and supply | Apply elasticity to requests once, never again to completion |
 | Wait/cancellation | Matching trajectories | Validate against separate baseline data |
-| Incremental contribution margin (secondary) | Policy difference after applicable variable costs | Confirm variable-cost classification and ledger with GSM; never label it total profit |
-| Incentive ROI (secondary) | Incremental GSM profit / incremental incentive cost for a fixed-price incentive contrast | Positive denominator, complete profit accounting and an isolated incentive comparison; otherwise unavailable |
+| Simulated gross booking value | Completed trips multiplied by scenario fares | Illustrative/declared price units; does not imply realized GSM profit |
+| Incremental GSM profit & ROI (conditional) | Target minus baseline recognized revenue less in-scope costs | Finance-approved scope and complete cost coverage; unavailable without confirmed GSM policy |
+| Incremental contribution margin (conditional) | Policy difference after applicable variable costs | Confirm variable-cost classification and ledger with GSM; never label it total profit |
 
 Resample appropriate clusters/time blocks, refit models, and rerun paired
 baseline/target simulations. Separate statistical uncertainty, simulation

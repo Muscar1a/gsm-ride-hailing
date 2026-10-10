@@ -16,13 +16,14 @@ profit and ROI stay `not_evaluated`.
 ## Delivery objective
 
 Deliver an end-to-end PoC backed by a reusable core engine with validated response
-models, operational and financial accounting, explicit failure states,
+models, operational simulation, marketplace equilibrium, explicit failure states,
 reproducible scenarios and measured resource limits. Its first validated market
-scope is one cluster and two services. The business decision output is GSM's
-incremental profit after all in-scope costs under an agreed accounting definition;
-trips, demand and driver responses explain it. The PoC demonstrates the path from
-prepared data and response models through simulation and financial reconciliation
-to baseline/target comparisons, dashboard and exports.
+scope is one cluster and two services. The primary decision outputs evaluate
+customer demand, driver supply and acceptance, completed trips, waiting times,
+idle vehicle-hours and simulated gross booking value. Full profit after all in-scope
+costs is evaluated conditionally when finance-approved accounting definitions are
+confirmed. The PoC demonstrates the path from prepared data and response models
+through simulation to baseline/target comparisons, dashboard and exports.
 Headless results, dashboard values and CSV/JSON must refer to the same versioned
 engine outputs, scope, units and statuses. The two-vehicle fixture establishes a
 development case; release requires independent correctness, statistical and
@@ -112,12 +113,11 @@ Decision-time offer terms and realized earnings have separate lineage. Follow th
 [execution design](reference/CORE_ENGINE_DESIGN.md#23-customer-and-driver-execution)
 and [driver models](reference/CORE_ENGINE_DESIGN.md#7-supply-response-engine).
 
-Week-3 target metrics are demand X/Y/total, net choice changes, driver participation,
-offer exposure/acceptance, serviceable/idle hours, completed trips, wait/cancel,
-driver earnings and charging when modeled. These are explanatory/guardrail
-outputs, not the final GSM business objective. Include source, unit, denominator,
-support, evidence C, and status. Missing intervals or profit remain unavailable
-with reasons.
+Week-3 target metrics are demand X/Y/total, net choice changes, offer exposure
+and trip acceptance, serviceable/idle hours, completed trips, wait/cancel,
+driver earnings summary and simulated gross booking value. Include source, unit,
+denominator, support, evidence C, and status. Full GSM profit remains conditional
+on confirmed accounting definitions and retains the explicit status not_evaluated.
 
 Required tests: request/offer accounting with carry-in/out; nonoverlapping states;
 legacy immediate acceptance, zero acceptance, unchanged driver terms, feasible

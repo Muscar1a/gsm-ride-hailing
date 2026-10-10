@@ -117,11 +117,12 @@ negative uplifts and ties are kept.
 ### Freeze the business objective
 
 Specify which services GSM owns, which prices it can change, baseline fares,
-currency, and the recognized revenue, complete cost and allocation definitions.
-The decision target is incremental GSM profit after all costs in the declared
-market and horizon; completed trips and revenue alone are intermediate outcomes.
-If Y is a competitor, keep its price fixed and exclude its bookings from GSM
-revenue. If both services belong to GSM, include substitution between them.
+and currency. Completed trips, fulfillments, wait times, cancellations, and idle
+vehicle-hours constitute the primary operational benchmark; simulated gross booking
+value provides commercial comparison. If Y is a competitor, keep its price
+fixed and exclude its bookings from GSM revenue. If both services belong to GSM,
+include substitution between them. Real GSM profit and ROI are conditional on
+confirmed financial policies from GSM.
 
 Until these inputs are supplied, monetary results are unavailable. A toy study
 may use explicitly declared illustrative fares or normalized price units, with
@@ -196,8 +197,8 @@ inputs, plus operational availability. Agree join keys, accounting scope,
 currency, recognition periods, cost categories and feature availability before
 fitting. Completed TLC trips cannot supply this.
 
-The primary economic comparison is
-`delta_profit = profit(target) - profit(baseline)`.
+When financial and accounting data become available from GSM, the full economic
+comparison is evaluated as `delta_profit = profit(target) - profit(baseline)`.
 Each profit equals confirmed GSM-recognized revenue minus every applicable
 direct and allocated cost under one finance-approved
 definition. Reconcile category totals and source coverage in both arms, including
@@ -213,8 +214,9 @@ incentive contrast at the same customer price, when profit is supported and
 incremental incentive cost is positive. A combined price/incentive policy needs
 the price-only policy as its comparator for this ratio. Profit already subtracts
 incentives once. Missing cost pools, coverage or allocation rules leave profit
-and profit-based ROI `not_evaluated` with reasons; a supported partial margin
-must keep its own label. The toy policy benchmark reports only simulated gross
+and profit-based ROI `not_evaluated` with reasons, without invalidating completed
+operational and demand benchmarks; a supported partial margin
+must keep its own label. The toy policy benchmark reports simulated gross
 booking value; it does not measure GSM contribution margin, profit, ROI or
 economic impact.
 

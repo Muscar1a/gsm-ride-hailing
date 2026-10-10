@@ -13,25 +13,28 @@ current progress and executed evidence are indexed in [docs README](../README.md
 ## 1. Objectives and required outputs
 
 Given a price/incentive policy, baseline market, and versioned response models,
-estimate how much GSM's profit changes after all costs in the declared market,
-accounting scope and horizon. Compare baseline and target profit with uncertainty;
-forecast customer, driver and operational outcomes to explain the change and
-enforce guardrails. Freeze predictions for experimental reconciliation. A completed
-trip count alone is not a business-value measure.
+estimate how customer demand, driver acceptance and serviceable supply, completed
+trips, waiting times, and idle vehicle-hours change across the market horizon.
+Evaluate operational service fulfillment and simulated gross booking value with
+traceable uncertainty; report baseline and target comparisons across supported
+scenarios. Freeze predictions for experimental reconciliation. Real GSM profit
+and complete cost reconciliation remain conditional on confirmed GSM accounting
+policies and data.
 
 Reference scenario: **raise service X price 10% in a cluster/time window**.
-Report demand, serviceable supply, service choice, and idle supply. Customer
-price changes affect supply through compensation and adjustable driver decisions.
+Report demand, serviceable supply, service choice, completed trips, waiting times,
+and idle supply. Customer price changes affect supply through compensation, offer
+dispatch, and adjustable driver trip acceptance.
 
 | Requirement | Output | Component |
 |---|---|---|
 | Customer price sensitivity | Request response; quote conversion separately; explicit unit/population | DemandResponse |
 | Cross-service response | Supported own/cross 2x2 matrix by zone/time/service | ChoiceResponse |
-| Driver participation and supply | Participation, feasible shifts and serviceable vehicle-hours versus expected income/incentives; extra hours versus relocation | DriverParticipation, ScheduleBuilder |
+| Driver attendance and supply | Feasible shifts and serviceable vehicle-hours under offered terms; extra hours versus relocation | DriverParticipation, ScheduleBuilder |
 | Driver trip acceptance | Acceptance conditional on an actual offer; rejection, timeout and offer exposure separately | DriverAcceptance |
 | Equilibrium | Consistent income/supply/utilization or nonconvergence status | EquilibriumSolver |
-| Operations | Completed trips, wait, cancellation, idle, charging | MarketplaceSimulator |
-| Economics (primary decision output) | Recognized GSM revenue, complete cost bridge, baseline/target profit and incremental profit; contribution margin and supported ROI separately | EconomicEvaluator |
+| Operations | Completed trips, wait, cancellation, idle hours, charging | MarketplaceSimulator |
+| Economics | Simulated gross booking value and driver earnings summary; profit and ROI reported conditionally when GSM cost ledgers exist | EconomicEvaluator |
 | Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output | UncertaintyEngine, EvidenceRegistry |
 | Validation | Switchback schedule, frozen forecasts, reconciliation ledger | ExperimentInterface |
 | Handoff | Scenario dashboard, CSV/JSON, reproducible versions | ScenarioRunner, ArtifactStore |
@@ -742,35 +745,34 @@ P_{\text{GSM}}(\pi)=R_{\text{recognized,GSM}}(\pi)
 \Delta P=P_{\text{GSM}}(\pi_1)-P_{\text{GSM}}(\pi_0).
 $$
 
-**Incremental profit $\Delta P$ is the primary policy decision measure.** Report
-baseline and target profit, the revenue and cost-category bridge, coverage,
-uncertainty and operating guardrails. Fixed costs that truly remain identical
-cancel in $\Delta P$, but still belong in absolute profit; policy-dependent shift,
-fleet or shared costs must change according to approved rules. A cluster result
-is profit for its declared accounting scope, not GSM-wide net income.
+**Marketplace fulfillment and simulated gross booking value lead policy comparisons.**
+Completed trips, waiting times, fill rates and idle vehicle-hours explain the operational
+trade-offs between pricing policies. In parallel, simulated gross booking value
+and driver earnings provide commercial context under declared tariff and pay rules.
 
-Finance confirms revenue definitions; gross customer payment is not automatically
-GSM revenue. Reconcile taxes/tolls/refunds/subsidies/funders and all expense
-sources without double counting. A bonus already contained in payroll or driver
-pay is subtracted once. Missing costs, source coverage or allocation rules leave
-GSM profit and $\Delta P$ `not_evaluated`, not zero. Independently supported
-operations and revenue remain reportable. When variable costs are complete,
-report the narrower contribution margin separately:
+When confirmed accounting scope, complete cost classifications, and allocation rules
+are supplied by GSM, **incremental profit $\Delta P$ serves as a conditional full-cost measure**:
+report baseline and target profit, the revenue and cost-category bridge, coverage,
+uncertainty and operating guardrails. Fixed costs that truly remain identical
+cancel in $\Delta P$, but still belong in absolute profit. A cluster result is profit
+for its declared accounting scope, not GSM-wide net income.
+
+Finance must confirm revenue definitions; gross customer payment is not automatically
+GSM revenue. Missing cost categories, incomplete ledger coverage, or unconfirmed
+allocation rules leave GSM profit and $\Delta P$ `not_evaluated`, not zero.
+Independently supported operations, completed trips, and simulated gross booking
+value remain fully reportable and actionable. When variable costs are complete,
+the narrower contribution margin may be reported separately:
 
 $$
 \text{CM}(\pi)=R_{\text{recognized,GSM}}(\pi)-C_{\text{variable}}(\pi).
 $$
 
-Only when profit and a positive incremental incentive expense are supported may
-the optional net-benefit ratio use
-$\text{incentive ROI}=\Delta P/\Delta C_{\text{incentive}}$.
-Use an incentive-only contrast at fixed customer price; for a combined change,
-compare combined policy with its price-only counterpart before attributing the
-incremental profit to incentives.
-Profit already subtracts incentives; do not subtract them again from the
-numerator. Report the denominator and any changes in other costs. Missing or
-nonpositive denominators leave ROI unavailable. Assumed-price or assumed-cost
-toy metrics remain explicitly simulated and never claim measured GSM profit.
+When profit and a positive incremental incentive expense are supported, the optional
+net-benefit ratio may evaluate $\text{incentive ROI}=\Delta P/\Delta C_{\text{incentive}}$
+for an isolated incentive contrast at fixed customer price. Missing cost coverage or
+nonpositive denominators leave ROI unavailable. Simulated or illustrative economics
+must remain explicitly labeled and never claim measured GSM profit.
 
 ## 12. Uncertainty and sensitivity
 
@@ -855,14 +857,13 @@ announcement/effectiveness and shift-decision horizon, not payment time alone.
 
 `scenario_result` includes baseline/target/delta, unit/population/denominator,
 source/evidence/support/status per metric, with separate interval status. Its
-primary decision fields are GSM profit and incremental profit, with recognized
-revenue, each nonoverlapping cost category, cost coverage and accounting version.
-Demand X/Y/total, net choices, participation, offer exposure/acceptance,
-serviceable/idle hours, completed trips, wait/cancel, driver earnings and charging
-when modeled explain the result and serve as guardrails. Week 3 validates
+primary evaluated fields are operational fulfillment and simulated gross booking
+value: completed trips, fill/completion rate, wait times, cancellations, serviceable
+and idle vehicle-hours, driver earnings and simulated revenue. Week 3 validates
 operations at C; week 4 adds full-chain uncertainty and supported economics.
-Missing profit, revenue, CM or ROI retain distinct reasons; an operationally
-complete scenario cannot be labeled financially evaluated when profit is missing.
+Full GSM profit, cost bridge, CM and ROI are reported conditionally and retain
+the status `not_evaluated` when cost ledgers or allocation rules are unconfirmed;
+missing financial policies do not prevent operational metrics from being reported.
 
 Stage execution: `pending/running/succeeded/failed`. Module/metric behavior:
 
@@ -1008,7 +1009,7 @@ without GSM; real forecasts/calibration/economics require corresponding sources.
 | Simulator | No double assignment; correct request partition; retain censoring |
 | Energy | Consistent SOC/kWh/station capacity/eligibility |
 | Solver | Explicit zero-denominator, oscillation, budget, nonconvergence handling |
-| Finance | Reconciled revenue and complete in-scope cost bridge, including zero-trip pay and approved shared-cost allocation; no duplicate refunds/pay/incentives; profit unavailable if coverage fails; valid ROI denominator |
+| Finance | Simulated fares and driver pay settle without duplicates; profit and cost bridge evaluated conditionally when complete inputs qualify |
 | Artifacts | Versions/checksums, atomic completion, seeded reproducibility |
 
 ### 17.2 Benchmarks
@@ -1044,7 +1045,7 @@ Driver integration adds controlled checks before market-level evaluation:
 | PoC integration | A supported scenario walkthrough uses the same versioned results in headless execution, dashboard and CSV/JSON, preserving units, denominators, evidence and statuses |
 | Reproducibility | Same versions/data/config/seeds agree within declared tolerance |
 | Complete outputs | Price-only, incentive-only and combined policies traverse customer choice, driver participation/acceptance, compensation, simulation and applicable equilibrium across independent seeds and supported contexts |
-| Business outcome | Profit and incremental profit lead supported policy comparisons; baseline/target revenue and every in-scope cost reconcile under one approved accounting definition, or financial results carry an explicit unavailable status |
+| Business outcome | Completed trips, wait times, cancellations, idle hours and simulated gross booking value lead supported comparisons; real profit and ROI reported conditionally when accounting policies exist, or carry an explicit unavailable status |
 | State and failure handling | Invariants pass through carryover and supported operational transitions; deliberate invalid inputs, budget exhaustion and nonconvergence yield explicit failures |
 | Transparency | Evidence/interval/support/dependencies displayed and exported per metric |
 | Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
