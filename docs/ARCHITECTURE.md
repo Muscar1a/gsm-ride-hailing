@@ -102,19 +102,30 @@ algorithms, estimands and validation rules. Extend the existing packages through
 versioned interfaces rather than treating the current fixed-supply trajectory
 as a complete price/incentive forecast.
 
+The target delivery flow starts with identifying and estimating causal rider-price,
+driver-labor-supply and own/cross-service responses, then supported policy forecasts,
+independent decision evaluation and experimental reconciliation. Response estimates,
+intervals, diagnostics, assumptions, support and evidence are publishable before
+the full simulator is complete. Simulation supplies the operational translation
+when the policy forecast requires it; its technical gates remain mandatory for
+those outputs. Initial target scope is one cluster and two services.
+
 | Package | Target responsibility |
 |---|---|
 | `data/` | Map native sources to validated quote, eligibility, shift, trip-offer, state and finance ledger tables; retain nonparticipants, zero outcomes and cost-source coverage |
-| `causal/` | Fit and independently validate demand/choice, driver participation/conditional hours and trip-acceptance models; export separate estimands, support and evidence in model bundles |
+| `causal/` | Identify, fit and independently validate rider-price/choice and driver participation/conditional-hours responses, with trip acceptance as a separate dispatch response; export estimands, estimates/intervals, assumptions, diagnostics, identified matrix scope, support and evidence independently of the full simulator |
 | `simulation/` | Apply compensation rules; construct physical driver/vehicle schedules; dispatch offers, resolve acceptance and operate the state simulator; produce individual earnings ledgers and bounded income-supply trials |
-| `pipeline/` | Freeze compatible model/calibration/policy/snapshot inputs; orchestrate bounded jobs, paired baseline/target scenarios, operational metrics, simulated economics, uncertainty and exports |
+| `pipeline/` | Freeze compatible model/calibration/policy/snapshot and evaluation inputs; orchestrate bounded supported forecasts, paired baseline/target scenarios, uncertainty, independent finite-policy comparisons against confirmed business criteria/guardrails, frozen experimental forecasts and reconciliation |
 | `core/` | Define shared contracts, units, versions, support/status checks, seeds, budgets and artifact lifecycle |
 | `ui/` | Read completed scenario artifacts and expose the same values, evidence, limitations and statuses as headless execution and CSV/JSON |
 
 ```mermaid
 flowchart TD
-  Sources[Native sources + coverage] --> Offline[Offline mapping, estimation and independent calibration]
+  Questions[Causal questions + business criterion + guardrails] --> Offline[Identification, estimation and independent validation/calibration]
+  Sources[Native sources + coverage] --> Offline
   Offline --> Version[Versioned response bundles, support and operational rules]
+  Version --> CausalResults[Causal estimates, intervals, diagnostics and evidence]
+  CausalResults --> Artifacts[Completed evidence/scenario artifacts]
   Version --> Runner[Bounded paired scenario runner]
   Policy[Customer price + driver incentive policy] --> Runner
   Snapshot[Common initial snapshot + roster + seed plan] --> Runner
@@ -135,7 +146,13 @@ flowchart TD
   Metrics --> Results[Paired scenario results: operations, simulated economics, uncertainty, status]
   BookingValue --> Results
   DriverSummary --> Results
-  Results --> Artifacts[Completed scenario artifacts]
+  Results --> Compare[Independent supported finite-policy evaluation + guardrails]
+  Compare --> Pilot[Candidate pilot recommendation + frozen forecast/analysis plan]
+  Pilot --> Experiment[Authorized A/A and designed experiment]
+  Experiment --> Reconcile[Measured effects versus frozen forecast]
+  Compare --> Artifacts
+  Pilot --> Artifacts
+  Reconcile --> Artifacts
   Artifacts --> UI[Dashboard and CSV/JSON]
 ```
 
@@ -160,15 +177,26 @@ Per-trip pay divided by pickup/trip duration may describe an offer, but is not
 shift-level expected income because it excludes idle time and offer opportunity.
 Use the declared decision denominator and explicit failure/nonconvergence status.
 
-The evaluation layer converts each completed scenario into operational service
-quality (completed trips, fill/completion rate, wait times, cancellations, idle
-vehicle-hours) and simulated gross booking value under declared scenario fares.
-Baseline/target comparisons lead with operational fulfillment and booking value;
-driver earnings are summarized under declared compensation rules. Real GSM-wide
-profit and complete cost reconciliation remain conditional on GSM providing
-confirmed accounting scope, cost categories and allocation rules; until those inputs
-qualify, profit retains an explicit `not_evaluated` status without blocking
-operational scenario evaluation.
+The evaluation layer compares supported finite candidates with unchanged policy
+against a business criterion and minimum worthwhile improvement confirmed before
+final evaluation, with service-quality, driver-income and budget guardrails. Policy
+selection uses development data and independent final evaluation; the same fitted
+model must not select a candidate and serve as its sole evidence of value. A
+recommendation identifies candidates for an authorized pilot, with evidence,
+uncertainty and reasons for rejection or deferral; it does not deploy a policy.
+
+Report causal demand/supply/substitution responses and, when operational inputs
+qualify, completed trips, fill/completion rate, waiting, cancellation, idle
+vehicle-hours, simulated booking value and driver earnings. Revenue, contribution
+margin, profit and ROI retain separate definitions and require their respective
+measurement/accounting coverage. Missing GSM inputs leave the affected outcome
+`not_evaluated` with reasons, without blocking supported causal or operational
+outputs. Booking value or improved fulfillment does not establish profit/ROI.
+Separate statistical intervals from Monte Carlo variability and sensitivity to
+unmeasured assumptions. The experiment handoff freezes model/policy/assignment
+references, forecasts and analysis before treatment outcomes; reconciliation
+compares measured causal effects at matching scope and horizon without overwriting
+the forecast. A/A and impact evaluation depend on actual data and authorization.
 
 The initial demand mode remains `reduced_form_policy`: do not apply simulated
 wait/ETA effects to booking again. A separately identified `structural_choice`
@@ -226,11 +254,11 @@ These generated tables do not establish a mapping from GSM native schemas.
 | `admission_plan` | Proposed physical supply interface | Eligible-population/model references, participation decisions, driver/vehicle/shift keys, shift start/end, service eligibility, roster reference, target and feasible serviceable hours, capacity gaps and compensation version |
 | `trip_offer_log` | Proposed simulator decision trace | Offer/request/dispatch/driver/vehicle/shift keys, immutable predecision terms/version, exposure and response events, acceptance-model reference and seeded decision provenance; preserve unaccepted offers |
 | `earnings_ledger` | Proposed compensation outcome | Individual driver/shift/trip pay, bonus/deduction and currency entries under frozen rules; offered-term references, earned/paid basis and zero-trip outcomes; separate from rider-payment and cost entries |
-| `economic_ledger` | Proposed economic summary | Simulated gross booking value from completed trips and driver payouts under frozen policy rules; full profit and cost allocation remain conditional on GSM inputs |
+| `economic_ledger` | Proposed economic summary | Simulated gross booking value from completed trips and driver payouts under frozen policy rules; revenue, contribution margin, profit and ROI require their respective confirmed measurement/accounting inputs and retain unavailable status when unsupported |
 | `equilibrium_result` | Proposed income-supply interface | Expected/realized income and hours by decision group, unit/denominator, residuals, iteration/replicate budgets and convergence/failure status; references to the common initial snapshot |
 | `operational_checkpoint` | Implemented fixed-supply continuation; driver-decision extension proposed | Current `end_snapshot.json` preserves arrivals, requests, vehicles and pending events; future versions must also preserve offer attempts/decisions, remaining driver activity and compatible model/compensation references |
-| `scenario_result` | Choice scenarios implemented; full marketplace comparison proposed | Scenario/run/model references and scope; baseline/target/delta for operational metrics (completed trips, fill rate, wait time, idle vehicle-hours) and simulated gross booking value; driver earnings summary; profit and ROI reported as conditional with explicit `not_evaluated` status when GSM cost inputs are pending; snapshot references |
-| `prediction_record` | Proposed experiment record | Frozen model/snapshot/policy/assignment references, forecast and analysis plan; reconciliation appends results without overwriting the frozen forecast |
+| `scenario_result` | Choice scenarios implemented; full marketplace comparison proposed | Scenario/run/model references and scope. Proposed marketplace extension: baseline/target/delta for causal demand/supply/substitution responses and supported operational metrics (completed trips, fill rate, wait time, idle vehicle-hours), simulated booking value and driver earnings; conditional economics with explicit `not_evaluated` reasons; snapshot references, estimands/assumptions, support/evidence, statistical intervals versus simulation/sensitivity uncertainty, confirmed decision criterion/guardrails, independent evaluation and pilot recommendation status |
+| `prediction_record` | Proposed experiment record | Frozen model/snapshot/policy/assignment references, scope/horizon, forecast points/intervals, guardrails and analysis plan; reconciliation appends matching measured causal effects, forecast errors and limitations without overwriting the frozen forecast |
 
 Current model bundles use trusted local `.joblib` files and retain feature,
 outcome and treatment order, baseline model and support diagnostics. A full

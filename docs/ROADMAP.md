@@ -15,15 +15,25 @@ profit and ROI stay `not_evaluated`.
 
 ## Delivery objective
 
-Deliver an end-to-end PoC backed by a reusable core engine with validated response
-models, operational simulation, marketplace equilibrium, explicit failure states,
-reproducible scenarios and measured resource limits. Its first validated market
-scope is one cluster and two services. The primary decision outputs evaluate
-customer demand, driver supply and acceptance, completed trips, waiting times,
-idle vehicle-hours and simulated gross booking value. Full profit after all in-scope
-costs is evaluated conditionally when finance-approved accounting definitions are
-confirmed. The PoC demonstrates the path from prepared data and response models
-through simulation to baseline/target comparisons, dashboard and exports.
+Estimate and validate three causal responses: rider price sensitivity, driver
+labor supply and own/cross-service substitution. The initial target scope is one
+cluster and two services. Each result reports the estimand, estimate and interval,
+decision population, identification assumptions, support, diagnostics and evidence;
+identified results can be handed off before the full simulator is complete.
+Use supported responses to forecast policy effects, compare a finite candidate
+set against unchanged policy, and recommend candidates for a pilot under a
+preregistered business criterion and service-quality, driver-income and budget
+guardrails. Revenue, contribution margin, profit and ROI each require their own
+confirmed measurement inputs and accounting scope; unavailable economics retain
+explicit status rather than using booking value as a substitute.
+
+The delivery path is identification, estimation, supported forecasts, independent
+policy evaluation and experimental reconciliation. The reusable core engine,
+simulator, dashboard and exports support these outputs. Simulation translates
+behavioral responses into completed trips, waiting/cancellation, idle
+vehicle-hours and conditional economics; convergence alone does not validate
+the causal responses. Its correctness, explicit failures, reproducibility and
+measured resource limits remain mandatory for simulation-dependent forecasts.
 Headless results, dashboard values and CSV/JSON must refer to the same versioned
 engine outputs, scope, units and statuses. The two-vehicle fixture establishes a
 development case; release requires independent correctness, statistical and
@@ -39,11 +49,11 @@ These are weekly requirements and targets, not completion records.
 
 | Week | Required input | Expected output and acceptance |
 |---|---|---|
-| 1 | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands | Research tables, quality report, manifests, splits and acceptance specification; validate keys/grain/units/totals |
-| 2 | Choice/assignment records or controlled blocks; separate Swissmetro data and independent evaluator | Demand/choice bundle, common matrix or identified columns, baseline/support/interval diagnostics and method/choice/policy reports; no oracle leakage |
-| 3 | Frozen demand/choice bundle; offered compensation, dispatch decisions, eligible participation/shift/state records or declared synthetic truth; shared roster, rules, initial snapshot, seeds and budgets | Driver participation/acceptance and calibration bundles, feasible plans/snapshots, offer/operational trajectories, earnings ledger, price/incentive comparisons, equilibrium status and baseline-error report; invariant, failure and independent controlled benchmark evidence |
-| 4 | Full model/snapshot, recognized-revenue and complete direct/shared cost sources or labeled synthetic fixtures, approved accounting/allocation rules, uncertainty specification, movement/carryover and power assumptions | Full-chain intervals, reconciled cost bridge and profit comparison when inputs support them (otherwise explicit unavailable status), headless scenario comparisons, workload benchmarks, dashboard/exports, experiment specification and frozen forecast |
-| 5 | Versioned engine/artifacts, correctness/statistical/performance evidence and acceptance records; actual experiment logs if an experiment occurs | Runnable end-to-end PoC and reproducible engine package, rerun instructions, validated scope/limits and gate status; conditional A/A/pilot and forecast-versus-effect reconciliation |
+| 1 | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands and business decision | Causal questions, confirmed business criterion/guardrails, identification and evaluation plan, research tables, quality report, manifests and splits; validate keys/grain/units/totals |
+| 2 | Choice/assignment records or controlled blocks; separate Swissmetro data and independent evaluator | Rider demand/choice results, common matrix or identified columns, baseline/support/interval diagnostics and method/choice/policy reports; state unidentified responses and prevent oracle leakage |
+| 3 | Frozen demand/choice bundle; offered compensation, dispatch decisions, eligible participation/shift/state records or declared synthetic truth; shared roster, rules, initial snapshot, seeds and budgets | Driver labor-supply results and separate acceptance diagnostics; supported integrated forecasts with feasible plans/snapshots, offer/operational trajectories, earnings ledger, equilibrium status and baseline-error report; invariant, failure and independent controlled benchmark evidence |
+| 4 | Supported response bundles and validated operational inputs; finance sources/rules to the extent required by the chosen criterion; uncertainty specification, movement/carryover and power assumptions | Independently evaluated finite policy comparisons, intervals and sensitivity, pilot recommendations with guardrail/evidence status; conditional economic comparison/cost bridge, workload checks, experiment/A/A specification and frozen forecasts; dashboard/exports expose the same results |
+| 5 | Versioned causal/policy/engine artifacts, correctness/statistical/performance evidence and acceptance records; actual experiment logs if an experiment occurs | Reproducible evidence package, rerun instructions, identified/unidentified scope and gate status; runnable supporting PoC, pilot handoff and forecast-versus-effect reconciliation when experiment data qualify |
 
 ## 1. Close week 2
 
@@ -113,7 +123,11 @@ Decision-time offer terms and realized earnings have separate lineage. Follow th
 [execution design](reference/CORE_ENGINE_DESIGN.md#23-customer-and-driver-execution)
 and [driver models](reference/CORE_ENGINE_DESIGN.md#7-supply-response-engine).
 
-Week-3 target metrics are demand X/Y/total, net choice changes, offer exposure
+Week-3 primary outputs are driver participation/conditional-hours estimates,
+their intervals, decision populations, support and evidence, followed by
+supported demand/supply forecasts. Acceptance remains a separate dispatch
+response. Integrated forecast metrics include demand X/Y/total, net choice changes,
+offer exposure
 and trip acceptance, serviceable/idle hours, completed trips, wait/cancel,
 driver earnings summary and simulated gross booking value. Include source, unit,
 denominator, support, evidence C, and status. Full GSM profit remains conditional
@@ -147,19 +161,26 @@ SimPy is now declared and locked for the implemented fixed-supply simulator.
 ## 3. Handoff and follow-up
 
 Keep large model/data/run artifacts ignored; every output has a manifest/checksum.
-Engine correctness, model validity, reproducibility and resource benchmarks take
-priority over dashboard polish. Preserve conservation and failure checks when
-expanding the validated workload or model complexity.
+Identification, response-model validity, supported forecast and independent
+policy-evaluation evidence take priority in the handoff. Engine correctness,
+reproducibility and resource checks remain required for integrated forecasts;
+dashboard polish follows these requirements. Preserve conservation and failure
+checks when expanding the validated workload or model complexity.
 
-Week 4 adds full-chain uncertainty, a finance-approved accounting definition,
-all-cost ledger and incremental-profit evaluation when coverage permits,
-power/carryover, switchback specs, and a frozen prediction ledger. Continue C-level development
+Week 4 adds full-chain uncertainty, explicit sensitivity to unmeasured assumptions,
+independent comparison of supported finite candidates under the confirmed
+business criterion and guardrails, and conditional financial evaluation when
+the corresponding coverage/definitions qualify. A profit-specific comparison
+requires a finance-approved all-cost ledger. Deliver power/carryover assumptions,
+switchback and A/A specifications, and a frozen prediction ledger. Continue C-level development
 without GSM while requesting **eight raw source groups over the latest 12 months**.
 When GSM arrives, reassess mapping/quality/identification/calibration before
 forecasting; an adapter swap or borrowed synthetic coefficients is insufficient.
 
-Week 5 packages the reproducible engine and PoC handoff, including a verified
+Week 5 packages the causal results, independent policy evaluation, limitations
+and reproducible experiment handoff, with the supporting engine/PoC, verified
 scenario walkthrough and acceptance status. A/A, a pilot and forecast reconciliation
 depend on actual GSM data and experiment authorization.
 A week-5 pilot prioritizes process checks; impact evaluation may extend according
-to the power analysis.
+to the power analysis. A short price switchback need not identify the longer-horizon
+shift-participation response; each experiment must match its stated estimand.

@@ -16,23 +16,32 @@ correlation alone does not identify the three responses needed for policy decisi
 | Response | Question | Main source of bias |
 |---|---|---|
 | Customer price sensitivity | How do requests change when service price rises 1%? | Prices often rise during rain or peak demand, creating positive price-trip correlation despite negative price effects |
-| Driver supply response | How do serviceable hours change with expected earnings or incentives? | Incentives target shortages; relocation and shifted charging can resemble extra supply |
+| Driver supply response | How do participation and serviceable hours change with predecision offered compensation or incentives? | Incentives target shortages; relocation and shifted charging can resemble extra supply |
 | Cross-service substitution | How do X/Y requests and nonbooking probability change when one price changes? | Services share demand shocks; net changes do not identify individual customer switches |
 
-Build causal response models and combine them in a marketplace simulator. The
-reference business question is: **If service X price rises 10% in one zone/time
-window, how do demand, serviceable supply, service choice, completed trips, and idle
-supply change?** Supply response depends on compensation, offer dispatch, and the
-trip acceptance decisions drivers can adjust. Commercial outcomes (simulated gross
-booking value) are reported alongside operational service quality; real GSM profit
-and ROI require confirmed cost and financial policies from GSM and remain conditional.
+The main objective is to estimate these three causal responses, use identified
+responses to predict policy effects and select policies worth testing, and validate
+the frozen counterfactuals through experiments. The decision path is identification
+-> estimation -> supported policy forecasts -> policy evaluation -> experimental
+validation. Its first scope is one cluster and two services.
 
-Deliver an end-to-end PoC built on a reusable core engine with verified
-state/accounting, model validity, explicit failure handling, reproducible execution
-and measured workload limits. Its first validated scope is one cluster and two services.
-The PoC demonstrates supported scenario comparisons through a dashboard and exports
-using engine results; delivery quality follows the
-[engine standard](CORE_ENGINE_DESIGN.md#11-engine-delivery-standard).
+The reference business question is: **If service X price rises 10% in one zone/time
+window, how do demand, serviceable supply, service choice, completed trips, and idle
+supply change, and is this policy worth testing under agreed business and service
+criteria?** This example is forecast only within supported action bounds. Supply
+response depends on offered compensation, expectations formed before the labor
+decision, and the decisions drivers can adjust; participation/hours and acceptance
+of individual dispatch offers remain separate outcomes.
+
+Deliver three causal result packages, supported counterfactual comparisons,
+decision evidence, and an executable switchback design with a frozen forecast
+ledger. A reusable core engine, marketplace simulator, dashboard, and exports
+support these outputs. Their state/accounting, explicit failures, reproducibility
+and workload limits follow the
+[engine standard](CORE_ENGINE_DESIGN.md#11-engine-delivery-standard). Passing
+technical gates does not establish causal identification or real GSM policy impact.
+Real GSM profit and ROI require confirmed cost and financial policies from GSM and
+remain conditional.
 
 | Forecast | Interpretation | Dependency |
 |---|---|---|
@@ -51,9 +60,10 @@ geographic cluster and time block, with frozen forecasts compared to outcomes.
 |---|---|---|
 | Policy | Prices and driver incentives; subscription benefits as effective price changes for observed subscribers | Automatic production pricing |
 | Estimation | Three responses by supported zone/time/service resolution, intervals, evidence A/B/C | Individual customer pricing |
-| Marketplace | One-cluster simulator, equilibrium and idle supply per scenario | Citywide competition model |
-| Validation | Switchback design and forecast reconciliation ledger; cluster pilot subject to GSM approval | Broad rollout |
-| Delivery | End-to-end PoC with a validated core engine, headless scenario execution, dashboard and CSV/JSON | Production trip-level dispatch optimization |
+| Marketplace | Supported demand/supply forecasts; one-cluster simulation for operational effects and equilibrium when justified | Citywide competition model |
+| Decision | Finite supported price/incentive candidates, agreed business criterion, uncertainty and operational guardrails | Automatic policy optimization |
+| Validation | Executable switchback design, A/A protocol and frozen forecast reconciliation ledger; cluster pilot subject to GSM approval | Broad rollout |
+| Delivery | Causal result packages, decision evidence and experiment package, presented through a validated core engine, dashboard and CSV/JSON | Production trip-level dispatch optimization |
 
 Expected use: evaluate pricing and incentive policies by their operational and
 commercial marketplace impact, with traceable accounting and uncertainty, and explain
@@ -62,17 +72,24 @@ These are objectives, not measured benefits.
 
 ## System and data
 
-Pricing and driver operations teams choose a service, zone, horizon, and price
-or incentive change. The system compares it with the current policy, reports
-operational/economic outcomes and uncertainty, and prepares approved actions
-for experimentation within GSM limits.
+Pricing and driver operations teams define a service, zone, horizon, and finite
+set of supported price/incentive candidates. Before selection and final evaluation,
+agree the primary business metric, minimum worthwhile effect, wait/cancel/driver
+income/budget guardrails and action bounds with GSM. No default objective maximizes
+gross booking value or profit. Compare each candidate with the current policy,
+report operational/economic outcomes and uncertainty, and give a reasoned decision:
+worth testing, more evidence needed, or outside approved limits. Policy selection
+uses development data; final evaluation uses independent held-out data or valid
+experimental outcomes. Do not use the selecting model as its own proof of policy
+value. These outputs support approved experimentation; they do not execute or
+deploy pricing policies automatically.
 
 | Recipient | Output | Handoff |
 |---|---|---|
-| Pricing and driver operations | Price/incentive scenario comparisons | Interactive demo |
-| Group 4 - Mobility Assistant | Price sensitivity and 2x2 response matrix | CSV/JSON |
-| Group 1 | Supply response with battery/charging constraints | CSV/JSON |
-| GSM leadership and regulators | Customer/driver impact explanation | Report |
+| Pricing and driver operations | Candidate comparisons, uncertainty, guardrail status and policies worth testing | Decision report and interactive demo |
+| Group 4 - Mobility Assistant | Price sensitivity and identified full/partial 2x2 response matrix | CSV/JSON |
+| Group 1 | Labor participation/hours response with battery/charging constraints and separate acceptance response | CSV/JSON |
+| GSM leadership and regulators | Traceable customer/driver/economic impact explanation and evidence limits | Report |
 
 Request **eight raw source groups over the latest 12 months**, including
 neighboring/control zones. GSM exports existing Parquet, UTF-8 CSV, or native
@@ -93,10 +110,10 @@ research tables; field/grain requirements follow the data contract.
 | Block/contract stage | Input | Output |
 |---|---|---|
 | `prepare_data` | Labeled raw/public/synthetic sources, metadata, mapping | Parquet research tables, quality report, JSON manifest |
-| `fit_demand_choice`, `fit_supply`, `validate_benchmarks` | Choice/assignment or offer/state tables, estimands, splits | Model bundles, baselines, effect matrix/supply response, diagnostics, independent benchmarks |
+| `fit_demand_choice`, `fit_supply`, `validate_benchmarks` | Choice/assignment or offer/state tables, estimands, splits | Three causal result packages, model bundles, baselines, full/partial effect matrix, supply response, diagnostics and independent benchmarks |
 | `calibrate_baseline`, `simulate_marketplace`, `solve_equilibrium` | Request rates, admission plan, snapshot/rules/calibration, seed/budget | Trajectories, operational metrics, equilibrium or nonconvergence status |
-| `compare_scenarios` | Common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Scenario CSV/JSON with demand/supply/choice/operations, completion rate, simulated booking value, evidence and intervals; real profit/ROI conditional on GSM cost policies |
-| `design_switchback`, `reconcile_experiment`, `handoff` | Supported actions, experiment spec, frozen forecast; actual logs where available | Schedule/ledger, valid experimental reconciliation, dashboard, reproducible package |
+| `compare_scenarios` | Finite supported candidates, agreed business metric/guardrails; common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Candidate CSV/JSON with demand/supply/choice/operations, supported economics, evidence, intervals and decision reasons; real profit/ROI conditional on GSM cost policies |
+| `design_switchback`, `reconcile_experiment`, `handoff` | Supported actions, assignment/power/analysis spec, A/A protocol, frozen forecast; actual logs where available | Executable experiment package, schedule/ledger, valid experimental reconciliation, dashboard and reproducible package |
 
 Request input is requests/hour. Supply is serviceable vehicle-hours; idle hours
 are a subset. Tables/draws/trajectories use Parquet, specs/manifests JSON, models
@@ -115,17 +132,23 @@ GSM approves operational policy execution.
 
 ## Estimating the three responses
 
-Each effect specifies outcome, policy variation, population/horizon, and causal
-assumptions. Estimate only at resolutions supported by data. Prefer quoted
+Each causal result specifies treatment and contrast, outcome and unit, population,
+zone/service, behavioral horizon, policy variation, and identification assumptions.
+Report an absolute effect; report elasticity only when its definition and positive
+price/outcome denominators make it valid. Each package includes a point estimate,
+confidence interval/status, simple comparison baseline, supported action range,
+diagnostics, evidence A/B/C, and any unidentified component with its reason and
+collection/experiment plan. These results can be handed off independently of a
+completed simulator. Estimate only at resolutions supported by data. Prefer quoted
 prices or tariff multipliers adjusted for trip characteristics; average realized
 fares are distorted by selection and distance mix. Subscription benefits affect
 the effective price shown to subscribers.
 
 | Response | Outcome | Preferred identification | Interpretation |
 |---|---|---|---|
-| Customer price sensitivity | Request change per 1% price change; quote conversion reported separately | Randomized prices -> historical tariff change/DiD -> DML | Historical estimates require identification assumptions |
-| Supply | Serviceable hours versus expected earnings/incentives | Randomized incentives -> shift incentive changes/DiD | Use amount effects for incentives starting at zero |
-| Cross-service | Each service's response to both prices; 2x2 matrix | Separately identifiable price variation; optional nested logit with choice logs | Changing only X identifies one column |
+| Customer price sensitivity | Total request effect; request elasticity when identifiable; quote conversion reported separately with complete quote exposure logs | Randomized prices -> historical tariff change/DiD -> DML | Conversion among observed quote opportunities alone does not identify total request demand |
+| Supply | Labor participation, worked hours and serviceable hours under predecision offered compensation/incentives | Randomized incentives -> shift incentive changes/DiD | Use amount effects for incentives starting at zero; distinguish extra total supply from relocation |
+| Cross-service | Each service's request response to both prices; full/partial 2x2 matrix and total X/Y effect | Separately identifiable price variation; optional nested logit with choice logs | Changing only X identifies one column; nonbooking requires complete opportunity windows |
 
 | Method | Conditions | Assumptions/gate | Evidence |
 |---|---|---|---|
@@ -139,10 +162,14 @@ shocks. Compare with correlation and adjusted regression baselines. Differences
 show sensitivity, not which estimate is correct. Before DiD, inspect allocation,
 anticipated demand, and concurrent changes.
 
-Customer prices affect supply only through offered compensation/expected income
-and adjustable driver decisions. Fixed shifts/salaries may imply zero additional
-hours; extra shifts, acceptance, and charging timing need separate outcomes.
-Track neighbors to distinguish extra total supply from relocation.
+Customer prices affect supply only through offered compensation, expected income
+and adjustable driver decisions. Offered terms and expectations used for labor
+response must be available before participation/hours decisions; realized post-shift
+income is an outcome/mediator and cannot be substituted as a predecision treatment.
+An expected-income causal channel requires its own identification basis. Fixed
+shifts/salaries may imply zero additional hours; extra shifts, acceptance, and
+charging timing need separate outcomes. Track neighbors to distinguish extra total
+supply from relocation.
 
 Two matrix columns require independent residual price variation. Report request
 X/Y/total and conversion separately. `NONE` means no booking in a complete
@@ -150,9 +177,13 @@ observation window; it does not establish departure from GSM or competitor choic
 
 ## Marketplace simulation and switchback validation
 
-The simulator combines request flows, eligible drivers/vehicles, compensation,
-and matching rules. It includes pickup/service time, waiting cancellation,
-return to availability, and charging. Preserve states across analysis windows.
+Identified causal responses produce demand and supply forecasts. The simulator
+translates these forecasts into conditional operational and economic outcomes by
+combining request flows, eligible drivers/vehicles, compensation, and matching
+rules. It includes pickup/service time, waiting cancellation, return to availability,
+and charging. Preserve states across analysis windows. Simulator convergence and
+accounting validity are technical conditions; behavioral validity requires separate
+identification and empirical checks.
 
 The income-supply loop is expected earnings -> serviceable hours -> simulated
 utilization and earnings -> updated expectations. Convergence requires consistent
@@ -188,11 +219,28 @@ Switchback randomizes policies by geographic cluster/time block. Design choices:
 | Separate X/Y price schedules | Identifiable variation for each service | Missing matrix columns |
 | Sample size | Worthwhile detectable effect and actual variability | Insufficient power |
 
-Before execution, freeze forecasts/model versions, metrics, horizon, analysis,
-and stopping rules; run A/A and validate inference by repeated simulation.
-During execution, monitor agreed wait/cancel guardrails; draw efficacy conclusions
-on the planned analysis schedule. Afterwards, inspect spatial/time dependence,
-compare measured causal effects with frozen forecasts, then update models.
+The behavioral horizon must match the estimand. Short price switchbacks can test
+request responses without identifying drivers' shift participation or added hours;
+labor responses need assignments, exposure and horizons compatible with those
+decisions. The experiment package contains:
+
+1. Assignment, exposure, cluster/block/washout, power and analysis specifications,
+   with agreed primary metric, guardrails and stopping rules.
+2. An A/A protocol checking assignment/exposure logs, metric reconstruction and
+   inference under no policy effect; executed results only when logs are available.
+3. A frozen ledger of model/data/policy versions, forecast point estimates and
+   intervals/statuses, population/horizon, support and assumptions.
+4. A live monitor for agreed wait/cancel/driver-income/budget guardrails, separate
+   from efficacy inference on the planned analysis schedule.
+5. A reconciliation plan comparing identified measured effects with frozen
+   forecasts for the same population and horizon, diagnosing deviations and then
+   recording the next model version.
+
+Before execution, freeze this package, run A/A and validate inference by repeated
+simulation. Afterwards, inspect spatial/time dependence and reconcile forecasts.
+Without valid actual logs, hand over the executable design and mark experimental
+impact/reconciliation unevaluated. Real-time monitoring does not authorize repeated
+unplanned efficacy tests. GSM approval remains required for live policy execution.
 
 ## Five-week roadmap
 
@@ -201,11 +249,11 @@ Source data requests follow the [GSM data request](../GSM_DATA_CONTRACT.md).
 
 | Week | Input | Review output |
 |---|---|---|
-| 1 | Eight-group/12-month raw request; public/synthetic sources; market/rules/estimands | Mapping/quality/manifest, split/acceptance specs, identification design |
-| 2 | Prepared choice/assignment or controlled blocks; separate Swissmetro | Demand/choice bundle, pooled/partial matrix, baseline/support/interval; method, choice, independent policy-value reports |
-| 3 | Demand bundle; offered compensation/states/operations or synthetic truth; roster/rules | Supply model, calibration/snapshot, trajectories, price/incentive scenarios, equilibrium status, baseline-error report |
-| 4 | Full model/snapshot/scenario, accounting/uncertainty, movement/carryover/power | Full-chain intervals, supported economics, dashboard/export, experiment spec, frozen prediction ledger |
-| 5 | Completed artifacts/acceptance; actual experiment logs if available | Reproducible package, instructions, gate status; conditional reconciliation/A/A/pilot and next steps |
+| 1 | Eight-group/12-month raw request; public/synthetic sources; market/rules | Causal questions/estimands, mapping/quality/manifest, identification and split/acceptance specs, agreed business metric/guardrails and evaluation plan |
+| 2 | Prepared choice/assignment or controlled blocks; separate Swissmetro | Demand/choice causal packages, full/partial matrix, baselines, diagnostics, support/intervals and independent method/choice reports |
+| 3 | Predecision offered compensation/states; operations or synthetic truth; roster/rules | Labor participation/hours package; supported integrated forecasts, calibration/snapshot, trajectories, equilibrium status and baseline-error report |
+| 4 | Finite supported candidates, independent policy-value evaluation, accounting/uncertainty, movement/carryover/power | Decision comparison with reasons/guardrails and separate uncertainty sources; experiment specification, A/A protocol and frozen forecast ledger; supporting dashboard/export |
+| 5 | Completed scientific/technical artifacts; actual experiment logs if available | Reproducible evidence package, limits and gate status; executable pilot plan and conditional A/A/reconciliation results with next steps |
 
 Without GSM, real calibration, causal effects, profit and ROI stay `not_evaluated`.
 Synthetic recovery/coverage establishes only performance under tested conditions,
@@ -215,9 +263,11 @@ power requirements may extend impact evaluation beyond five weeks.
 
 | Deliverable | Content | Needs GSM data? |
 |---|---|---|
-| System | End-to-end PoC backed by a reusable core engine, versioned models, one-cluster simulator, headless scenarios, benchmark evidence, dashboard and CSV/JSON | No; controlled sources support technical development and validation within their declared conditions |
-| Design | Identification, switchback, frozen forecast ledger | No |
-| Documentation | Code/configuration, rerun instructions, assumptions | No |
+| Three causal result packages | Estimands, absolute effects/valid elasticities, baselines, confidence intervals/statuses, support, assumptions, diagnostics and unidentified parts | Real GSM estimates require GSM data; controlled recovery/coverage and method packages can be delivered with evidence C |
+| Policy decision evidence | Finite candidate comparisons, independent evaluation, agreed business criterion/guardrails, supported outcomes, uncertainty and reasoned testing decisions | Real GSM impact/economics require applicable GSM sources; synthetic comparisons remain conditional |
+| Experiment package | Identification, executable switchback/A/A protocols, frozen forecasts, monitoring and reconciliation plan | Design can be prepared without GSM data; actual assignment, power calibration and reconciliation require appropriate GSM inputs/logs |
+| Supporting system | Reusable core engine, versioned models, one-cluster simulator, headless scenarios, benchmark evidence, dashboard and CSV/JSON | No; controlled sources support technical development and validation within their declared conditions |
+| Documentation | Code/configuration, rerun instructions, assumptions, evidence limits and missing-data/experiment plans | No |
 | GSM results | Causal effects, real calibration, profit, ROI, experimental impact | Yes |
 
 Outputs declare zone/service/horizon, uncertainty, support, evidence, and missing
@@ -225,24 +275,29 @@ sources. Unsupported components include a collection/experiment plan.
 
 | Acceptance criterion | Requirement | Verification |
 |---|---|---|
+| Identification | Defined treatment/outcome/population/horizon, adequate variation/overlap and assumptions for each published causal result | Assignment/history review and identification/support diagnostics; unresolved parts stay unidentified |
+| Estimation | Simple baseline, no leakage, parameter recovery, coverage and null/placebo behavior under declared conditions | Independent/repeated controlled benchmarks and valid historical/experimental diagnostics where available |
+| Policy prediction and decision | Finite supported comparisons use an agreed business criterion and guardrails, independent evaluation and explicit uncertainty/decision reasons | Held-out evaluation with frozen selection/analysis rules; retain rejected candidates and conditional economics |
+| Experimental validation | Executable design, frozen forecasts and reconciliation of identified effects on the same scope/horizon | A/A and inference checks; actual counterfactual accuracy remains unevaluated until valid experiment or historical identification is available |
+| Simulator | Operational/economic forecasts require baseline trip/wait/cancel/idle errors within frozen thresholds | Separate holdout baseline; synthetic accuracy is evidence C only |
 | Engine robustness | State/accounting invariants, explicit failures, validated carryover and bounded workloads | [Core engine validation protocol](../BENCHMARK.md#core-engine-validation-protocol) and recorded [release gates](CORE_ENGINE_DESIGN.md#173-acceptance-gates) |
 | Reproducibility | Trace every metric to data/model/config/assumptions | Rerun saved versions and seeds |
-| Completeness | Price/incentive scenarios return demand/supply/choice/idle and supported operations/economics | Headless scenarios on independent seeds and supported contexts |
-| PoC integration | Dashboard and exports expose the same supported engine results, scope, units, evidence and statuses | Verified scenario walkthrough and artifact comparison |
-| Transparency | Intervals, support/extrapolation, evidence beside metrics | Review dashboard and exports |
-| Estimation | Parameter recovery, coverage, null/placebo behavior | Repeated controlled benchmarks |
-| Simulator | Baseline trip/wait/cancel/idle errors within frozen thresholds | Separate holdout baseline |
-| Counterfactual accuracy | Forecast agrees with identified measured effects | Valid experiment or historical identification |
+| Completeness and transparency | Causal packages and supported scenarios report scope, units, intervals/statuses, evidence and missing parts | Independent seeds/contexts, package review; unidentified results include a collection/experiment plan |
+| PoC integration | Dashboard and exports expose the same supported results, scope, units, evidence and statuses | Verified scenario walkthrough and artifact comparison |
 
-Freeze error/runtime thresholds after week-1 inspection and before final holdout.
-Unavailable evidence remains unevaluated. GSM confirms eight groups/12 months,
+Agree minimum worthwhile effects, business/guardrail criteria, coverage and
+prediction/baseline error tolerances after week-1 inspection and before policy
+selection/final evaluation; freeze runtime thresholds before final holdout. Do not
+require complex models to win or policies to produce positive uplift. An explicit
+unidentified result is transparent delivery, but the corresponding GSM measurement
+remains open. Unavailable evidence remains unevaluated. GSM confirms eight groups/12 months,
 compensation/finance definitions, variation, action bounds, assignments, and
 guardrails. Missing sources leave dependent outputs unavailable; C development
 continues.
 
 | End-of-week-5 decision | Condition |
 |---|---|
-| Expand pilot | Core engine passes technical gates; adequate data/design and passing A/A/logging checks |
+| Expand pilot | Causal scope/support and worthwhile candidate rationale are documented; required technical gates pass, data/design are adequate and A/A/logging checks pass; live execution remains subject to GSM approval |
 | Collect more data | Insufficient power or identification; specify missing sources and next review |
 | Pause rollout | Process checks fail or data/approved experiment bounds are unavailable |
 

@@ -1,8 +1,9 @@
 # Core Engine Design - GSM Causal Marketplace
 
 **Basis:** [GSM Causal Marketplace Proposal](GSM_Causal_Marketplace_Proposal.md).
-**Scope:** a reusable causal marketplace core engine powering an end-to-end PoC;
-first validated scope is one cluster and two services, with a five-week development plan.
+**Scope:** causal response estimation, supported policy forecasts and experimental
+validation, with a core engine and PoC supporting delivery; first validated scope
+is one cluster and two services, with a five-week development plan.
 **Document type:** implementation and acceptance design. Formulas, interfaces,
 and starting values are design choices, not measurements or implementation status.
 
@@ -12,31 +13,40 @@ current progress and executed evidence are indexed in [docs README](../README.md
 
 ## 1. Objectives and required outputs
 
-Given a price/incentive policy, baseline market, and versioned response models,
-estimate how customer demand, driver acceptance and serviceable supply, completed
-trips, waiting times, and idle vehicle-hours change across the market horizon.
-Evaluate operational service fulfillment and simulated gross booking value with
-traceable uncertainty; report baseline and target comparisons across supported
-scenarios. Freeze predictions for experimental reconciliation. Real GSM profit
-and complete cost reconciliation remain conditional on confirmed GSM accounting
-policies and data.
+Estimate and validate three causal responses: customer price sensitivity, driver
+labor supply and cross-service substitution. Use identified responses to forecast
+policy effects, assess trade-offs and identify policies worth testing under an
+agreed business criterion, uncertainty and service/driver guardrails. Design
+switchback or other suitable randomized interventions to reconcile frozen
+forecasts with measured causal effects.
+
+The primary deliverables are response estimates, supported counterfactuals,
+policy assessments and the experiment package. Each response declares treatment,
+outcome, population, horizon, unit, identification assumptions, point/interval
+estimates, support, evidence and unidentified parts. The simulator translates
+responses into conditional operational forecasts; the dashboard and exports
+present the same versioned evidence. Real GSM economics require the data and
+confirmed accounting definitions appropriate to each reported measure.
 
 Reference scenario: **raise service X price 10% in a cluster/time window**.
 Report demand, serviceable supply, service choice, completed trips, waiting times,
-and idle supply. Customer price changes affect supply through compensation, offer
-dispatch, and adjustable driver trip acceptance.
+and idle supply. Customer price changes affect labor supply through a declared
+compensation/income mechanism and an identified participation/hours response.
+Offer dispatch and trip acceptance affect matching and operational outcomes.
 
 | Requirement | Output | Component |
 |---|---|---|
-| Customer price sensitivity | Request response; quote conversion separately; explicit unit/population | DemandResponse |
-| Cross-service response | Supported own/cross 2x2 matrix by zone/time/service | ChoiceResponse |
-| Driver attendance and supply | Feasible shifts and serviceable vehicle-hours under offered terms; extra hours versus relocation | DriverParticipation, ScheduleBuilder |
+| Customer price sensitivity | Request effects and valid elasticities; quote conversion separately; point/interval estimates and identification/support | DemandResponse |
+| Driver labor supply | Participation/hours effects of predecision offered terms; serviceable-hour response and extra hours versus relocation | DriverParticipation |
+| Cross-service response | Supported own/cross 2x2 matrix or identified columns; X/Y/total request effects and nonbooking where observed | ChoiceResponse |
+| Policy assessment | Finite supported policy comparisons, agreed business metric/guardrails, uncertainty and pilot disposition with reasons | ScenarioRunner, EconomicEvaluator |
+| Experimental validation | Assignment and A/A protocol, power/carryover design, frozen forecasts, live guardrail monitoring and causal reconciliation | ExperimentInterface |
+| Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output; statistical, simulator and sensitivity sources separately | UncertaintyEngine, EvidenceRegistry |
+| Physical supply | Feasible shifts and serviceable vehicle-hours within driver/vehicle capacity | ScheduleBuilder |
 | Driver trip acceptance | Acceptance conditional on an actual offer; rejection, timeout and offer exposure separately | DriverAcceptance |
 | Equilibrium | Consistent income/supply/utilization or nonconvergence status | EquilibriumSolver |
 | Operations | Completed trips, wait, cancellation, idle hours, charging | MarketplaceSimulator |
-| Economics | Simulated gross booking value and driver earnings summary; profit and ROI reported conditionally when GSM cost ledgers exist | EconomicEvaluator |
-| Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output | UncertaintyEngine, EvidenceRegistry |
-| Validation | Switchback schedule, frozen forecasts, reconciliation ledger | ExperimentInterface |
+| Economics | Scoped revenue, contribution margin, profit or incentive ROI when their definitions/inputs qualify; simulated booking value and driver earnings labeled separately | EconomicEvaluator |
 | Handoff | Scenario dashboard, CSV/JSON, reproducible versions | ScenarioRunner, ArtifactStore |
 
 The engine supports decisions. Production execution requires GSM approval;
@@ -45,19 +55,22 @@ are outside this scope.
 
 ### 1.1 Engine delivery standard
 
-The PoC is built on a core engine with independently verified behavior and
-declared operating limits. PoC delivery includes a scenario dashboard and exports
-using the same versioned results as headless execution. A small market scope
-bounds the validation domain; it does not relax correctness, inference or failure
-handling. These are target
+Delivery first establishes which responses are identified, where forecasts are
+supported and how they will be checked experimentally. Scientific response
+reports can be delivered independently of a complete simulator. Integrated
+operational/economic forecasts must also pass every applicable engine gate.
+The PoC and exports use the same versioned results as headless execution, with
+independently verified behavior and declared operating limits. A small market
+scope does not relax correctness, inference or failure handling. These are target
 requirements, not claims that current implementation has passed them.
 
 | Area | Required behavior/evidence |
 |---|---|
+| Scientific validity | Simple baselines, leakage-free splits, independent controlled truths/holdouts, support/rank checks, repeated-run accuracy and empirical interval coverage; missing GSM evidence stays explicit |
+| Policy and experimental validity | Agreed criterion and guardrails before selection; independent policy evaluation; executable assignment/A/A/analysis plan and frozen forecast reconciliation when logs exist |
 | Execution and interfaces | Python/CLI execution independent of UI; explicit schema/version, scope, units and configuration at module boundaries; dashboard reads completed results |
 | State and accounting | Valid request/vehicle transitions, no double assignment, conserved request/state-time/energy/ledger quantities; carryover retains unfinished work and applicable operational state |
 | Failure behavior | Identification/support failures, invalid states, nonconvergence and exhausted budgets retain reasons and withhold dependent official forecasts; valid independent outputs keep their own status |
-| Scientific validity | Simple baselines, leakage-free splits, independent controlled truths/holdouts, support/rank checks, repeated-run accuracy and empirical interval coverage; missing GSM evidence stays explicit |
 | Reproducibility | Versioned data/models/rules/configuration/environment, explicit event ordering and random streams, verified artifact reuse and replay; operational continuation separately validates saved event/RNG state |
 | Resource limits | Freeze representative workloads and acceptance budgets before final checks; measure runtime, memory, work counts and failure rates; expose bounded exhaustion |
 | Extension | Map new sources and replace declared response/operational rules through explicit interfaces; rerun contract and regression checks and record the newly validated scope |
@@ -71,9 +84,12 @@ substitute for evidence. The benchmark protocol and release gates are in
 
 ### 2.1 Response estimation and market simulation
 
-Use a structural marketplace model for forecasting. DML, DiD, or experiments
-estimate responses; simulation combines them with operations and compensation.
-DML alone does not produce completed trips, idle vehicles, GSM profit or ROI.
+Identification and response estimation lead the workflow. DML, DiD or randomized
+analysis estimate effects under their assumptions; their reports expose evidence
+without requiring a simulated trajectory. A structural marketplace model combines
+supported responses with compensation and calibrated operations for integrated
+forecasts. DML alone does not produce completed trips, idle vehicles, GSM profit
+or ROI. Simulator correctness or solver convergence does not validate causal effects.
 
 The target extends the existing customer-response engine with two driver
 decisions: participation/working hours and acceptance of an individual trip offer.
@@ -92,19 +108,24 @@ architecture; current implementation and executed gates remain in the
 flowchart TD
     Sources["GSM / labeled validation sources"] --> Data["Mapping, quality, research tables"]
     Data --> Identification["Estimand, DAG, assignment, support"]
-    Identification --> Responses["Customer choice, driver participation, trip acceptance"]
+    Identification --> Responses["Customer price, labor supply, cross-service responses"]
+    Responses --> Evidence["Effect estimates, intervals, support, unidentified parts"]
     Data --> Calibration["Baseline: matching, times, cancel, charging, pay"]
     Responses --> Version["ModelVersion: parameters, support, evidence"]
     Calibration --> Version
     Policy["Prices, incentives, subscription effective prices"] --> Runner["ScenarioRunner"]
     Version --> Runner
-    Runner --> Solver["Income-supply equilibrium"]
+    Runner --> Forecast["Supported demand and supply counterfactuals"]
+    Runner --> Solver["Conditional income-supply equilibrium"]
     Solver --> Simulator["One-cluster simulator"]
     Simulator --> Solver
-    Solver --> Economics["Operations, GSM profit and cost bridge"]
-    Economics --> Uncertainty["Uncertainty, sensitivity, status"]
-    Uncertainty --> Output["Dashboard / CSV / JSON / frozen forecast"]
-    Output --> Experiment["Approved switchback and reconciliation"]
+    Solver --> Operations["Conditional operations and scoped economics"]
+    Forecast --> Assessment["Policy criterion, uncertainty, guardrails, pilot disposition"]
+    Operations --> Assessment
+    Evidence --> Assessment
+    Assessment --> Output["Dashboard / CSV / JSON / frozen forecast"]
+    Evidence --> Output
+    Output --> Experiment["Assignment, A/A, approved experiment and causal reconciliation"]
     Experiment --> Data
 ```
 
@@ -140,9 +161,9 @@ flowchart TD
     Simulator --> Ledger["Realized driver earnings ledger"]
     Pay --> Ledger
     Ledger -. Bounded income-supply solver .-> Expectations
-    Simulator --> Finance["Recognized revenue and all-cost accounting"]
+    Simulator --> Finance["Scoped economics when accounting inputs qualify"]
     Ledger --> Finance
-    Finance --> Compare["Paired GSM profit, operations and uncertainty"]
+    Finance --> Compare["Policy criterion, paired effects, uncertainty and guardrails"]
     Simulator --> Compare
     Compare --> Artifacts["Completed artifacts / PoC / exports"]
 ```
@@ -156,8 +177,8 @@ flowchart TD
 | DriverAcceptance | Predict a decision only after an actual trip offer, using its frozen terms and predecision context. |
 | MarketplaceSimulator | Own dispatch, offer reservations, request/vehicle transitions, cancellation, deadlines and carryover. |
 | EarningsLedger and EquilibriumSolver | Reconcile realized driver earnings and update income expectations in bounded trials from the same initial state. |
-| EconomicEvaluator | Reconcile recognized revenue and every in-scope direct or allocated cost against a finance-approved accounting definition; calculate profit only when coverage is complete. |
-| ScenarioRunner and evaluation | Compare policies, propagate uncertainty and evidence, and publish validated artifacts consumed by both the PoC and exports. |
+| EconomicEvaluator | Evaluate the agreed scoped economic measure using qualifying revenue/cost inputs; reconcile every in-scope expense when reporting profit and retain unavailable measures. |
+| ScenarioRunner and evaluation | Compare supported policies under an agreed criterion/guardrails, propagate uncertainty and evidence, retain decision reasons and publish validated artifacts consumed by both the PoC and exports. |
 
 These are logical responsibilities within the existing packages, not requirements
 for separate services or one file per component. Package ownership and internal
@@ -253,6 +274,13 @@ exclusion/censoring reasons in artifacts.
 Each `EstimandSpec` records treatment, outcome, population, horizon, assignment,
 pretreatment features, inference unit, assumptions, support, and evidence source.
 Conversion, request-rate, and completed-trip elasticities are distinct outcomes.
+
+The response report retains absolute effects, elasticities only with valid treatment
+domains/denominators, intervals, simple baselines, support/resolution and every
+unidentified part. Demand and cross-service outputs may share one estimation
+system; do not multiply overlapping effects. Benchmark thresholds and inference
+units are frozen before final evaluation. An imprecise or unidentified result
+must retain its reason; transparency does not complete the missing GSM estimand.
 
 | Variation | Estimator | Identification gate | Evidence after validation |
 |---|---|---|---|
@@ -411,6 +439,13 @@ Treatments are offered compensation/incentives and income information known
 before decisions. Fixed contracts may imply zero extra hours; additional shifts,
 acceptance, and charging timing remain possible responses. Never use the same
 shift's realized earnings to manufacture a pretreatment expectation.
+
+The primary policy contrast changes offered terms before the work decision.
+Expected income is a mechanism or information treatment whose causal response
+requires separate identification; an incentive experiment alone does not identify
+an unrestricted income elasticity. Preserve participation and work-hour outcomes
+alongside the serviceable-hour bridge when their data qualify. An acceptance
+upgrade under fixed attendance does not establish a labor-supply response.
 
 One possible aggregate-hours specification, for positive baseline income and an
 identified expected-income response, is:
@@ -714,8 +749,23 @@ on initialization; a single converged run does not prove uniqueness.
 
 ## 11. Policy comparison and economics
 
-Solve baseline and target separately with common horizon, initial snapshot,
-exogenous conditions, and paired seeds. Compare two simulated measurements;
+Freeze the business criterion, ownership/scope, uncertainty target and wait,
+cancellation, driver-income and budget guardrails before policy selection and
+final evaluation. Compare a finite set of feasible, jointly supported price,
+incentive and combined policies against no change and simple baselines. Validate
+the selected policy independently of the data/model used to select it; reuse the
+[policy benchmark](../BENCHMARK.md#compare-decisions-fairly). Neither more trips
+nor higher simulated booking value is a universal selection objective.
+
+Each assessment retains supported effects, economic measures whose inputs qualify,
+uncertainty, evidence and a reasoned disposition: worth a pilot, needs more
+evidence or violates guardrails. Wide intervals or missing economic inputs can
+leave candidates incomparable. Without GSM evidence, these dispositions describe
+controlled development cases or experiment readiness, not a verified GSM ranking.
+
+For simulation-dependent integrated comparisons, solve baseline and target
+separately with common horizon, initial snapshot, exogenous conditions and paired
+seeds. Compare two simulated measurements;
 observed totals validate baseline rather than serve as an incompatible comparator.
 
 Evaluate rider-price-only, driver-incentive-only and combined changes against a
@@ -726,10 +776,13 @@ number and composition of offers change. A common seed alone is insufficient if
 event ordering changes: use stable entity/event random streams and independent
 replicates, preserving failed or unsupported runs in diagnostics.
 
-Version prices/promotions/bonuses by quote/offer. Finance must confirm the profit
-definition, GSM-owned services, recognition period, accounting scope, cost
-classification and allocation rules before a GSM monetary forecast is supported.
-Create reconciled ledger entries for recognized revenue, refunds/adjustments,
+Version prices/promotions/bonuses by quote/offer. Finance must confirm the selected
+measure's revenue definition, GSM-owned services, recognition period, accounting
+scope and applicable cost/denominator rules before a GSM monetary forecast is
+supported. Revenue or contribution margin may qualify without complete profit
+coverage. Reporting full profit additionally requires complete in-scope cost
+classification and allocation rules. Create reconciled ledger entries for
+recognized revenue, refunds/adjustments,
 driver wages or trip pay, bonuses/incentives, energy, payment fees, vehicle costs
 and every other applicable direct or shared expense. Include pay for shifts with
 zero trips. Apply the same approved recognition and allocation rules to both
@@ -745,10 +798,13 @@ P_{\text{GSM}}(\pi)=R_{\text{recognized,GSM}}(\pi)
 \Delta P=P_{\text{GSM}}(\pi_1)-P_{\text{GSM}}(\pi_0).
 $$
 
-**Marketplace fulfillment and simulated gross booking value lead policy comparisons.**
-Completed trips, waiting times, fill rates and idle vehicle-hours explain the operational
-trade-offs between pricing policies. In parallel, simulated gross booking value
-and driver earnings provide commercial context under declared tariff and pay rules.
+**Supported causal policy effects and the agreed decision criterion lead comparisons.**
+Completed trips, waiting times, fill rates and idle vehicle-hours explain trade-offs
+and guardrails. Simulated gross booking value and driver earnings provide context
+under declared tariff and pay rules; they do not substitute for the selected
+economic measure or experimental evidence. Reconciled incremental contribution
+margin can support a scoped decision when its revenue and variable-cost inputs
+qualify, even if full profit remains unavailable.
 
 When confirmed accounting scope, complete cost classifications, and allocation rules
 are supplied by GSM, **incremental profit $\Delta P$ serves as a conditional full-cost measure**:
@@ -837,7 +893,7 @@ available, demand mode, seeds, budgets, and uncertainty. Pass assumptions explic
 | Policy | `baseline_policy_id`, `target_price_schedule`, `bonus_rule`, `effective_price_definition` |
 | Assumptions | `demand_mode`, `compensation_mode`, `participation_mode`, `acceptance_mode`, `boundary_mode`, initialization |
 | Compute | `seed_plan_id`, `max_iterations`, `max_events`, `max_offers_per_request`, `wall_time_budget`, replicate/draw budgets |
-| Evaluation | `interval_target`, level, support policy, `sensitivity_only` |
+| Evaluation | `interval_target`, level, support policy, `sensitivity_only`, agreed business criterion, guardrails and comparison candidates |
 
 +10% applies to baseline effective price for the correct service/group, not
 post-selection average fares. Zero-base bonuses use amounts. Schedules specify
@@ -845,25 +901,29 @@ announcement/effectiveness and shift-decision horizon, not payment time alone.
 
 ### 13.2 Execution
 
-1. Validate schema, scope, units, policy, version compatibility, and budgets.
-2. Check required identification/support and calibration quality.
-3. Produce request flows, construct supply schedules, solve baseline/target.
-4. Reconcile requests, offers, driver/vehicle-hours, ledgers and any modeled energy in each trajectory.
-5. Reconcile GSM revenue and all in-scope costs, then compute paired profit differences when accounting coverage permits; retain operational outcomes and guardrails.
+1. Validate schema, scope, units, policy, version compatibility, criterion/guardrails and budgets.
+2. Check identification/support for each requested result and calibration quality for outputs that depend on operational forecasts.
+3. Produce supported request/supply counterfactuals; construct schedules and solve baseline/target when integrated operational forecasts are required.
+4. Reconcile requests, offers, driver/vehicle-hours, ledgers and any modeled energy in each applicable trajectory.
+5. Evaluate the agreed economic measure when its inputs qualify; reporting profit additionally reconciles all in-scope costs. Retain operational trade-offs, guardrails and decision reasons.
 6. Run bounded uncertainty/sensitivity, retaining every draw's status.
 7. Atomically publish artifacts/manifests; expose forecasts only after gates pass.
 
 ### 13.3 Results and status
 
 `scenario_result` includes baseline/target/delta, unit/population/denominator,
-source/evidence/support/status per metric, with separate interval status. Its
-primary evaluated fields are operational fulfillment and simulated gross booking
-value: completed trips, fill/completion rate, wait times, cancellations, serviceable
-and idle vehicle-hours, driver earnings and simulated revenue. Week 3 validates
-operations at C; week 4 adds full-chain uncertainty and supported economics.
-Full GSM profit, cost bridge, CM and ROI are reported conditionally and retain
-the status `not_evaluated` when cost ledgers or allocation rules are unconfirmed;
-missing financial policies do not prevent operational metrics from being reported.
+source/evidence/support/status per metric, with separate interval status. Primary
+outputs are the supported customer/labor/cross-service policy contrasts, their
+uncertainty and a criterion/guardrail-based assessment with reasons. Link the
+response reports and compatible experiment/frozen-forecast records. Scientific
+estimates can be published independently of complete operational simulation.
+
+Completed trips, fill/completion rate, wait times, cancellations, serviceable and
+idle vehicle-hours, driver earnings and simulated booking value are conditional
+integrated forecasts. Keep statistical uncertainty, simulation variability and
+assumption sensitivity separate. Scoped revenue, CM, full profit/cost bridge and
+ROI each require their own qualifying definitions and inputs; unavailable GSM
+measures retain `not_evaluated` without blocking independent supported results.
 
 Stage execution: `pending/running/succeeded/failed`. Module/metric behavior:
 
@@ -936,6 +996,11 @@ and does not deserialize arbitrary uploaded models.
 
 ## 15. Switchback and forecast reconciliation
 
+The experiment package is a primary deliverable: assignment/analysis specification,
+A/A protocol and report when executed, frozen forecasts, a live guardrail-monitoring
+plan and causal reconciliation when outcome logs exist. Experiment readiness is
+distinct from executed validation and does not upgrade evidence.
+
 ### 15.1 Assignment design
 
 Choose geographic cluster x time block from movement/carryover measurements.
@@ -947,6 +1012,11 @@ Identify X/Y prices separately and price x incentive interactions when required.
 Use feasible supported actions with adequate power/safety, not every combination.
 Store seeds, strata, probabilities, announcement/effectiveness, exposure,
 applied policy, and overrides.
+
+Match interventions to each behavioral horizon. A short price switchback may
+identify customer responses without allowing drivers to change shifts or hours.
+Use suitable randomized shift/incentive contrasts when needed; do not claim that
+one schedule identifies all three responses or their interactions by default.
 
 Primary analysis is intention-to-treat. Applied/exposure analyses require separate
 noncompliance assumptions. Randomization or clustered inference matches assignment
@@ -1041,16 +1111,19 @@ Driver integration adds controlled checks before market-level evaluation:
 
 | Gate | Requirement |
 |---|---|
+| Identification | Defined estimands/populations/horizons, assessed assignment/assumptions and passing support/rank gates for every claimed response; partial and unidentified effects explicit |
+| Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
+| Policy assessment | Finite supported candidates evaluated independently under the frozen business criterion and service/driver/budget guardrails; uncertainty, unavailable economics and disposition reasons retained |
+| Experiment readiness | Executable assignment, behavioral-horizon/carryover/power, A/A, monitoring and analysis plan; immutable forecast package; execution conditional on GSM approval/data |
+| Counterfactual | Reconcile identified experimental/historical effects at the same estimand |
+| Complete outputs | Three response reports and supported policy contrasts expose uncertainty/support/evidence; integrated price-only, incentive-only and combined forecasts traverse the applicable customer, driver, compensation, simulation and equilibrium components across independent seeds |
+| Business outcome | Evaluate the agreed scoped economic criterion when its inputs qualify, alongside operational trade-offs and guardrails; real profit and ROI remain conditional and never inferred from booking value alone |
+| Transparency | Evidence/interval/support/dependencies displayed and exported per metric |
+| Simulator | Independent controlled baseline errors meet frozen thresholds; GSM calibration is evaluated separately when logs exist |
+| State and failure handling | Invariants pass through carryover and supported operational transitions; deliberate invalid inputs, budget exhaustion and nonconvergence yield explicit failures |
+| Reproducibility | Same versions/data/config/seeds agree within declared tolerance |
 | Headless execution | End-to-end Python/CLI scenarios use declared interfaces without dashboard execution |
 | PoC integration | A supported scenario walkthrough uses the same versioned results in headless execution, dashboard and CSV/JSON, preserving units, denominators, evidence and statuses |
-| Reproducibility | Same versions/data/config/seeds agree within declared tolerance |
-| Complete outputs | Price-only, incentive-only and combined policies traverse customer choice, driver participation/acceptance, compensation, simulation and applicable equilibrium across independent seeds and supported contexts |
-| Business outcome | Completed trips, wait times, cancellations, idle hours and simulated gross booking value lead supported comparisons; real profit and ROI reported conditionally when accounting policies exist, or carry an explicit unavailable status |
-| State and failure handling | Invariants pass through carryover and supported operational transitions; deliberate invalid inputs, budget exhaustion and nonconvergence yield explicit failures |
-| Transparency | Evidence/interval/support/dependencies displayed and exported per metric |
-| Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
-| Simulator | Independent controlled baseline errors meet frozen thresholds; GSM calibration is evaluated separately when logs exist |
-| Counterfactual | Reconcile identified experimental/historical effects at the same estimand |
 | Resources | Representative workload runtime/memory/work counts meet frozen budgets; stage reuse and operational continuation have separate verified semantics |
 
 Freeze `AcceptanceSpec` for business, operational error, coverage, and runtime
@@ -1058,14 +1131,21 @@ before final holdout. Never derive thresholds retroactively from achieved result
 Synthetic technical acceptance is not measured GSM business impact.
 Record technical and GSM-evidence gate conclusions separately. Open requirements
 remain visible even when the calendar milestone or dashboard demo is complete.
+Scientific gates do not require positive uplift or a complex estimator winning;
+negative, imprecise and unidentified findings retain their conclusions. All
+applicable technical gates remain mandatory for forecasts using the simulator.
 
 ## 18. Five-week sequence
 
 Weekly requirements and expected outputs are maintained in the
 [roadmap](../ROADMAP.md#weekly-inputs-and-outputs); it also records current work
-and remaining acceptance gates. This design describes target algorithms rather
-than implementation progress. Without GSM, calibration/effects/profit/ROI remain
-unevaluated while synthetic development and experiment design can continue.
+and remaining acceptance gates. Milestones prioritize identification/business
+criteria, demand/choice estimates, labor-supply estimates and integrated forecasts,
+policy uncertainty/experiment readiness, then reproducible evidence and conditional
+reconciliation. This design describes target algorithms rather than implementation
+progress. Without GSM, calibration/effects/profit/ROI remain unevaluated while
+synthetic development and experiment design can continue; five weeks do not
+guarantee powered experimental impact evidence.
 
 ## 19. Configuration and business decisions
 
@@ -1073,7 +1153,8 @@ unevaluated while synthetic development and experiment design can continue.
 mode, effect resolution/support, compensation/accounting, participation/acceptance
 modes, roster/initialization, matching/offer deadlines and attempt limits,
 patience, energy/charging/boundaries, solver limits,
-uncertainty targets, and budgets. Defaults require documented development reasons;
+uncertainty targets, decision criterion/guardrails, comparison candidates and budgets.
+Defaults require documented development reasons;
 unknown observations/business rules cannot default to zero.
 
 | Decision | Correctness dependency | Frozen spec |
@@ -1085,7 +1166,8 @@ unknown observations/business rules cannot default to zero.
 | Driver decisions and offers | Eligible decision population, predecision information, participation horizon, acceptance and response timing | DriverResponseSpec, OfferSpec |
 | Buffers/shared fleet | Relocation, capacity, interference | Boundary/FleetSpec |
 | State/charging coverage | Supported calibration/outputs | OperationalQualitySpec |
-| Profit, revenue, costs and ROI | GSM ownership/scope, recognition, complete cost coverage, allocation, consistent ledgers and denominators | AccountingSpec |
+| Policy decision criterion | Primary business measure, meaningful benefit, finite candidates, independent evaluation and wait/cancel/driver-income/budget guardrails | Acceptance/ExperimentSpec |
+| Profit, revenue, costs and ROI | GSM ownership/scope, recognition and measure-specific input coverage; complete in-scope costs/allocation for full profit; consistent ledgers and valid ROI denominators | AccountingSpec |
 | Safety/action support/power | Feasible scenarios/pilots | Acceptance/ExperimentSpec |
 
 Version these decisions. Synthetic assumptions remain declared; real forecasts

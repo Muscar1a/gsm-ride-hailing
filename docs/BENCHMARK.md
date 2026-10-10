@@ -4,6 +4,10 @@
 
 The benchmark should establish where the method works, whether it supports better
 pricing decisions, and eventually whether those decisions improve GSM's business.
+The primary scientific targets are causal rider-price, driver-labor-supply and
+own/cross-service responses, with supported policy forecasts and experimental
+reconciliation. Simulator correctness supports forecasts that require operational
+translation; it does not establish identification or real-world policy value.
 It must allow zero uplift, negative uplift and a simpler estimator winning.
 
 | Layer | What it establishes | Implementation / evidence |
@@ -13,7 +17,7 @@ It must allow zero uplift, negative uplift and a simpler estimator winning.
 | Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | Core engine validation | State/accounting correctness, repeatability, failure behavior and measured operating limits | Demand bridge and fixed-supply development checks exist; full engine protocol and release evidence remain required |
 | GSM offline policy evaluation | Estimated value under verified real-data identification and support | Requires GSM logs and a separate evaluator |
-| GSM randomized validation | Incremental realized revenue under the tested deployment | Requires a designed and executed GSM experiment |
+| GSM randomized validation | Measured causal effects and the preregistered business outcome under the tested deployment | Requires a designed and executed GSM experiment |
 
 Good effect estimates do not by themselves establish revenue uplift. The choice
 scenario stage outputs simulated quote choices with a fixed viewer population.
@@ -117,12 +121,23 @@ negative uplifts and ties are kept.
 ### Freeze the business objective
 
 Specify which services GSM owns, which prices it can change, baseline fares,
-and currency. Completed trips, fulfillments, wait times, cancellations, and idle
-vehicle-hours constitute the primary operational benchmark; simulated gross booking
-value provides commercial comparison. If Y is a competitor, keep its price
+and currency. Before GSM policy selection and final evaluation, confirm and
+preregister the primary business criterion, its minimum worthwhile improvement,
+service-quality, driver-income and budget guardrails, and the measurement period.
+Report demand, labor supply, substitution, completed trips, fulfillment, wait,
+cancellation and idle vehicle-hours as causal/operational outcomes as supported;
+their priority depends on that declared decision criterion. Evaluate revenue,
+contribution margin, profit or ROI only when the corresponding measurement inputs
+and accounting definitions qualify. If Y is a competitor, keep its price
 fixed and exclude its bookings from GSM revenue. If both services belong to GSM,
-include substitution between them. Real GSM profit and ROI are conditional on
-confirmed financial policies from GSM.
+include substitution between them. Missing financial inputs leave the respective
+economic outcome unavailable; operational improvements or booking value do not
+establish a financial success claim.
+
+The executed controlled pricing-policy protocol above remains frozen: normalized
+fares, fixed quote population and simulated gross booking value are its declared
+objective. The broader GSM decision criterion does not rewrite that protocol,
+its selected policies or its results.
 
 Until these inputs are supplied, monetary results are unavailable. A toy study
 may use explicitly declared illustrative fares or normalized price units, with
@@ -189,16 +204,20 @@ More challenging cases must be motivated and declared before fresh evaluation.
 
 ## 3. GSM offline validation
 
-Required data include nonbooking quote sessions, displayed options and prices,
-policy assignments and their probabilities/rules, completion/cancellation
-events, recognized revenue/payment adjustments, promotions, driver payroll and
-incentives, other direct costs, fixed/shared expense sources and allocation
-inputs, plus operational availability. Agree join keys, accounting scope,
-currency, recognition periods, cost categories and feature availability before
-fitting. Completed TLC trips cannot supply this.
+Core response/policy inputs include nonbooking quote sessions, displayed options
+and prices, policy assignments and their probabilities/rules, completion/cancellation
+events, eligible participation/shift records, predecision compensation/incentives,
+trip offers and operational availability. Financial outcomes additionally require
+recognized revenue/payment adjustments, promotions, driver payroll and incentives,
+and the direct/shared expense and allocation sources required by their declared
+scope. Agree join keys, feature availability and the applicable accounting scope,
+currency, recognition periods and cost categories before evaluation. Completed TLC
+trips cannot supply this.
 
 When financial and accounting data become available from GSM, the full economic
-comparison is evaluated as `delta_profit = profit(target) - profit(baseline)`.
+comparison may evaluate the preregistered outcome at its supported accounting
+scope. A profit-specific comparison is
+`delta_profit = profit(target) - profit(baseline)`.
 Each profit equals confirmed GSM-recognized revenue minus every applicable
 direct and allocated cost under one finance-approved
 definition. Reconcile category totals and source coverage in both arms, including
@@ -235,6 +254,12 @@ If logs cannot support the proposed actions, report value as unidentifiable.
 
 ## 4. GSM profit-impact experiment
 
+This section specifies a profit-specific experiment when GSM confirms profit as
+the primary business criterion and the complete financial measurement qualifies.
+For another declared criterion, preregister its estimand, measurement and minimum
+worthwhile improvement instead; every experiment still needs service-quality,
+driver-income and budget guardrails and a frozen forecast for reconciliation.
+
 Compare the frozen candidate policy against existing pricing using a randomized
 design appropriate for the marketplace. A zone/time switchback is a candidate;
 interference between zones and carryover determine whether it is suitable.
@@ -245,7 +270,10 @@ Pre-register incremental GSM profit in the declared scope as the primary
 business outcome, its minimum worthwhile uplift, accounting/coverage rules,
 power calculation, assignment unit, analysis period, uncertainty method and
 stopping rule. Use an A/A logging, ledger-reconciliation and assignment check
-before the treatment comparison.
+before the treatment comparison. Freeze response/scenario versions, policy and
+assignment references, forecast points/intervals, scope and analysis plan before
+observing treatment outcomes. Match block duration and follow-up to the response
+being tested; a short price switchback may not identify shift-participation effects.
 
 Measure profit over comparable assigned zones/blocks or a declared common
 exposure period. Include all owned-service revenue to capture substitution and
@@ -266,6 +294,10 @@ revenue alone. A losing policy is a valid benchmark outcome.
 Only an executed, appropriately analyzed GSM study can support a claim about
 GSM profit impact in the population, prices and operating conditions tested.
 Neither synthetic recovery nor simulated policy uplift establishes that claim.
+Reconcile the measured causal effects with the frozen forecasts at matching
+population, units and horizon. Preserve the original forecast and report forecast
+error, uncertainty and assumptions behind any model update; do not relabel a
+post-experiment refit as the original prediction.
 
 ## Core engine validation protocol
 

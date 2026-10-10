@@ -1,11 +1,12 @@
 # GSM Causal Marketplace PoC
 
-An end-to-end proof of concept under development for causal modeling and scenario
-evaluation in a ride-hailing marketplace, built on a reusable core engine.
-The target combines demand/choice, driver response and supply, operational simulation,
-marketplace equilibrium and simulated economics to evaluate completed trips,
-waiting times, idle vehicle-hours, and booking value, with traceable uncertainty in
-a dashboard and exports.
+An end-to-end proof of concept under development to estimate and validate causal
+rider-price sensitivity, driver labor supply and cross-service substitution in a
+ride-hailing marketplace. The target uses identified responses for supported
+policy forecasts, independent decision evaluation and experimental reconciliation,
+with uncertainty, evidence and agreed service/driver guardrails. A reusable core
+engine, operational simulation, marketplace equilibrium, dashboard and exports
+support these outputs; real economics require the appropriate GSM definitions/data.
 The code builds NYC TLC completed-trip marts, generates controlled X/Y/NONE
 choices, compares OLS and DML, evaluates known effects, and exposes supported
 price scenarios in Streamlit. The demand bridge converts choice forecasts into

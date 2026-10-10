@@ -4,13 +4,14 @@
 hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **10/10/2026**;
 kết quả reporting tuần 2 chốt lúc **17:13:28 ngày 07/10/2026, Asia/Bangkok**.
 
-Mục tiêu bàn giao gồm PoC đầu cuối và core engine có kiểm chứng để đánh giá tác động
-của các kịch bản giá và ưu đãi lên **nhu cầu khách hàng, phản ứng cung và chấp nhận chuyến
-của tài xế, số chuyến hoàn thành, thời gian chờ, thời gian xe nhàn rỗi và giá trị đặt chuyến**.
-Các chỉ tiêu tài chính nâng cao như lợi nhuận thực tế hay ROI phụ thuộc vào chính sách
-chi phí chính thức từ GSM và được giữ ở trạng thái có điều kiện (`not_evaluated`). PoC cung cấp
-kịch bản, dashboard và exports; engine chạy độc lập với UI, có kiểm chứng mô hình,
-vận hành, failure handling, tái lập và benchmark tải.
+Mục tiêu chính là ước lượng và kiểm chứng nhân quả **độ nhạy giá khách hàng, cung lao động
+tài xế và thay thế giữa dịch vụ**, rồi dự báo tác động chính sách, đánh giá quyết định
+và đối chiếu bằng thí nghiệm. Kết quả có khoảng tin cậy, phạm vi áp dụng, bằng chứng
+và tiêu chí kinh doanh cùng giới hạn chất lượng dịch vụ/thu nhập tài xế được chốt trước.
+Simulator, core engine, dashboard và exports hỗ trợ các đầu ra này. Doanh thu,
+contribution margin, lợi nhuận và ROI thực cần định nghĩa và dữ liệu GSM tương ứng;
+chỉ tiêu thiếu đầu vào giữ `not_evaluated`. Engine chạy độc lập với UI, có kiểm chứng
+mô hình, vận hành, failure handling, tái lập và benchmark tải.
 Dashboard và exports dùng cùng kết quả có version từ engine. Tiêu chuẩn đích nằm trong
 [core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard);
 trạng thái bên dưới mô tả phần đã triển khai, không mặc định các tiêu chuẩn đã đạt.
