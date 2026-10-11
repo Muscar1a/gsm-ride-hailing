@@ -104,7 +104,7 @@ và equilibrium vẫn còn phía trước.
 |---|---|
 | [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) | Mục tiêu, phạm vi và lộ trình năm tuần |
 | [Core engine design](reference/CORE_ENGINE_DESIGN.md) | Thiết kế thuật toán, supply, simulator và equilibrium; chưa phải trạng thái triển khai |
-| [Submission](submission/README.md) | Báo cáo/PDF theo ngày; báo cáo kỳ gần nhất [07/10](submission/days/20261007/README.md), kiểm chứng bàn giao và [chẩn đoán mới 11/10](submission/days/20261011/support_interval_diagnostic.md) |
+| [Submission](submission/README.md) | Báo cáo/PDF theo ngày; báo cáo kỳ gần nhất [11/10](submission/days/20261011/README.md), tổng hợp công việc 10–11/10, nghiệm thu Week 2 và hướng tiếp theo |
 | [Validation lịch sử](submission/days/20261003/validation.md) | Bằng chứng TLC/model/browser ngày 03/10 |
 
 ## Quy ước cập nhật

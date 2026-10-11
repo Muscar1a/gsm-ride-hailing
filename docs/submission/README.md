@@ -9,8 +9,14 @@ chốt theo Asia/Bangkok. Hồ sơ mới gồm **hai tài liệu cần nộp**:
 - `progress_update.md`: cập nhật tiến độ ngắn, phần mới so với kỳ trước,
   vướng mắc và bước tiếp theo; trỏ tới báo cáo PoC để xem số liệu chi tiết.
 
+Kỳ có điều chỉnh thiết kế có thể dùng bố cục riêng để giải thích cách hiểu
+ban đầu, lý do điều chỉnh, thiết kế mới và phạm vi kế thừa kết quả. Báo cáo
+[11/10](days/20261011/weekly_report.md) theo bố cục này; vẫn giữ dữ liệu,
+phương pháp, kết quả kiểm chứng và nguồn tham chiếu.
+
 | Ngày / kỳ | Báo cáo PoC | Báo cáo tiến độ | Hồ sơ |
 |---|---|---|---|
+| 11/10/2026 — tổng hợp công việc 10–11/10 | [weekly_report.md](days/20261011/weekly_report.md) | [progress_update.md](days/20261011/progress_update.md) | [README](days/20261011/README.md) |
 | 07/10/2026 — Week 2 cập nhật | [weekly_report.md](days/20261007/weekly_report.md) | [progress_update.md](days/20261007/progress_update.md) | [README](days/20261007/README.md) |
 | 04/10/2026 — bản đã nộp | [POC_Technical_Report.md](days/20261004/POC_Technical_Report.md) | [Progress_Update.md](days/20261004/Progress_Update.md) | [README và phân công cá nhân](days/20261004/README.md) |
 
@@ -39,8 +45,8 @@ không có Holm rejection không chứng nhận coverage 95% cho mọi output. M
 88–89%; full-context support, calibration mọi đầu ra và nghiệm thu GSM còn mở.
 
 Hồ sơ 04/10 đã nộp theo xác nhận được ghi trong hồ sơ; các báo cáo/PDF giữ mốc
-lịch sử. Hồ sơ 07/10 là báo cáo kỳ gần nhất; bản kiểm chứng 11/10 bổ sung bằng chứng
-kỹ thuật và xác nhận nghiệm thu Week 2 với ngoại lệ đã ghi ở hồ sơ hybrid.
+lịch sử. Hồ sơ 11/10 là báo cáo kỳ gần nhất, tổng hợp công việc ngày 10–11/10
+và bằng chứng kỹ thuật, cùng nghiệm thu Week 2 với ngoại lệ đã ghi ở hồ sơ hybrid.
 Kết quả đo cũ và run artifacts được đối chiếu qua [validation lịch sử](days/20261003/validation.md).
 Mỗi bản mới ghi người thực hiện, tuần công việc, phiên bản và thời điểm chốt;
 tiến độ thực thi tách khỏi nghiệm thu. Phần kỹ thuật chi tiết dẫn sang
