@@ -1,0 +1,5 @@
+dgp_id,outcome,treatment,paired_point_seeds,paired_available_intervals,mean_paired_error_difference_dml_minus_ols,paired_coverage_change_dml_minus_ols,paired_coverage_gains_dml,paired_coverage_losses_dml,width_ratio_denominator,mean_paired_width_ratio_dml_over_ols,development_only,interval_method
+RCT_SYN,X,X,1,1,0.0016833806539275908,0.0,0,0,1,1.1489171834796057,True,day_jackknife_t
+RCT_SYN,X,Y,1,1,-0.0031050775994840296,0.0,0,0,1,1.0890034477840083,True,day_jackknife_t
+RCT_SYN,Y,X,1,1,0.0003296914546402352,0.0,0,0,1,1.1382579063167464,True,day_jackknife_t
+RCT_SYN,Y,Y,1,1,0.0007297197952530476,0.0,0,0,1,1.162539794450852,True,day_jackknife_t

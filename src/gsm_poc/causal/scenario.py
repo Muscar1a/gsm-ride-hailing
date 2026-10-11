@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from gsm_poc.causal.analytic import analytic_intervals
 from gsm_poc.causal.estimate import ModelBundle
 from gsm_poc.causal.features import PRICE_LEVELS
 from gsm_poc.causal.uncertainty import BootstrapResult, percentile_interval
@@ -111,7 +112,11 @@ def scenario(
     config: Config,
     run_id: str,
     draws: BootstrapResult | None = None,
+    *,
+    inference_method: str = "analytic",
 ) -> dict:
+    if inference_method not in ("analytic", "bootstrap"):
+        raise ValueError("inference_method must be analytic or bootstrap")
     request.validate()
     if contexts.empty:
         raise ValueError("No selected scenario context")
@@ -147,6 +152,19 @@ def scenario(
             "theta": "probability / log-price",
         },
         "assumption": "Quote session population held fixed; X/Y are hypothetical services",
+        "inference_method": inference_method,
+        "interval_kind": (
+            "analytic score/delta method; individual intervals"
+            if inference_method == "analytic"
+            else "day-bootstrap percentile; individual intervals"
+        ),
+        "interval_scope": "individual",
+        "interval_validation_scope": "technical_checks_only",
+        "interval_calibration_status": "not_evaluated_for_this_run",
+        "coverage_warning": (
+            "Independent controlled evaluation retained 88–89% coverage in some cross-effect "
+            "and scenario outputs; technical stability does not certify nominal 95% coverage"
+        ),
         "interval": None,
     }
     if bundle is None:
@@ -237,6 +255,25 @@ def scenario(
         after_expected_bookings=total1,
         delta_expected_bookings=total1 - total0,
     )
+    if inference_method == "analytic":
+        output.update(
+            analytic_intervals(
+                bundle,
+                contexts,
+                weights,
+                t0,
+                t1,
+                output,
+                request.interval_level,
+                request.n_sessions,
+            )
+        )
+        output["interval_status"] = output["analytic"]["interval_status"]
+        if output["interval_status"] != "ok":
+            output["reasons"].append(output["analytic"]["reason"])
+            if output["status"] == "ok":
+                output["status"] = "interval_unstable"
+        return output
     requested = draws.requested_draws if draws else 0
     failed, invalid, values = 0, 0, []
     theta_values, elasticity_values = [], []
@@ -329,4 +366,5 @@ def scenario(
     if not stable and output["status"] == "ok":
         output["status"] = "interval_unstable"
         output["reasons"].append("Bootstrap interval is unavailable or requires a reporting run")
+    output["interval_status"] = output["bootstrap"]["interval_status"]
     return output

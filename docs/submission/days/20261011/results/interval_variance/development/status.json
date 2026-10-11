@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "protocol_hash": "09cf7dacee794516935d7f27d87d79f8e2b89f2daf480b22a3b287ac682838b2",
+  "duration_seconds": 2.910554100002628,
+  "new_fits": 0,
+  "unavailable_candidate_intervals": 0,
+  "interpretation": "development sensitivity only; no final calibration or method promotion",
+  "artifacts": {
+    "protocol.json": "2fc88a37ddaa50113c9e0e2afff3dbc46a0532492c5fa845e33e1715ef97af8c",
+    "seed_metrics.parquet": "76f29c334852f9c4927c074330914b82d050754b018c0eb59b9701d496a782d6",
+    "summary.csv": "e1a613395935fe1dcbde6c5b4ab469b256c418f5d6411b2d754238fac2bc5de9"
+  }
+}

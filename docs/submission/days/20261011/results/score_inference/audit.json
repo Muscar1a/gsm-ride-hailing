@@ -1,0 +1,75 @@
+{
+  "plan_hash": "5c6aff21bd988d1070f0863b827da659de47b88a57f5adb4ccf9b2270f2c8b55",
+  "stages": {
+    "ols": {
+      "expected_point_fits": 200,
+      "attempted_point_fits": 200,
+      "successful_point_fits": 200,
+      "failed_point_fits": 0,
+      "failed_inference_jobs": 0,
+      "duration_seconds": 313.413432500005
+    },
+    "dml_probe": {
+      "expected_point_fits": 2,
+      "attempted_point_fits": 2,
+      "successful_point_fits": 2,
+      "failed_point_fits": 0,
+      "failed_inference_jobs": 0,
+      "duration_seconds": 11.119740399997681
+    },
+    "dml_remainder": {
+      "expected_point_fits": 38,
+      "attempted_point_fits": 38,
+      "successful_point_fits": 38,
+      "failed_point_fits": 0,
+      "failed_inference_jobs": 0,
+      "duration_seconds": 165.44069829999353
+    },
+    "fold_probe": {
+      "expected_point_fits": 12,
+      "attempted_point_fits": 12,
+      "successful_point_fits": 12,
+      "failed_point_fits": 0,
+      "failed_inference_jobs": 0,
+      "duration_seconds": 67.47706950000429
+    }
+  },
+  "point_fits": 252,
+  "failed_point_fits": 0,
+  "failed_inference_jobs": 0,
+  "bootstrap_or_jackknife_fits": 0,
+  "main_metric_rows": 18240,
+  "fold_metric_rows": 912,
+  "independent_checks": [
+    "source hashes before reads",
+    "unique full Cartesian denominators",
+    "joint covariance from raw block influence and day sums",
+    "fixed-context oracle formula",
+    "all endpoints, coverage and null flags",
+    "exact binomial bounds and matched RMS-SE/SD",
+    "paired DML/OLS dataset identity",
+    "complete disjoint cross-fitting folds"
+  ],
+  "production_method_changed": false,
+  "final_calibration_executed": false,
+  "day_score_export": {
+    "rows": 5040,
+    "columns": [
+      "stage",
+      "dgp_id",
+      "seed",
+      "estimator",
+      "folds",
+      "dataset_id",
+      "status",
+      "original_day_id",
+      "score_0",
+      "score_1",
+      "score_2",
+      "score_3",
+      "score_4",
+      "score_5"
+    ],
+    "operation": "column projection only; repeated point/fold metadata retained once in job JSON; raw registered CSVs stay in cache"
+  }
+}

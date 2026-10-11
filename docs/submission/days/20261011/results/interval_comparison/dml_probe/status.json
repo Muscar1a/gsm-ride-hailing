@@ -1,0 +1,18 @@
+{
+  "status": "completed",
+  "protocol_hash": "0acd68269859546d57761fab8268dd8c83d8e5530b730400fc23688041ddf9ed",
+  "completed_at": "2026-10-11T01:45:50.889804+00:00",
+  "completed_estimator_jobs": 1,
+  "duration_seconds": 60.50923260000127,
+  "interpretation": "development only; no selected method or final calibration acceptance",
+  "unavailable_bca_intervals": 0,
+  "artifacts": {
+    "protocol.json": "02645cd59f6b63527214be979af1411b2579804cb811625409b2e30780c44037",
+    "RCT_SYN-42001-dml-jackknife.parquet": "ab5cf8270cdd3dbb7268c131be93dfc2c3158bb7971a726a3e75f90baa4cd909",
+    "RCT_SYN-42001-dml-metrics.parquet": "080a0c22290cc5f54de19f992ccdce90b4232077622e7466a3b30706c8cb65c5",
+    "RCT_SYN-42001-dml.json": "c07575625092af6219c412875101eae0a61b9aed3739517b5ca2d5ed3d227a72",
+    "runner_source.py": "9a94fd2bd5bf07c677a6c4d169761060bd778e0ad401a40d1b7ca2fecbf2a9e3",
+    "seed_metrics.parquet": "080a0c22290cc5f54de19f992ccdce90b4232077622e7466a3b30706c8cb65c5",
+    "summary.csv": "ba8eac8a4a3a4c64d26919770d2be00a0453cacc12e16350c9d25b9c24f44dce"
+  }
+}

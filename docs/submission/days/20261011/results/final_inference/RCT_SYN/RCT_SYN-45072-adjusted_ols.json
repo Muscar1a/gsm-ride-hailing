@@ -1,0 +1,161 @@
+{
+  "dgp_id": "RCT_SYN",
+  "seed": 45072,
+  "estimator": "adjusted_ols",
+  "dataset_id": "ds-80ef20d88da75f1f683d",
+  "status": "succeeded",
+  "point_successful": true,
+  "point": [
+    -0.5801506775165083,
+    0.15327229712074475,
+    0.13385851222967757,
+    -0.5049569437541908,
+    0.3136147212254157,
+    0.25952908003480085
+  ],
+  "covariance": [
+    [
+      0.00014066231284450784,
+      1.4121944645575044e-06,
+      -5.291211831226785e-05,
+      -2.5799157050999835e-06,
+      -9.190347653997617e-07,
+      3.815257789153983e-07
+    ],
+    [
+      1.4121944645575044e-06,
+      0.00013844768542676505,
+      -2.579915705099985e-06,
+      -4.99654699611442e-05,
+      7.968617072497685e-07,
+      2.453682908410465e-07
+    ],
+    [
+      -5.291211831226785e-05,
+      -2.579915705099985e-06,
+      0.00011903907149344771,
+      9.204652393862423e-07,
+      3.815257789153981e-07,
+      1.2163839871912995e-07
+    ],
+    [
+      -2.5799157050999835e-06,
+      -4.99654699611442e-05,
+      9.204652393862423e-07,
+      0.00011471016881242395,
+      2.4536829084104657e-07,
+      -1.3582297818672824e-07
+    ],
+    [
+      -9.190347653997617e-07,
+      7.968617072497685e-07,
+      3.815257789153981e-07,
+      2.4536829084104657e-07,
+      1.0904621228035816e-06,
+      -4.1717679341567247e-07
+    ],
+    [
+      3.815257789153983e-07,
+      2.453682908410465e-07,
+      1.2163839871912995e-07,
+      -1.3582297818672824e-07,
+      -4.1717679341567247e-07,
+      9.536262234284507e-07
+    ]
+  ],
+  "diagnostics": {
+    "estimator": "adjusted_ols",
+    "status": "ok",
+    "outcome_order": [
+      "X",
+      "Y"
+    ],
+    "treatment_order": [
+      "X",
+      "Y"
+    ],
+    "active_treatments": [
+      0,
+      1
+    ],
+    "train_blocks": 4800,
+    "train_days": 20,
+    "train_sessions": 240000,
+    "weighting": "session_count",
+    "feature_allowlist": [
+      "hour_sin",
+      "hour_cos",
+      "is_weekend",
+      "is_peak",
+      "distance_scaled",
+      "zone_162",
+      "zone_163",
+      "zone_164",
+      "zone_170",
+      "weekday_1",
+      "weekday_2",
+      "weekday_3",
+      "weekday_4",
+      "weekday_5",
+      "weekday_6"
+    ],
+    "warnings": [],
+    "constant_log_prices": {},
+    "joint_price_support": [
+      {
+        "multiplier_x": 0.9,
+        "multiplier_y": 0.9,
+        "blocks": 536
+      },
+      {
+        "multiplier_x": 0.9,
+        "multiplier_y": 1.0,
+        "blocks": 543
+      },
+      {
+        "multiplier_x": 0.9,
+        "multiplier_y": 1.1,
+        "blocks": 497
+      },
+      {
+        "multiplier_x": 1.0,
+        "multiplier_y": 0.9,
+        "blocks": 554
+      },
+      {
+        "multiplier_x": 1.0,
+        "multiplier_y": 1.0,
+        "blocks": 560
+      },
+      {
+        "multiplier_x": 1.0,
+        "multiplier_y": 1.1,
+        "blocks": 507
+      },
+      {
+        "multiplier_x": 1.1,
+        "multiplier_y": 0.9,
+        "blocks": 536
+      },
+      {
+        "multiplier_x": 1.1,
+        "multiplier_y": 1.0,
+        "blocks": 544
+      },
+      {
+        "multiplier_x": 1.1,
+        "multiplier_y": 1.1,
+        "blocks": 523
+      }
+    ],
+    "residual_rank": 2,
+    "condition_number": 1.0164414427925894,
+    "validation_probability_valid": true,
+    "validation_prediction_rmse": 0.06296259708085244
+  },
+  "scenario_support": {
+    "x_plus10": "insufficient_support",
+    "y_plus10": "insufficient_support",
+    "both_plus10": "insufficient_support"
+  }
+}

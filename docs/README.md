@@ -35,14 +35,42 @@ Mapping/độ phủ thực chưa được kiểm chứng; tiêu chí kinh doanh,
 đáng thử, biên độ chính sách và ngưỡng chờ/hủy/thu nhập/ngân sách còn chờ GSM
 xác nhận. **Week 1: đặc tả đã duyệt; phần GSM chờ dữ liệu và xác nhận nghiệp vụ**.
 
-**Week 2 đã hoàn tất compute và rà soát số liệu, chưa nghiệm thu đầy đủ.**
+**Week 2 được Bun nghiệm thu ngày 11/10/2026 với ngoại lệ kỹ thuật**;
+phạm vi controlled evidence C và support được công bố trong
+[hồ sơ nghiệm thu hybrid](submission/days/20261011/week2_hybrid_acceptance.md).
 Reporting hoàn thành 500/500 seed jobs; Swissmetro và policy-value development
-đã có kết quả. Phần còn lại là chốt hạn chế interval calibration, hoàn thiện
-bundle demand/choice cùng rerun/resume, và xác nhận nghiệm thu thực tế.
+đã có kết quả lịch sử. `freeze-choice` giữ nguyên cả ba mô hình, effects,
+bootstrap và hồ sơ nguồn, xuất riêng kết quả replay dưới quy tắc hiện tại và
+phân biệt môi trường huấn luyện với đóng gói. Khoảng tin cậy được ghi rõ là
+kiểm tra kỹ thuật; chưa xác nhận coverage thực nghiệm cho run đó.
 
-[Hồ sơ nghiệm thu](submission/days/20261007/acceptance_review.md) là nguồn kết
-luận các gate; [rà soát thống kê](submission/days/20261007/statistical_review.md)
-giải thích metrics. Kế hoạch thực hiện phần còn lại nằm trong [ROADMAP.md](ROADMAP.md).
+[Kiểm chứng bàn giao 11/10](submission/days/20261011/choice_handoff_verification.md)
+ghi kết quả replay/reuse và gate hiện tại. Các giá trị lịch sử tái tạo đúng,
+nhưng kịch bản toàn bộ bối cảnh thiếu support ở một số nhóm theo kiểm tra hiện
+hành. [Chẩn đoán support và khoảng tin cậy 11/10](submission/days/20261011/support_interval_diagnostic.md)
+đã chọn phạm vi bằng dữ liệu huấn luyện: 10/20 nhóm, giữ 972/1.440 block và
+48.600/72.000 phiên (67,5%); replay trong phạm vi này đạt support với ngưỡng
+20 block giữ nguyên. Toàn bộ bối cảnh vẫn thiếu support.
+[Nhánh so sánh interval](submission/days/20261011/interval_method_comparison.md)
+đánh giá percentile/basic/BCa trên development riêng;
+[sensitivity variance theo ngày](submission/days/20261011/interval_variance_comparison.md)
+tái sử dụng jackknife đã lưu, không thêm fit hoặc seeds độc lập.
+[Pilot DML mới](submission/days/20261011/dml_variance_pilot.md) dùng seeds mới và
+adjusted OLS làm baseline ghép cặp cho day-jackknife t, không chạy lại các
+phương pháp bootstrap cũ trên cohort này.
+[Chẩn đoán score](submission/days/20261011/score_inference_diagnostic.md) mở rộng
+cohort, đối chiếu covariance theo block/ngày, kiểm chứng elasticity/scenario
+và độ nhạy folds. Các nghiên cứu này giữ nguyên mốc development.
+[Báo cáo xử lý khoảng tin cậy](submission/days/20261011/week2_inference_closeout.md)
+đã đối chiếu phương sai conditional OLS, hoàn tất assessment độc lập 400/400 fits
+trên seeds 45001–45100 và chạy toàn bộ 410 tests. OLS HC3 khớp phương sai chuẩn;
+day CR1 thiếu sai số chuẩn ở một số baseline. Assessment còn tám dòng cảnh báo
+coverage riêng; không có rejection sau Holm không chứng nhận mọi CI đạt 95%.
+Phương án A đã được chọn: analytic mặc định cho causal scenario/UI, bootstrap
+giữ baseline đóng băng; [hướng dẫn dùng](USAGE.md#hybrid-choice-inference).
+Calibration mọi đầu ra, full-context support và nghiệm thu GSM vẫn còn mở.
+[Rà soát thống kê 07/10](submission/days/20261007/statistical_review.md)
+giữ nguyên bằng chứng coverage; công việc còn lại nằm trong [ROADMAP.md](ROADMAP.md).
 Kết quả hành vi/vận hành mô phỏng là evidence C; các kết luận GSM giữ trạng thái
 theo dữ liệu và nhận diện tương ứng.
 
@@ -76,7 +104,7 @@ và equilibrium vẫn còn phía trước.
 |---|---|
 | [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) | Mục tiêu, phạm vi và lộ trình năm tuần |
 | [Core engine design](reference/CORE_ENGINE_DESIGN.md) | Thiết kế thuật toán, supply, simulator và equilibrium; chưa phải trạng thái triển khai |
-| [Submission](submission/README.md) | Báo cáo/PDF và bằng chứng theo ngày; hồ sơ mới nhất là [07/10](submission/days/20261007/README.md) |
+| [Submission](submission/README.md) | Báo cáo/PDF theo ngày; báo cáo kỳ gần nhất [07/10](submission/days/20261007/README.md), kiểm chứng bàn giao và [chẩn đoán mới 11/10](submission/days/20261011/support_interval_diagnostic.md) |
 | [Validation lịch sử](submission/days/20261003/validation.md) | Bằng chứng TLC/model/browser ngày 03/10 |
 
 ## Quy ước cập nhật

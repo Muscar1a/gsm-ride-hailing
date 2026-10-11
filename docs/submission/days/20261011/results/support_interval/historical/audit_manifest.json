@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "archived_at_utc": "2026-10-10T20:18:26.293987+00:00",
+  "purpose": "Read-only post-hoc diagnosis; final reporting seeds were not refitted or retuned",
+  "files": {
+    "cell_diagnostics.csv": "5aea7f31d5ef522ad9fa7c3af6f0e4ad6fa30961b3f9dba3290dc27e8d8f9cee",
+    "diagnose_historical.py": "06d001e0dd68cf28b560a1474216790a867268d3c0f4ca929c70ec7521a6babc",
+    "diagnostic.json": "47dd3672db983d10cc41748606fca055066d0f4d651343a1b7437f1e8fd9595d"
+  },
+  "historical_source_dir": "E:\\AI\\vric\\gsm-ride-hailing\\docs\\submission\\days\\20261007\\results\\week2",
+  "historical_source_hashes_verified": {
+    "evaluation_metrics.csv": "9cee52901c25189b7808266f649ff49088a5965b16b570d5399ba8b24b5801dc",
+    "execution.json": "e3974ee7083f64bcac97774c7a7363a56303346192b9c812dffd045cb73a9b9c",
+    "frozen_spec.json": "8fda615108bc06365320bdbf41fa5ded3e19423630efd360a6767c2c61e61af1",
+    "manifest.json": "cb54ac644f4c42e6bd9674a1b329b601bb568664feb46eff5378e167e5f07a47",
+    "README.md": "5e11c80a19616bd903b6379c0f719909a921b5e08048c8fe82a7e3729ce1fdb2",
+    "recovery_audit/after_resume.json": "7c733695ffbcfcb41e1824179644c2f8d2123bde82aa84c5b26bbac6353d5f30",
+    "recovery_audit/before_execution.json": "204ee1d548c9277901f1a94e3cc6a7522eaf8704bcaa82a692561dea30d374e4",
+    "recovery_audit/before_resume.json": "9f71d76c33dbcd75c02498e702fc3e5979f51ff94af7ee82c7b71c5dd5eacc8e",
+    "recovery_audit/before_status.json": "b83927960c211c0a5230912e4110bd8c6466a62969e110ddc967d3e329fc1fc7",
+    "recovery_audit/launch.json": "88f379399777588af26ee21ccd62756e27b155467aa047dafcc08278e0d9d60e",
+    "reproducibility.zip": "c01d120ef173d302aa8c48892c7eaacd68a113241c2dc52ef892bcca4143c726",
+    "seed_metrics.parquet": "37b603a12e432d075be30d2048eb4c90d52a29cfe11b439314a4bfa3100f3916",
+    "status.json": "dfbaa9a2a75162252257e2c8e31a42657ccb1f89739c43e105be92261f2fa64b"
+  },
+  "previous_statistical_review_hashes_verified": {
+    "audit.json": "a50d38002dcde9ebcf670dae42e980250172137e3594b5f6288867be33f7b821",
+    "cell_metrics.csv": "a9ca67e439353d3b60bde32ef017ed72b0c635e17ae6924faa91366fc4bff978",
+    "dgp_estimator_summary.csv": "692a08288c52f06877fe26af1b8369aeec61e6521545f7fc9dea71052ca9c1c1"
+  },
+  "reproduce_from_repo_cwd": ".venv/Scripts/python.exe docs/submission/days/20261011/results/support_interval/historical/diagnose_historical.py --output-dir .cache/week2-historical-diagnosis-fresh-run",
+  "reproduce_note": "Output directory must not exist; numerical CSV reproduces exactly. Timestamp, live revision, and analysis metadata may differ.",
+  "executed_command": ".venv/Scripts/python.exe docs/submission/days/20261011/results/support_interval/historical/diagnose_historical.py --output-dir .cache/week2-historical-interval-diagnostic-20261011/published-reproduction-02",
+  "validation_calls": [
+    "scripts/review_week2_statistics.py:review_results(results_dir)",
+    "scripts/review_week2_statistics.py:exact_interval(successes, trials)",
+    "Independent archived CSV checks:60 unique cells;100 seeds/cell;48 identifiedcells;12 rejectedcells;tail counts partition100;JSON/CSV numericmatch",
+    "Existing-output-directory guard exits2 and preserves all archivedfilehashes"
+  ],
+  "validation_source_sha256": "4145ff9cd266c6d9264b0d09f999a84f528297deef297838e40ee90dcc9ed9ef",
+  "verification": {
+    "all_historical_source_and_500_checkpoint_hashes": "passed",
+    "published_metric_rows_and_metadata": "passed",
+    "archived_script_reproduced_metrics_exactly": "passed",
+    "reject_existing_output_directory": "passed"
+  },
+  "limitations": [
+    "Historical final reporting seeds are diagnostic evidence only; no development tuning.",
+    "Raw bootstrap draws were not saved for the 500 reporting jobs; actual bootstrap SD/skewness and quantile Monte Carlo error cannot be reconstructed.",
+    "Width-derived normal-equivalent SE approximates percentile interval variability and cannot establish the mechanism of undercoverage.",
+    "20 fixed TLC-context training days, five zones and 50 synthetic sessions/block; this is synthetic validation, not GSM evidence.",
+    "No new fit, bootstrap, or full benchmark rerun occurred."
+  ]
+}

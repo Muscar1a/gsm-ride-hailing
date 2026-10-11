@@ -10,6 +10,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 
+from gsm_poc.causal.analytic import coefficient_covariance
 from gsm_poc.causal.features import (
     OUTCOME_COLUMNS,
     PRICE_LEVELS,
@@ -38,6 +39,7 @@ class ModelBundle:
     seed: int
     outcome_order: tuple[str, ...] = ("X", "Y")
     treatment_order: tuple[str, ...] = ("X", "Y")
+    analytic_inference: dict | None = None
 
     def baseline(self, context: pd.DataFrame) -> np.ndarray:
         return self.base_rate_model.predict(self.encoder.transform(context))
@@ -52,6 +54,7 @@ class ModelBundle:
 class FitResult:
     bundle: ModelBundle | None
     diagnostics: dict
+    crossfit_residuals: tuple[np.ndarray, np.ndarray] | None = None
 
 
 def _rank(residual: np.ndarray, weights: np.ndarray) -> tuple[int, float | None]:
@@ -62,7 +65,13 @@ def _rank(residual: np.ndarray, weights: np.ndarray) -> tuple[int, float | None]
 
 
 def fit_estimator(
-    train: pd.DataFrame, config: Config, estimator: str, seed: int | None = None
+    train: pd.DataFrame,
+    config: Config,
+    estimator: str,
+    seed: int | None = None,
+    *,
+    capture_residuals: bool = False,
+    prepare_analytic: bool = True,
 ) -> FitResult:
     require_observed(train)
     encoder = Encoder(config.source.zones)
@@ -115,12 +124,13 @@ def fit_estimator(
     if condition is None or condition > config.model.max_condition_number:
         diagnostic["warnings"].append("Residual price covariance is poorly conditioned")
     actual_seed = config.simulation.seed if seed is None else seed
+    crossfit_residuals = None
     if estimator in ("naive_ols", "adjusted_ols"):
         design = t if estimator == "naive_ols" else np.column_stack([t, w])
         model = LinearRegression().fit(design, outcome, sample_weight=weights)
         theta = model.coef_[:, : len(active)]
     elif estimator == "dml":
-        # Lazy import keeps non-DML commands lightweight; no analytic IID interval is used.
+        # Lazy import keeps non-DML commands lightweight; EconML's default CI is disabled.
         from econml.dml import LinearDML
 
         forests = [
@@ -154,6 +164,11 @@ def fit_estimator(
         )
         theta = np.asarray(model.const_marginal_effect()).reshape(2, len(active))
         residual_t = model.residuals_[1].reshape(len(train), len(active))
+        if capture_residuals or prepare_analytic:
+            residual_y, _, _, residual_w = model.residuals_
+            if residual_w is None or not np.array_equal(residual_w, w):
+                raise ValueError("Cached DML residual rows differ from original training order")
+            crossfit_residuals = (residual_y.reshape(len(train), 2).copy(), residual_t.copy())
         rank, condition = _rank(residual_t, weights)
         diagnostic.update(residual_rank=rank, condition_number=condition)
         if rank < len(active):
@@ -192,16 +207,28 @@ def fit_estimator(
         str(train.dgp_id.iloc[0]),
         int(train.seed.iloc[0]),
     )
-    return FitResult(bundle, diagnostic)
+    if prepare_analytic:
+        try:
+            bundle.analytic_inference = coefficient_covariance(bundle, train, crossfit_residuals)
+        except ValueError as exc:
+            diagnostic["analytic_unavailable_reason"] = str(exc)
+    return FitResult(bundle, diagnostic, crossfit_residuals if capture_residuals else None)
 
 
-def fit_all(blocks: pd.DataFrame, config: Config) -> tuple[dict[str, FitResult], dict]:
+def fit_all(
+    blocks: pd.DataFrame, config: Config, *, capture_residuals: bool = False
+) -> tuple[dict[str, FitResult], dict]:
     require_observed(blocks)
     if blocks.duplicated(["dataset_id", "block_id"]).any():
         raise ValueError("Duplicate observed block grain")
     splits = date_splits(blocks, config)
     results = {
-        name: fit_estimator(splits["train"], config, name) for name in config.model.estimators
+        name: (
+            fit_estimator(splits["train"], config, name, capture_residuals=True)
+            if capture_residuals
+            else fit_estimator(splits["train"], config, name)
+        )
+        for name in config.model.estimators
     }
     for result in results.values():
         if result.bundle is not None:

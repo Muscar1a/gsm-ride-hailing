@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "run_id": "week2-support-diagnostic-20261011-v3",
+  "source_package_run_id": "week2-choice-handoff-20261011-v2",
+  "source_model_run_id": "20261003T130951-df24a7e4",
+  "dataset_id": "ds-5f26297a9194afda2d39",
+  "source_kind": "semi_synthetic",
+  "evidence_level": "C",
+  "estimator": "dml",
+  "source_environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0"
+    },
+    "git_revision": "c2d24a277424e4523668eed8dd35e7135ae2e1a2",
+    "source_code_sha256": "8af06450fdbbc7269ad493bc92743e830f5270516e1273ef26f182f1040a4e2e",
+    "lock_sha256": "c3ebe7e5556b2dfeba6933118f3fd8fcf01be08bf2dd10696480b675f0a7a07c"
+  },
+  "diagnostic_environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0",
+      "simpy": "4.1.2"
+    },
+    "git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "source_code_sha256": "1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6",
+    "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "diagnostic_script_sha256": "f5c0e149f624ca00cdcc48a64e94272f54f77140a1259dd4ddaacd8b6786068a",
+  "source_artifacts_sha256": {
+    "runs/week2-choice-handoff-20261011-v2/effects.csv": "4ecc2a35dae6286607398734fa73ea9f428927d750fa9ca855ca7d60eea47c4c",
+    "runs/week2-choice-handoff-20261011-v2/splits.json": "baba4adc4243e81d00628089f742818cae73350bc8a0b64029439e0edd303929",
+    "runs/week2-choice-handoff-20261011-v2/scenario_result.json": "cc1b67ba2604466f71e9d1b84921bea0aef34d5ab95b4c69c91437ace9709a3c",
+    "runs/week2-choice-handoff-20261011-v2/scenario_contexts.parquet": "779cec5683af4e44d414846b8e2827bb57a012f003dafa1bbaf895461d95fb99",
+    "runs/week2-choice-handoff-20261011-v2/method_metrics.csv": "c70ffa8d0aba14ea66926145c8494ef840643458430448ff682292a74d1c33a0",
+    "runs/week2-choice-handoff-20261011-v2/models/naive_ols/diagnostics.json": "7f0d342df8d893733455364525f693970ebd1c8a3f41b6cd93a98ffac26a1d81",
+    "runs/week2-choice-handoff-20261011-v2/models/naive_ols/model_bundle.joblib": "343daa042552dba3a82ad2b646070a73124b238a8a79910d71f6745a2fbf2e94",
+    "runs/week2-choice-handoff-20261011-v2/models/naive_ols/bootstrap_bundles.joblib": "b4549aedfb853cc05b138c2753ad7233187efc91bdda73c7f9584e80e59f30aa",
+    "runs/week2-choice-handoff-20261011-v2/models/naive_ols/bootstrap_draws.parquet": "5cb8c484286961ea26d266a1f565fb710618b80c8bcb04f5ca1e4afd9bd21ee8",
+    "runs/week2-choice-handoff-20261011-v2/models/adjusted_ols/diagnostics.json": "c68078c72a8ca1076fbffd5f82af299bf23c64849cc4efe3b7b13c3d7eda3a16",
+    "runs/week2-choice-handoff-20261011-v2/models/adjusted_ols/model_bundle.joblib": "cffc68698e72e74715d0faf14ba098f85255268c34dfd4c105f5580949e29dc6",
+    "runs/week2-choice-handoff-20261011-v2/models/adjusted_ols/bootstrap_bundles.joblib": "40497736a7f1384f17812e4c559d90cbba287b77ca7ca3e5b25e553b76e2597e",
+    "runs/week2-choice-handoff-20261011-v2/models/adjusted_ols/bootstrap_draws.parquet": "188e109348391acec2979d0d6891210c34cc9adf821d952021b3721b420dc272",
+    "runs/week2-choice-handoff-20261011-v2/models/dml/diagnostics.json": "40fcde0edcf25f6961ff9e93e63eb9e20e73733519bf188fdb2373d2379e311f",
+    "runs/week2-choice-handoff-20261011-v2/models/dml/model_bundle.joblib": "964a3ed2686878d18cb5529e5ca6777f04a3dad097f9ffda7c5ee7de2ff46cbd",
+    "runs/week2-choice-handoff-20261011-v2/models/dml/bootstrap_bundles.joblib": "188ae9e5dfe9e667b808f2932e3dbf61f9dbbc61f83e991db1131c8dd9168add",
+    "runs/week2-choice-handoff-20261011-v2/models/dml/bootstrap_draws.parquet": "0a11e4970dfdc6efc4fe0d11c6dc0fcc45178877549113947f196c85c5626fd8",
+    "runs/week2-choice-handoff-20261011-v2/source_manifest.json": "d7fe2e29ca3d29a20e1131abfe158be83861a615ad5e169c6426e7d231cf8f70",
+    "runs/week2-choice-handoff-20261011-v2/current_scenario_result.json": "64488ba2010cf79601be5507d399330d9a66b5c44ad2daffc41238395e8dfa61",
+    "runs/week2-choice-handoff-20261011-v2/choice_handoff.json": "c4eb84c56f0c80f96c757a51d35a9a267df77d2a83701ee295dca808b1b7aa9e",
+    "runs/week2-choice-handoff-20261011-v2/manifest.json": "35849460841ed2a542c3f9ae111508c40204aee0fc5f9f522ac2889c4aeff34f"
+  },
+  "source_bytes_unchanged": true,
+  "all_context_replay_matches_frozen_current_result": true,
+  "all_context_status": "insufficient_support",
+  "scoped_status": "ok",
+  "scoped_support_status": "ok",
+  "candidate_scope_sha256": "4eccebbad94a5e2e50388cd3a26c87506e7f09ede9acb9eed74f41ad39080719",
+  "eligible_training_groups": 10,
+  "all_training_groups": 20,
+  "denominators": {
+    "all_context_blocks": 1440,
+    "all_context_weight_sessions": 72000,
+    "retained_context_blocks": 972,
+    "retained_context_weight_sessions": 48600,
+    "excluded_context_blocks": 468,
+    "excluded_context_weight_sessions": 23400,
+    "unseen_training_group_context_blocks": 0,
+    "unseen_training_group_weight_sessions": 0,
+    "retained_session_fraction": 0.675,
+    "hypothetical_forecast_sessions": 10000,
+    "forecast_population": "fixed hypothetical quote sessions within retained scope",
+    "extrapolates_to_excluded_scope": false,
+    "context_coverage_by_weekend_peak": [
+      {
+        "is_weekend": 0,
+        "is_peak": 0,
+        "all_context_blocks": 680,
+        "all_context_weight_sessions": 34000,
+        "retained_context_blocks": 680,
+        "retained_context_weight_sessions": 34000
+      },
+      {
+        "is_weekend": 0,
+        "is_peak": 1,
+        "all_context_blocks": 280,
+        "all_context_weight_sessions": 14000,
+        "retained_context_blocks": 224,
+        "retained_context_weight_sessions": 11200
+      },
+      {
+        "is_weekend": 1,
+        "is_peak": 0,
+        "all_context_blocks": 340,
+        "all_context_weight_sessions": 17000,
+        "retained_context_blocks": 68,
+        "retained_context_weight_sessions": 3400
+      },
+      {
+        "is_weekend": 1,
+        "is_peak": 1,
+        "all_context_blocks": 140,
+        "all_context_weight_sessions": 7000,
+        "retained_context_blocks": 0,
+        "retained_context_weight_sessions": 0
+      }
+    ]
+  },
+  "interval_calibration_status": "not_validated_by_support_diagnosis",
+  "limitation": "Restricted-scope semi-synthetic replay; no GSM or CI calibration claim"
+}

@@ -128,6 +128,7 @@ Read execution, result quality and interval quality separately:
 | Manifest stage status: `pending`, `running`, `succeeded`, `failed` | Whether the batch stage completed; success alone does not establish a supported forecast |
 | Effect/scenario status and support diagnostics | `not_identified`, `insufficient_support` or invalid probabilities withhold affected estimates/forecasts; retain the reason and attempted/failed counts |
 | Interval status: `ok`, `interval_unstable`, `interval_unavailable` | A valid point estimate can coexist with a withheld interval; the quality rules are in [IDENTIFICATION.md](IDENTIFICATION.md#estimation-and-inference) |
+| Interval validation/calibration | `technical_checks_only` and `not_evaluated_for_this_run` distinguish numerical stability from empirical coverage; nominal 95% is not a measured coverage guarantee |
 | Simulation calibration status: `not_calibrated`, evidence C | A completed synthetic trajectory remains assumption-based and does not establish operational accuracy on GSM |
 
 Missing or unavailable metrics are not zero. Keep failed bootstrap draws in quality
@@ -135,9 +136,264 @@ counts and reject invalid probabilities rather than clipping them. The broader
 status vocabulary for planned modules is specified in the
 [target engine design](reference/CORE_ENGINE_DESIGN.md#133-results-and-status).
 
+## Week 2 choice handoff
+
+`freeze-choice` packages all estimators from a completed fit, method evaluation
+and scenario run. It needs no fleet snapshot, simulator, refit or oracle access.
+Use a separate output run:
+
+```powershell
+uv run python -m gsm_poc freeze-choice --config configs/tlc_quick.toml --model-run-id 20261003T130951-df24a7e4 --run-id week2-choice-handoff-20261011-v2
+uv run python -m gsm_poc scenario --config configs/tlc_quick.toml --model-run-id week2-choice-handoff-20261011-v2 --scenario-id price-x-plus10 --delta-x 0.10 --delta-y 0 --inference-method bootstrap --run-id week2-choice-replay-20261011-v2
+```
+
+The package keeps the original model/effects/scenario files and source manifest
+byte for byte. `choice_handoff.json` records their checksums, source configuration,
+training environment, packaging environment, scope, units and review status.
+`current_scenario_result.json` separately applies the current support and interval
+checks to the saved model/draws and original request. Read its current status;
+historical `scenario_result.json` remains evidence for its training revision.
+The dashboard and scenario/demand consumers use the original training configuration
+and support thresholds. `--estimator` selects another frozen estimator for a
+scenario; consumer settings cannot lower those thresholds.
+
+Repeat either command with identical arguments to verify reuse. Resume after a
+failed freeze retries the stage, verifying source hashes and replacing incomplete
+outputs atomically. A changed output prevents reuse. Code/environment changes
+require a new run ID. Replay requires this repository and its environment, but
+no original source run, training dataset or oracle files once the package is ready.
+This reproduces saved-model inference, not a fresh training/bootstrap run.
+
+The historical TLC package reproduces the numeric outputs but its all-context
+scenario fails the current context-specific support gate. Coverage limitations
+were accepted by Bun on 11/10/2026 as a
+[technical exception](submission/days/20261011/week2_hybrid_acceptance.md).
+Technical stability does not certify calibration or close support gaps.
+
+## Hybrid choice inference
+
+Causal `scenario()` and UI default to `inference_method="analytic"`; select
+`"bootstrap"` for the frozen day-bootstrap baseline. CLI scenarios default to
+analytic. Existing batch `Pipeline.scenario()` calls default to bootstrap for
+`fit`, `run-all` and handoff replay; pass analytic explicitly in new integrations.
+New point fits persist compact covariance; bootstrap refits do not. Analytic is
+qualified for adjusted OLS (HC3/t) and DML (block score/normal), with individual
+delta-method elasticity intervals and joint baseline covariance.
+
+Prepare an older frozen package once in a separate run:
+
+```powershell
+uv run python -m gsm_poc prepare-inference --config configs/tlc_quick.toml --model-run-id week2-choice-handoff-20261011-v2 --run-id week2-hybrid-inference-20261011-v3
+uv run python -m gsm_poc scenario --config configs/tlc_quick.toml --model-run-id week2-hybrid-inference-20261011-v3 --inference-method analytic --run-id week2-hybrid-scenario-20261011-v3
+```
+
+Preparation verifies original observed/metadata hashes (early fit manifests use
+the fit observed hash plus generation's registered metadata hash), and refits at most once
+per qualified estimator, checking point coefficients against the saved baseline.
+Original bytes and bootstrap contracts remain intact. No oracle or new bootstrap
+draws are needed. Missing/stale covariance is explicitly unavailable/rejected;
+UI never fits or silently falls back. `prepare-demand` retains point request rates
+and unavailable block-rate intervals. Manifest integrity checks still read
+registered bytes, while analytic inference avoids bootstrap deserialization.
+
+Keep `Technically stable` and the 88–89% cross-effect/scenario coverage warning.
+The accepted exception does not certify 95% coverage for every output or
+calibration of each run. Reproduce historical research with its frozen source
+snapshot and original inference engine.
+
+## Week 2 support and interval diagnostics
+
+The support diagnostic reads a completed choice package, freezes eligible
+zone/weekend/peak strata using training counts, and replays the unchanged
+all-context scenario alongside the restricted scope. Both price points retain
+the source support thresholds. Excluded context/session weights are reported;
+the restricted forecast describes its own fixed quote population.
+
+```powershell
+.venv/Scripts/python.exe scripts/diagnose_week2_support.py --model-run-id week2-choice-handoff-20261011-v2 --run-id week2-support-new-review
+```
+
+Use a new run ID on each execution. `runs/<id>/` contains the training support
+table, saved scope, restricted contexts, both scenario results and a checksummed
+diagnostic report. The source package remains unchanged.
+
+The interval runner preserves fitting and individual day-bootstrap percentile
+intervals. It freezes configuration, source hashes, code/environment and fresh
+development seeds before generating data, and saves raw coefficient draws and
+per-seed metrics. Start with one seed to measure cost:
+
+```powershell
+.venv/Scripts/python.exe scripts/diagnose_week2_intervals.py --config configs/default.toml --build-id 214dd5a1184bd3705e66 --output-root .cache/week2-ci-new-probe --seed-start 41001 --seeds 1 --dgps RCT_SYN --estimators adjusted_ols --bootstrap-draws 199
+```
+
+The same interface supports the bounded RCT/null development study with
+`--seeds 20 --dgps RCT_SYN NULL_EFFECT`, a separate `--estimators dml` probe,
+and nested endpoint checks with `--bootstrap-draws 999`. Always use a fresh
+output directory. Historical reporting seeds 20001–20100 and probe 19001 are
+rejected. The example range reproduces the current development study; an
+independent new study needs an unused range. Counts, failures, actual bootstrap SD, empirical SD, widths, tail
+misses and exact binomial uncertainty remain visible. The 199-prefix comparison
+uses requested draws, preserving failures. A development study or sufficient
+draw count does not establish nominal coverage; fit/interval methods and
+acceptance thresholds require their own frozen final evaluation.
+
+Measured results and their immutable identities are in the
+[11/10 diagnostic evidence](submission/days/20261011/support_interval_diagnostic.md).
+
+### Development interval-method comparison
+
+The standalone comparator reads a completed interval diagnostic with verified
+protocol/artifact checksums, raw coefficient draws and the saved source context.
+It freezes percentile (baseline), basic and BCa candidates before comparison.
+Use a separate, new output directory:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.compare_week2_intervals --diagnostic-root .cache/week2-ci-comparison-development-20261011 --output-root .cache/week2-ci-methods-new-review
+```
+
+All candidates use the same observed coefficient and 199 saved original-day
+bootstrap draws. The comparator reconstructs the seed's dataset, verifies the
+refitted point estimates, and deletes each of the 20 original training days in
+turn for BCa jackknife refits. Each 19-day fit refits the learned components with
+the original seed and original-day fold groups. Quote counts and held-out
+contexts stay fixed. Failed refits, unavailable intervals and unresolved BCa
+tails remain visible; no clipping or percentile fallback fills missing BCa values.
+
+Outputs are `protocol.json`, `status.json`, `seed_metrics.parquet`, `summary.csv`
+and per-job metrics/jackknife Parquet tables with JSON metadata and checksums.
+Read `completed_with_failures` and per-effect unavailable reasons alongside the
+method summaries and paired common-valid-seed comparisons. Coverage and null
+false positives retain exact binomial uncertainty and attempted/valid
+denominators. It selects no winner and changes no production
+interval, nominal 95% level, support threshold or choice package. Only the four
+theta coefficient cells are compared; elasticity and scenario intervals need
+their own evaluation. The 20-seed development cohort and single DML probe cannot
+establish final calibration. See the
+[comparison protocol](BENCHMARK.md#development-interval-method-comparison) and
+[11/10 comparison evidence](submission/days/20261011/interval_method_comparison.md).
+
+### Development day-jackknife variance sensitivity
+
+`scripts.compare_week2_variance` reads a completed, checksummed interval-method
+comparison and reuses its saved points and all 20 original-day jackknife fits.
+It performs no generation, fitting or bootstrap. Use a new output directory:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.compare_week2_variance --comparison-root .cache/week2-ci-methods-development-20261011 --output-root .cache/week2-ci-variance-new-review
+```
+
+The individual `day_jackknife_t` candidate uses the saved original full-data
+point, jackknife variance and a Student-t critical value with 19 degrees of
+freedom. A missing, duplicate, failed or nonfinite omission, or degenerate
+variance, leaves the candidate unavailable; no omission is dropped and no
+fallback replaces it. Baseline percentile/basic/BCa results remain unchanged.
+
+Read coverage, null false positives, widths, attempted/available counts and
+paired changes alongside the RMS jackknife SE versus between-seed SD on the
+same valid seeds. A single DML probe cannot provide that SD comparison.
+This reuses development seeds 42001–42020 and adds no independent evidence or
+production method. The frozen t reference and generic jackknife for DML require
+empirical assessment. Formula/limits are in
+[IDENTIFICATION](IDENTIFICATION.md#development-day-jackknife-variance-sensitivity),
+with results in the
+[variance evidence](submission/days/20261011/interval_variance_comparison.md).
+
+### Fresh DML day-jackknife pilot
+
+`scripts.pilot_week2_dml_variance` uses the verified comparison's configuration
+and source context to generate fresh development seeds 43001–43005 for RCT_SYN
+and NULL_EFFECT. DML and adjusted OLS share each generated seed as paired
+estimators; each gets an original full-data fit and 20 delete-one-day refits.
+It constructs the same individual `day_jackknife_t` candidate, with no bootstrap
+draws. The frozen outer study permits at most 20 estimator jobs / 420 fits,
+including 210 DML fits; run one RCT seed first to measure cost, then continue the
+frozen remaining cohort in new directories without counting that probe twice.
+
+```powershell
+.venv/Scripts/python.exe -m scripts.pilot_week2_dml_variance --comparison-root .cache/week2-ci-methods-development-20261011 --output-root .cache/week2-dml-variance-new-probe --seed-start 43001 --seeds 1 --dgps RCT_SYN
+```
+
+The remaining RCT jobs use `--seed-start 43002 --seeds 4 --dgps RCT_SYN`; NULL
+jobs use `--seed-start 43001 --seeds 5 --dgps NULL_EFFECT`, each with a new output
+directory. Only seeds 43001–43005 are permitted. Outputs retain
+`protocol.json`, `status.json`, `seed_metrics.parquet`, `summary.csv`,
+`paired_estimators.csv`, per-job point/jackknife/metrics tables and metadata,
+including DML original-day fold assignments and a saved source context.
+
+The former percentile/basic/BCa candidates are not run on these fresh seeds.
+The paired baseline here is adjusted OLS, not the historical interval methods.
+Read coverage, null false positives, widths, failure/availability counts and
+matched-cohort SE/SD comparisons. Five seeds per DGP provide very limited
+precision. The pilot changes no production method and establishes no final
+calibration; individual theta results do not transfer to elasticity/scenarios.
+See the [pilot protocol](BENCHMARK.md#fresh-dml-day-jackknife-pilot) and
+[pilot evidence](submission/days/20261011/dml_variance_pilot.md).
+
+## Week 2 score inference diagnosis
+
+The standalone research controller captures DML out-of-fold residuals without
+changing the model point or production percentile intervals. Freeze the protocol
+before generating seeds; the plan and every stage require fresh output paths:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.diagnose_week2_score_inference --plan .cache/new-score-plan.json --freeze-source .cache/week2-ci-methods-development-20261011
+.venv/Scripts/python.exe -m scripts.diagnose_week2_score_inference --plan .cache/new-score-plan.json --output-root .cache/new-score-dml-probe --stage dml_probe
+```
+
+Inspect the two probe jobs before expansion; the frozen guard is 30 seconds per
+DML fit or any fit/inference failure. Then execute `--stage ols`,
+`--stage dml_remainder` and `--stage fold_probe`, each in a different fresh output
+directory, with at most two processes and one native thread per process.
+The fixed protocol allows 100 OLS seeds and 20 DML seeds per RCT/null DGP;
+the probe is included, not discarded. The separate 4/10-fold sensitivity uses
+three of those DML seeds and is excluded from coverage denominators.
+
+The study produces joint theta/baseline influence, covariance, individual theta,
+elasticity and three scenario intervals, original-day scores, fold diagnostics,
+failure counts, source snapshots and checksum registries. Compare block and day
+methods on the same seeds; do not compare their gains with historical cohorts as
+if paired. Full-context scenario calibration remains a diagnostic when the
+existing support gate rejects that population. Replaying older research studies
+requires their frozen source revision, since residual capture changes the code
+hash even though the default numerical method is unchanged. See the
+[protocol](BENCHMARK.md#development-score-inference-diagnosis) and
+[evidence](submission/days/20261011/score_inference_diagnostic.md).
+
+## Week 2 conditional variance audit and independent assessment
+
+The oracle variance controller checks the existing OLS development cohort with
+no model fits. Freeze first, then use a fresh output directory:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.diagnose_week2_oracle_variance --plan .cache/new-oracle-plan.json --freeze-source docs/submission/days/20261011/results/score_inference
+.venv/Scripts/python.exe -m scripts.diagnose_week2_oracle_variance --plan .cache/new-oracle-plan.json --output-root .cache/new-oracle-review
+```
+
+The independent assessment freezes block methods and its diagnostic family
+before generating the reserved 45001–45100 cohort:
+
+```powershell
+.venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --freeze-source docs/submission/days/20261011/results/score_inference
+.venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --output-root .cache/new-independent-rct --dgp RCT_SYN
+.venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --output-root .cache/new-independent-null --dgp NULL_EFFECT
+```
+
+Execute the two DGP stages with at most two concurrent experiment processes.
+This is a reproduction of the frozen cohort, not a source of additional
+independent evidence. There are 400 point fits and no bootstrap or delete-day
+refits. Inspect both stage statuses, complete seed/output denominators and
+unavailable intervals before combining summaries. `assessment_tests` applies
+the frozen binomial/Holm screen to the combined summary, removing repeated
+baseline-before tests only; raw metrics retain those rows. Keep the original
+source revision for replay. Oracle covariance is an audit reference and is
+never used by this assessment's fitting or inference. The
+[closeout report](submission/days/20261011/week2_inference_closeout.md) records
+results, checksums and the separate support/GSM limits.
+
 ## Week 3 demand handoff
 
-`prepare-demand` reads a completed, checksum-verified choice run. It copies the
+`prepare-demand` reads a completed, checksum-verified choice fit or `freeze-choice`
+package. It copies the
 selected model/diagnostics/bootstrap, effects, splits, original scenario and held-out
 contexts into `demand_bundle/`, preserving the source config/environment manifest.
 It exports X/Y requests/hour as `expected_bookings / block_hours`, with baseline

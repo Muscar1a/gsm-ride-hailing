@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "selection_rule": "all training strata passing unchanged joint_support at both prices",
+  "selection_inputs": "model_bundle.train_support and frozen training diagnostics only",
+  "uses_test_outcomes": false,
+  "uses_interval_widths": false,
+  "request": {
+    "scenario_id": "price-x-plus10",
+    "baseline_multiplier_x": 1.0,
+    "baseline_multiplier_y": 1.0,
+    "delta_price_x": 0.1,
+    "delta_price_y": 0.0,
+    "n_sessions": 10000,
+    "interval_level": 0.95,
+    "target_context_set": "all"
+  },
+  "minimum_blocks": 20,
+  "group_columns": [
+    "zone_id",
+    "is_weekend",
+    "is_peak"
+  ],
+  "groups": [
+    {
+      "zone_id": 161,
+      "is_weekend": 0,
+      "is_peak": 0,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 161,
+      "is_weekend": 0,
+      "is_peak": 1,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 161,
+      "is_weekend": 1,
+      "is_peak": 0,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 14 blocks for context zone_id=161, is_weekend=1, is_peak=0; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 161,
+      "is_weekend": 1,
+      "is_peak": 1,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 9 blocks for context zone_id=161, is_weekend=1, is_peak=1; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 7 blocks for context zone_id=161, is_weekend=1, is_peak=1; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 162,
+      "is_weekend": 0,
+      "is_peak": 0,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 162,
+      "is_weekend": 0,
+      "is_peak": 1,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 14 blocks for context zone_id=162, is_weekend=0, is_peak=1; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 162,
+      "is_weekend": 1,
+      "is_peak": 0,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 162,
+      "is_weekend": 1,
+      "is_peak": 1,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 13 blocks for context zone_id=162, is_weekend=1, is_peak=1; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 7 blocks for context zone_id=162, is_weekend=1, is_peak=1; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 163,
+      "is_weekend": 0,
+      "is_peak": 0,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 163,
+      "is_weekend": 0,
+      "is_peak": 1,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 163,
+      "is_weekend": 1,
+      "is_peak": 0,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 17 blocks for context zone_id=163, is_weekend=1, is_peak=0; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 13 blocks for context zone_id=163, is_weekend=1, is_peak=0; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 163,
+      "is_weekend": 1,
+      "is_peak": 1,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 9 blocks for context zone_id=163, is_weekend=1, is_peak=1; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 10 blocks for context zone_id=163, is_weekend=1, is_peak=1; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 164,
+      "is_weekend": 0,
+      "is_peak": 0,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 164,
+      "is_weekend": 0,
+      "is_peak": 1,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 164,
+      "is_weekend": 1,
+      "is_peak": 0,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 18 blocks for context zone_id=164, is_weekend=1, is_peak=0; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 17 blocks for context zone_id=164, is_weekend=1, is_peak=0; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 164,
+      "is_weekend": 1,
+      "is_peak": 1,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 15 blocks for context zone_id=164, is_weekend=1, is_peak=1; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 8 blocks for context zone_id=164, is_weekend=1, is_peak=1; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 170,
+      "is_weekend": 0,
+      "is_peak": 0,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 170,
+      "is_weekend": 0,
+      "is_peak": 1,
+      "eligible": true,
+      "reasons": []
+    },
+    {
+      "zone_id": 170,
+      "is_weekend": 1,
+      "is_peak": 0,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 15 blocks for context zone_id=170, is_weekend=1, is_peak=0; minimum 20"
+      ]
+    },
+    {
+      "zone_id": 170,
+      "is_weekend": 1,
+      "is_peak": 1,
+      "eligible": false,
+      "reasons": [
+        "Joint price corner (1.0, 1.0) has only 11 blocks for context zone_id=170, is_weekend=1, is_peak=1; minimum 20",
+        "Joint price corner (1.1, 1.0) has only 12 blocks for context zone_id=170, is_weekend=1, is_peak=1; minimum 20"
+      ]
+    }
+  ],
+  "eligible_group_count": 10,
+  "training_group_count": 20
+}

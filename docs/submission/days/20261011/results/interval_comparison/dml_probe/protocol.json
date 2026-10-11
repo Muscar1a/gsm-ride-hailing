@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "purpose": "paired development comparison; no winner or production change",
+  "development_only": true,
+  "source_protocol_hash": "95763727c6a0acce1f349dbd27b738c0e8a8b24921a7359552fbac20765da28e",
+  "diagnostic_root": "E:\\AI\\vric\\gsm-ride-hailing\\.cache\\week2-ci-comparison-dml-20261011",
+  "source_artifact_sha256": {
+    "protocol.json": "cb77d5b0b1d9b44dc924db5524edaee15eae8b6aaca02927fe422537b2880ab9",
+    "RCT_SYN-42001-dml-draws.parquet": "82edb757d8975e15f61bb61d67f65d224f82d0512583d3b5255a958400b13087",
+    "RCT_SYN-42001-dml-metrics.parquet": "9c20d9b1b7b224891fe91c27fb54b4e447a1de21c0f71f79b6af83f7a2c94063",
+    "RCT_SYN-42001-dml.json": "bcf26f328b131622e9cefcb8bd3307cb7b88ec78582a295940b8c9c974d77920",
+    "runner_source.py": "d727df6bc81b0643133bb0eb3bdf50c36b2b85c37f6df61b05881079199b2cbe",
+    "seed_metrics.parquet": "9c20d9b1b7b224891fe91c27fb54b4e447a1de21c0f71f79b6af83f7a2c94063",
+    "summary.csv": "2b14d47220d26cdb587b8de8c708275083326d4d731f05b7705cc4901516f1d7",
+    "source_context/context_templates.json": "3cf01f3e868d9050e7062b1f937f22426d86c89ee8be4d9de9df1a358c6f79d9",
+    "source_context/context_templates.parquet": "7137136cd0687ab6c60c382576fad6568d1587ccb9953e575b57c19945531ccf",
+    "status.json": "8d6e0440af8ed462d80412fac13584229d557af756029ecab1d372e79172a35e"
+  },
+  "source_config": {
+    "project": {
+      "name": "tlc-reporting",
+      "context_mode": "tlc"
+    },
+    "source": {
+      "trip_url": "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2024-01.parquet",
+      "zone_url": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+      "start": "2024-01-01",
+      "end": "2024-02-01",
+      "train_end": "2024-01-21",
+      "validation_end": "2024-01-26",
+      "dashboard_end": "2024-02-01",
+      "zones": [
+        161,
+        162,
+        163,
+        164,
+        170
+      ],
+      "platforms": [
+        "HV0003",
+        "HV0005"
+      ],
+      "slot_minutes": 30,
+      "assumed_timezone": "America/New_York",
+      "min_group_count": 30,
+      "duration_difference_warning_seconds": 60,
+      "download_timeout_seconds": 60,
+      "download_retries": 3,
+      "max_download_bytes": 1000000000,
+      "duckdb_memory_limit": "4GB",
+      "threads": 4
+    },
+    "simulation": {
+      "seed": 42,
+      "dgp": "RCT_SYN",
+      "slot_minutes": 30,
+      "sessions_per_block": 50
+    },
+    "model": {
+      "estimators": [
+        "naive_ols",
+        "adjusted_ols",
+        "dml"
+      ],
+      "scenario_estimator": "dml",
+      "folds": 5,
+      "n_trees": 50,
+      "max_depth": 6,
+      "min_samples_leaf": 20,
+      "min_price_cell_count": 20,
+      "max_condition_number": 1000.0,
+      "elasticity_min_probability": 0.01
+    },
+    "evaluation": {
+      "seeds": 100,
+      "dgps": [
+        "RCT_SYN",
+        "OBSERVED_CONFOUNDING",
+        "HIDDEN_CONFOUNDING",
+        "NULL_EFFECT",
+        "COLLINEAR_PRICE"
+      ],
+      "bootstrap_draws": 199,
+      "reporting_min_draws": 199,
+      "max_failure_fraction": 0.05,
+      "interval_level": 0.95,
+      "theta_rmse_target": 0.1,
+      "probability_rmse_target": 0.02
+    },
+    "scenario": {
+      "delta_price_x": 0.1,
+      "delta_price_y": 0.0,
+      "n_sessions": 10000,
+      "target_context_set": "all"
+    }
+  },
+  "environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0",
+      "simpy": "4.1.2"
+    },
+    "git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "source_code_sha256": "1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6",
+    "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "script_sha256": "9a94fd2bd5bf07c677a6c4d169761060bd778e0ad401a40d1b7ca2fecbf2a9e3",
+  "interval_methods": [
+    "percentile",
+    "basic",
+    "bca"
+  ],
+  "interval_level": 0.95,
+  "seeds": [
+    42001
+  ],
+  "dgps": [
+    "RCT_SYN"
+  ],
+  "estimators": [
+    "dml"
+  ],
+  "bootstrap_draws": 199,
+  "original_training_days_per_job": 20,
+  "maximum_point_refits": 1,
+  "maximum_jackknife_refits": 20,
+  "jackknife_unit": "delete one original training day; refit every learned component",
+  "jackknife_seed": "original dataset seed; DML folds rebuilt on remaining original days",
+  "bca_tail_guard": "adjusted probabilities within [1/(B+1), B/(B+1)]; never clipped",
+  "paired_unit": "same seed, DGP, estimator and coefficient; same saved bootstrap draws",
+  "scope": "individual theta intervals only; no elasticity or scenario candidate intervals",
+  "native_threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1"
+  },
+  "protocol_hash": "0acd68269859546d57761fab8268dd8c83d8e5530b730400fc23688041ddf9ed"
+}

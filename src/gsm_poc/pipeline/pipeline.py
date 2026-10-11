@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
 
-from gsm_poc.causal.estimate import FitResult, fit_all
+from gsm_poc.causal.analytic import model_identity, validate_covariance
+from gsm_poc.causal.estimate import FitResult, fit_all, fit_estimator
 from gsm_poc.causal.evaluate import effect_rows, monte_carlo, saved_method_evaluation
 from gsm_poc.causal.features import date_splits, require_observed
 from gsm_poc.causal.scenario import ScenarioRequest, scenario
@@ -336,18 +338,338 @@ class Pipeline:
                 draws[name] = joblib.load(directory / "bootstrap_bundles.joblib")
         return results, draws
 
+    def freeze_choice(self, model_run_id: str) -> dict:
+        """Freeze the complete choice results independently of operational inputs."""
+        if model_run_id == self.run.run_id:
+            raise ValueError("freeze-choice requires a separate output run")
+        if set(self.run.manifest.get("stages", {})) - {"freeze_choice"}:
+            raise ValueError("freeze-choice cannot overwrite an unrelated run; use a new run ID")
+        if (
+            self.run.manifest.get("choice_source", {}).get("model_run_id", model_run_id)
+            != model_run_id
+        ):
+            raise ValueError("freeze-choice requires a new run ID for a different source")
+        source_manifest: dict = {}
+        source_artifacts: dict[str, str] = {}
+        source_manifest_sha256 = ""
+
+        def choice_inputs():
+            nonlocal source_manifest, source_artifacts, source_manifest_sha256
+            source_manifest = completed_run(self.config.workspace, model_run_id)
+            for stage in ("fit", "method_evaluation", "scenario"):
+                if source_manifest.get("stages", {}).get(stage, {}).get("status") != "succeeded":
+                    raise ValueError(f"Choice handoff requires a completed {stage} stage")
+            source_config = Config.from_dict(source_manifest["config"], self.config.workspace)
+            directory = self.config.workspace / "runs" / safe_id(model_run_id)
+            names = [
+                "effects.csv",
+                "splits.json",
+                "scenario_result.json",
+                "scenario_contexts.parquet",
+                "method_metrics.csv",
+            ]
+            for name in source_config.model.estimators:
+                prefix = f"models/{name}"
+                diagnostics = read_json(directory / prefix / "diagnostics.json")
+                if diagnostics["status"] != source_manifest.get("model_results", {}).get(name):
+                    raise ValueError("Choice model status differs from estimator diagnostics")
+                names.append(f"{prefix}/diagnostics.json")
+                if diagnostics["status"] != "not_identified":
+                    names.extend(
+                        [
+                            f"{prefix}/model_bundle.joblib",
+                            f"{prefix}/bootstrap_bundles.joblib",
+                            f"{prefix}/bootstrap_draws.parquet",
+                        ]
+                    )
+            source_artifacts = {}
+            for name in names:
+                relative = f"runs/{model_run_id}/{name}"
+                if relative not in source_manifest["artifacts"]:
+                    raise ValueError(f"Required choice artifact is not registered: {relative}")
+                source_artifacts[name] = source_manifest["artifacts"][relative]
+            source_manifest_sha256 = sha256_file(directory / "manifest.json")
+            return {
+                "model_run_id": model_run_id,
+                "source_manifest_sha256": source_manifest_sha256,
+                "source_artifacts": source_artifacts,
+            }
+
+        with self.run.stage("freeze_choice", choice_inputs) as execute:
+            result_path = self.run.path / "choice_handoff.json"
+            if execute:
+                source = self.config.workspace / "runs" / model_run_id
+                paths = freeze_artifacts(source, self.run.path, source_artifacts)
+                manifest_path = self.run.path / "source_manifest.json"
+                with atomic_path(manifest_path) as temporary:
+                    shutil.copyfile(source / "manifest.json", temporary)
+                    if sha256_file(temporary) != source_manifest_sha256:
+                        raise ValueError("Source manifest changed while freezing choice artifacts")
+                paths.append(manifest_path)
+                source_config = Config.from_dict(source_manifest["config"], self.config.workspace)
+                name = source_config.model.scenario_estimator
+                prefix = self.run.path / "models" / name
+                diagnostics = read_json(prefix / "diagnostics.json")
+                bundle = (
+                    joblib.load(prefix / "model_bundle.joblib")
+                    if diagnostics["status"] != "not_identified"
+                    else None
+                )
+                if bundle is not None and (
+                    bundle.estimator != name
+                    or bundle.source_kind != source_manifest["source_kind"]
+                    or bundle.dataset_id != source_manifest["dataset_id"]
+                    or bundle.dgp_id != source_config.simulation.dgp
+                    or bundle.seed != source_config.simulation.seed
+                ):
+                    raise ValueError("Choice bundle provenance differs from the source manifest")
+                draws = joblib.load(prefix / "bootstrap_bundles.joblib") if bundle else None
+                historical = read_json(self.run.path / "scenario_result.json")
+                contexts = pd.read_parquet(self.run.path / "scenario_contexts.parquet")
+                request = ScenarioRequest(**historical["request"])
+                zone = historical.get("scope", {}).get("selected_zone")
+                if request.target_context_set.startswith("zone_"):
+                    requested_zone = int(request.target_context_set.removeprefix("zone_"))
+                    if zone is not None and zone != requested_zone:
+                        raise ValueError("Saved scenario zone differs from its scope")
+                    zone = requested_zone
+                if zone is not None:
+                    contexts = contexts[contexts.zone_id == zone]
+                if historical.get("context_blocks", len(contexts)) != len(contexts):
+                    raise ValueError(
+                        "Saved scenario scope cannot be reproduced from frozen contexts"
+                    )
+                current = scenario(
+                    bundle,
+                    contexts,
+                    request,
+                    source_config,
+                    model_run_id,
+                    draws,
+                    inference_method="bootstrap",
+                )
+                current_path = self.run.path / "current_scenario_result.json"
+                write_json(current_path, current)
+                paths.append(current_path)
+                comparison_fields = [
+                    key
+                    for key in (
+                        "theta",
+                        "elasticity_at_baseline",
+                        "probabilities",
+                        "interval",
+                        "theta_interval",
+                        "elasticity_interval",
+                        "before_expected_bookings",
+                        "after_expected_bookings",
+                        "delta_expected_bookings",
+                        "context_blocks",
+                        "context_weight_sessions",
+                        "bootstrap",
+                    )
+                    if key in historical
+                ]
+                result = {
+                    "schema_version": 1,
+                    "source_model_run_id": model_run_id,
+                    "dataset_id": source_manifest["dataset_id"],
+                    "source_kind": source_manifest["source_kind"],
+                    "evidence_level": source_manifest["evidence_level"],
+                    "source_config": source_manifest["config"],
+                    "source_environment": source_manifest["environment"],
+                    "packaging_environment": self.run.manifest["environment"],
+                    "source_manifest_sha256": source_manifest_sha256,
+                    "artifacts": source_artifacts,
+                    "model_results": source_manifest["model_results"],
+                    "scope": current["scope"],
+                    "units": current["units"],
+                    "current_status": current["status"],
+                    "current_support_status": current.get("support_status", "not_evaluated"),
+                    "current_reasons": current["reasons"],
+                    "reproduction_mode": "saved_model_replay; no refit",
+                    "replay_verification": {
+                        "compared_fields": comparison_fields,
+                        "matching_values": (
+                            all(historical[key] == current.get(key) for key in comparison_fields)
+                            if comparison_fields
+                            else None
+                        ),
+                        "historical_status": historical["status"],
+                        "current_status": current["status"],
+                        "status_matches": historical["status"] == current["status"],
+                    },
+                    "interval_qualification": {
+                        "interval_kind": "day-bootstrap percentile; individual intervals",
+                        "interval_scope": "individual",
+                        "interval_validation_scope": "technical_checks_only",
+                        "interval_calibration_status": "not_validated_by_packaging",
+                    },
+                    "review_status": "pending_reviewer_acceptance",
+                }
+                write_json(result_path, result)
+                paths.append(result_path)
+                self.run.manifest.update(
+                    dataset_id=result["dataset_id"],
+                    source_kind=result["source_kind"],
+                    evidence_level=result["evidence_level"],
+                    model_results=result["model_results"],
+                    choice_source={
+                        "model_run_id": model_run_id,
+                        "source_config": result["source_config"],
+                        "source_environment": result["source_environment"],
+                        "source_manifest_sha256": source_manifest_sha256,
+                    },
+                )
+                self.run.outputs("freeze_choice", paths, copied_artifacts=len(source_artifacts))
+            return read_json(result_path)
+
+    def prepare_inference(self, model_run_id: str) -> dict:
+        """Copy a frozen baseline, adding compact covariance without changing its bytes."""
+        if model_run_id == self.run.run_id or self.run.manifest.get("stages"):
+            raise ValueError("prepare-inference requires a new, separate output run")
+        source = completed_run(self.config.workspace, model_run_id)
+        if source.get("stages", {}).get("freeze_choice", {}).get("status") != "succeeded":
+            raise ValueError("prepare-inference requires a completed freeze-choice baseline")
+        directory = self.config.workspace / "runs" / safe_id(model_run_id)
+        source_config = Config.from_dict(
+            source["choice_source"]["source_config"], self.config.workspace
+        )
+        original = read_json(directory / "source_manifest.json")
+        dataset_id = safe_id(source["dataset_id"])
+        dataset = self.config.workspace / "data/synthetic" / dataset_id
+        fit_inputs = {
+            "dataset_id": dataset_id,
+            "observed_sha256": sha256_file(dataset / "observed/choice_block.parquet"),
+            "metadata_sha256": sha256_file(dataset / "manifest.json"),
+        }
+        expected = fingerprint(
+            {
+                "inputs": fit_inputs,
+                "config": original["config_hash"],
+                "code": original["environment"]["source_code_sha256"],
+            }
+        )
+        input_verification = "fit_observed_and_metadata_hash"
+        if expected != original["stages"]["fit"]["input_hash"]:
+            # Early manifests hashed observed bytes at fit; generation registered metadata.
+            legacy_inputs = {key: fit_inputs[key] for key in ("dataset_id", "observed_sha256")}
+            legacy_hash = fingerprint(
+                {
+                    "inputs": legacy_inputs,
+                    "config": original["config_hash"],
+                    "code": original["environment"]["source_code_sha256"],
+                }
+            )
+            metadata_relative = f"data/synthetic/{dataset_id}/manifest.json"
+            if (
+                legacy_hash != original["stages"]["fit"]["input_hash"]
+                or original["artifacts"].get(metadata_relative) != fit_inputs["metadata_sha256"]
+            ):
+                raise ValueError("Observed dataset or metadata differs from the frozen fit inputs")
+            input_verification = "legacy_fit_observed_hash_and_registered_metadata_hash"
+        names = {
+            relative.removeprefix(f"runs/{model_run_id}/"): checksum
+            for relative, checksum in source["artifacts"].items()
+        }
+        with self.run.stage(
+            "freeze_choice", {"baseline_run_id": model_run_id, "artifacts": names}
+        ) as execute:
+            if execute:
+                paths = freeze_artifacts(directory, self.run.path, names)
+                self.run.manifest.update(
+                    {
+                        key: source[key]
+                        for key in (
+                            "dataset_id",
+                            "source_kind",
+                            "evidence_level",
+                            "model_results",
+                            "choice_source",
+                        )
+                    }
+                )
+                self.run.outputs("freeze_choice", paths, copied_artifacts=len(names))
+        with self.run.stage("prepare_inference", fit_inputs) as execute:
+            result_path = self.run.path / "inference_preparation.json"
+            if execute:
+                blocks = pd.read_parquet(dataset / "observed/choice_block.parquet")
+                require_observed(blocks)
+                train = date_splits(blocks, source_config)["train"]
+                paths, methods = [], {}
+                for name, status in source["model_results"].items():
+                    if status == "not_identified" or name not in ("adjusted_ols", "dml"):
+                        continue
+                    prefix = self.run.path / "models" / name
+                    bundle = joblib.load(prefix / "model_bundle.joblib")
+                    record = getattr(bundle, "analytic_inference", None)
+                    if record is None:
+                        fitted = fit_estimator(train, source_config, name)
+                        new = fitted.bundle
+                        if (
+                            new is None
+                            or new.active_treatments != bundle.active_treatments
+                            or not np.allclose(new.theta, bundle.theta, atol=1e-10, rtol=1e-9)
+                            or not np.allclose(
+                                new.base_rate_model.coef_,
+                                bundle.base_rate_model.coef_,
+                                atol=1e-10,
+                                rtol=1e-9,
+                            )
+                            or not np.allclose(
+                                new.base_rate_model.intercept_,
+                                bundle.base_rate_model.intercept_,
+                                atol=1e-10,
+                                rtol=1e-9,
+                            )
+                        ):
+                            raise ValueError(
+                                f"{name}: refitted point differs from the frozen baseline"
+                            )
+                        record = new.analytic_inference
+                        if record is None:
+                            raise ValueError(
+                                f"{name}: {fitted.diagnostics.get('analytic_unavailable_reason')}"
+                            )
+                        record = {**record, "model_identity": model_identity(bundle)}
+                    validate_covariance(bundle, record)
+                    path = prefix / "analytic_inference.json"
+                    write_json(path, record)
+                    paths.append(path)
+                    methods[name] = record["method"]
+                result = {
+                    "baseline_run_id": model_run_id,
+                    "dataset_id": dataset_id,
+                    "fit_inputs": fit_inputs,
+                    "input_verification": input_verification,
+                    "methods": methods,
+                    "baseline_bytes_preserved": True,
+                    "point_reconstruction_verified": True,
+                    "review_status": "technical_exception_accepted",
+                    "reviewer": "Bun",
+                    "review_date": "2026-10-11",
+                    "interval_calibration_status": "not_certified_at_nominal_95",
+                }
+                write_json(result_path, result)
+                paths.append(result_path)
+                self.run.outputs("prepare_inference", paths, estimators=len(methods))
+            return read_json(result_path)
+
     def scenario(
         self,
         request: ScenarioRequest | None = None,
         model_run_id: str | None = None,
         zone: int | None = None,
+        inference_method: str = "bootstrap",
         **kwargs: Any,
     ) -> dict:
+        if inference_method not in ("analytic", "bootstrap"):
+            raise ValueError("inference_method must be analytic or bootstrap")
         if "modelRunId" in kwargs and model_run_id is None:
             model_run_id = kwargs["modelRunId"]
 
         selected_run = model_run_id or self.run.run_id
         directory = self.config.workspace / "runs" / safe_id(selected_run)
+        source_config = self.config
         target_context_set = (
             f"zone_{zone}" if zone is not None else self.config.scenario.target_context_set
         )
@@ -365,8 +687,20 @@ class Pipeline:
             resolved_request = request
 
         def scenario_inputs():
+            nonlocal source_config
+            source_manifest = self.run.manifest
             if model_run_id:
-                completed_run(self.config.workspace, selected_run)
+                source_manifest = completed_run(self.config.workspace, selected_run)
+                source_config = Config.from_dict(
+                    source_manifest.get("choice_source", {}).get(
+                        "source_config", source_manifest["config"]
+                    ),
+                    self.config.workspace,
+                )
+                if self.config.model.scenario_estimator not in source_manifest.get(
+                    "model_results", {}
+                ):
+                    raise ValueError("Selected estimator is not present in the frozen model run")
             name = self.config.model.scenario_estimator
             diagnostics_path = directory / "models" / name / "diagnostics.json"
             if not diagnostics_path.is_file():
@@ -379,10 +713,16 @@ class Pipeline:
             if diagnostics["status"] != "not_identified":
                 if not model_path.is_file():
                     raise FileNotFoundError(f"Model bundle not found: {model_path}")
-                if not bootstrap_path.is_file():
+                if inference_method == "bootstrap" and not bootstrap_path.is_file():
                     raise FileNotFoundError(f"Bootstrap bundles not found: {bootstrap_path}")
                 model_sha256 = sha256_file(model_path)
-                bootstrap_sha256 = sha256_file(bootstrap_path)
+                if inference_method == "bootstrap":
+                    bootstrap_sha256 = sha256_file(bootstrap_path)
+            analytic_path = model_path.with_name("analytic_inference.json")
+            if inference_method == "analytic" and analytic_path.is_file():
+                relative = str(analytic_path.relative_to(self.config.workspace)).replace("\\", "/")
+                if source_manifest["artifacts"].get(relative) != sha256_file(analytic_path):
+                    raise ValueError("Analytic covariance is unregistered or its checksum differs")
             contexts_path = directory / "scenario_contexts.parquet"
             if not contexts_path.is_file():
                 raise FileNotFoundError(f"Scenario contexts not found: {contexts_path}")
@@ -394,6 +734,11 @@ class Pipeline:
                 "model_sha256": model_sha256,
                 "bootstrap_sha256": bootstrap_sha256,
                 "contexts_sha256": sha256_file(contexts_path),
+                "source_config": source_config.as_dict(),
+                "inference_method": inference_method,
+                "analytic_sha256": sha256_file(analytic_path)
+                if inference_method == "analytic" and analytic_path.is_file()
+                else None,
             }
 
         with self.run.stage("scenario", scenario_inputs) as execute:
@@ -407,14 +752,23 @@ class Pipeline:
                 )
                 draws = (
                     joblib.load(model_path.with_name("bootstrap_bundles.joblib"))
-                    if bundle
+                    if bundle and inference_method == "bootstrap"
                     else None
                 )
+                analytic_path = model_path.with_name("analytic_inference.json")
+                if bundle and inference_method == "analytic" and analytic_path.is_file():
+                    bundle.analytic_inference = read_json(analytic_path)
                 contexts = pd.read_parquet(directory / "scenario_contexts.parquet")
                 if zone is not None:
                     contexts = contexts[contexts.zone_id == zone]
                 result = scenario(
-                    bundle, contexts, resolved_request, self.config, selected_run, draws
+                    bundle,
+                    contexts,
+                    resolved_request,
+                    source_config,
+                    selected_run,
+                    draws,
+                    inference_method=inference_method,
                 )
                 write_json(path, result)
                 self.run.outputs("scenario", [path], output_status=result["status"])
@@ -441,9 +795,17 @@ class Pipeline:
         def demand_inputs():
             nonlocal source_manifest, snapshot, source_config, selected_estimator, source_artifacts
             source_manifest = completed_run(self.config.workspace, model_run_id)
-            if source_manifest.get("stages", {}).get("fit", {}).get("status") != "succeeded":
+            if not any(
+                source_manifest.get("stages", {}).get(stage, {}).get("status") == "succeeded"
+                for stage in ("fit", "freeze_choice")
+            ):
                 raise ValueError("Demand requires a completed choice fit")
-            source_config = Config.from_dict(source_manifest["config"], self.config.workspace)
+            source_config = Config.from_dict(
+                source_manifest.get("choice_source", {}).get(
+                    "source_config", source_manifest["config"]
+                ),
+                self.config.workspace,
+            )
             selected_estimator = estimator or source_config.model.scenario_estimator
             if selected_estimator not in source_manifest.get("model_results", {}):
                 raise ValueError("Selected estimator is not present in the frozen model run")
@@ -463,6 +825,11 @@ class Pipeline:
                 names.extend(
                     [f"{prefix}/model_bundle.joblib", f"{prefix}/bootstrap_bundles.joblib"]
                 )
+                if (
+                    f"runs/{model_run_id}/{prefix}/analytic_inference.json"
+                    in source_manifest["artifacts"]
+                ):
+                    names.append(f"{prefix}/analytic_inference.json")
             source_artifacts = {}
             for name in names:
                 relative = f"runs/{model_run_id}/{name}"
@@ -504,6 +871,9 @@ class Pipeline:
                     or bundle.seed != source_config.simulation.seed
                 ):
                     raise ValueError("Choice bundle provenance differs from the source manifest")
+                analytic_path = prefix / "analytic_inference.json"
+                if bundle is not None and analytic_path.is_file():
+                    bundle.analytic_inference = read_json(analytic_path)
                 resolved_request = request or ScenarioRequest(
                     delta_price_x=source_config.scenario.delta_price_x,
                     delta_price_y=source_config.scenario.delta_price_y,

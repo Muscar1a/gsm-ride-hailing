@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 from pathlib import Path
 
 import joblib
@@ -38,8 +39,10 @@ def artifact(workspace: Path, manifest: dict, relative: str) -> pd.DataFrame:
 
 
 def load_model(
-    workspace: Path, manifest: dict, estimator: str
+    workspace: Path, manifest: dict, estimator: str, inference_method: str = "analytic"
 ) -> tuple[ModelBundle | None, BootstrapResult | None]:
+    if inference_method not in ("analytic", "bootstrap"):
+        raise ValueError("inference_method must be analytic or bootstrap")
     prefix = f"runs/{manifest['run_id']}/models/{estimator}"
     diagnostic = read_json(workspace / f"{prefix}/diagnostics.json")
     if diagnostic["status"] == "not_identified":
@@ -48,10 +51,16 @@ def load_model(
         str(workspace / f"{prefix}/model_bundle.joblib"),
         manifest["artifacts"][f"{prefix}/model_bundle.joblib"],
     )
-    draws = read_bundle(
-        str(workspace / f"{prefix}/bootstrap_bundles.joblib"),
-        manifest["artifacts"][f"{prefix}/bootstrap_bundles.joblib"],
-    )
+    draws = None
+    if inference_method == "bootstrap":
+        draws = read_bundle(
+            str(workspace / f"{prefix}/bootstrap_bundles.joblib"),
+            manifest["artifacts"][f"{prefix}/bootstrap_bundles.joblib"],
+        )
+    elif f"{prefix}/analytic_inference.json" in manifest["artifacts"]:
+        bundle = dataclasses.replace(
+            bundle, analytic_inference=read_json(workspace / f"{prefix}/analytic_inference.json")
+        )
     return bundle, draws
 
 
@@ -73,15 +82,20 @@ def main() -> None:
     st.title("GSM Causal Marketplace")
     st.caption("First two weeks · controlled PoC")
     available = []
-    run_records = {}
+    run_configs = {}
     for path in sorted((workspace / "runs").glob("*/manifest.json"), reverse=True):
         try:
             record = read_json(path)
         except (ValueError, OSError):
             continue
-        if record.get("status") == "succeeded" and "fit" in record.get("stages", {}):
+        if record.get("status") == "succeeded" and any(
+            record.get("stages", {}).get(stage, {}).get("status") == "succeeded"
+            for stage in ("fit", "freeze_choice")
+        ):
             available.append(record["run_id"])
-            run_records[record["run_id"]] = record
+            run_configs[record["run_id"]] = record.get("choice_source", {}).get(
+                "source_config", record["config"]
+            )
     if not available:
         st.info(
             "No completed model run yet. Run the offline demo command in the README, "
@@ -92,23 +106,19 @@ def main() -> None:
         st.subheader("Completed run")
         initial = args.run_id or st.query_params.get("run")
         initial = initial if initial in available else available[0]
-        initial_simulation = run_records[initial]["config"]["simulation"]
-        dgps = sorted({record["config"]["simulation"]["dgp"] for record in run_records.values()})
+        initial_simulation = run_configs[initial]["simulation"]
+        dgps = sorted({config["simulation"]["dgp"] for config in run_configs.values()})
         selected_dgp = st.selectbox("DGP", dgps, index=dgps.index(initial_simulation["dgp"]))
         matching = [
-            run
-            for run in available
-            if run_records[run]["config"]["simulation"]["dgp"] == selected_dgp
+            run for run in available if run_configs[run]["simulation"]["dgp"] == selected_dgp
         ]
-        seeds = sorted({run_records[run]["config"]["simulation"]["seed"] for run in matching})
+        seeds = sorted({run_configs[run]["simulation"]["seed"] for run in matching})
         seed_index = (
             seeds.index(initial_simulation["seed"]) if initial_simulation["seed"] in seeds else 0
         )
         selected_seed = st.selectbox("Seed", seeds, index=seed_index)
         matching = [
-            run
-            for run in matching
-            if run_records[run]["config"]["simulation"]["seed"] == selected_seed
+            run for run in matching if run_configs[run]["simulation"]["seed"] == selected_seed
         ]
         selected_run_id = st.selectbox(
             "Run ID",
@@ -118,15 +128,22 @@ def main() -> None:
         )
         st.query_params["run"] = selected_run_id
         manifest = checked_manifest(workspace, selected_run_id)
-        config = Config.from_dict(manifest["config"], workspace)
+        choice_source = manifest.get("choice_source", {})
+        frozen_config = choice_source.get("source_config", manifest["config"])
+        source_environment = choice_source.get("source_environment", manifest["environment"])
+        config = Config.from_dict(frozen_config, workspace)
         st.caption(f"Run {manifest['run_id']} · created {manifest['created_at']}")
-        st.caption(f"Code hash {manifest['environment']['source_code_sha256'][:12]}")
+        st.caption(f"Code hash {source_environment['source_code_sha256'][:12]}")
         with st.expander("Frozen configuration"):
-            st.json(manifest["config"])
+            st.json(frozen_config)
         with st.expander("Stages"):
             st.json(manifest["stages"])
-        with st.expander("Environment and versions"):
-            st.json(manifest["environment"])
+        with st.expander("Model environment and versions"):
+            st.json(source_environment)
+        if choice_source:
+            st.caption(f"Source model run {choice_source['model_run_id']}")
+            with st.expander("Packaging environment and versions"):
+                st.json(manifest["environment"])
     tabs = st.tabs(["Observed", "Method evaluation", "Price scenario"])
     with tabs[0]:
         observed_tab(workspace, manifest, artifact)

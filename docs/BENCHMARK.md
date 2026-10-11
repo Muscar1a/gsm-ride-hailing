@@ -204,6 +204,159 @@ This fresh-seed run completed as `20261003T135730-1ae94396`: all 100 seed jobs
 finished with no failed jobs. Its measured results and limitations are recorded
 in [VALIDATION.md](submission/days/20261003/validation.md#fresh-seed-point-accuracy-benchmark).
 
+### Development interval-method comparison
+
+The standalone `scripts.compare_week2_intervals` compares the existing individual
+95% percentile intervals with basic and BCa candidates. Production fitting,
+configuration, support gates and interval selection remain unchanged. Candidate
+definitions are frozen before the comparison; the development study was frozen
+before generation in its
+[study plan](submission/days/20261011/results/interval_comparison/development_plan.json).
+
+The fresh adjusted-OLS cohort uses seeds 42001–42020 for RCT_SYN and NULL_EFFECT,
+199 original-day bootstrap draws and the same fixed TLC-derived context. A
+separate DML seed 42001 is a bounded execution probe. All candidates share each
+seed's observed point and bootstrap draws; BCa additionally uses 20
+delete-one-original-day fits, refitting all learned components on the remaining
+19 days with the original seed and fold groups. Reconstruction must match the
+diagnostic point estimates before intervals are compared. Scope remains the
+four theta coefficient cells, with fixed quote counts and held-out contexts;
+these results cannot calibrate elasticity or scenario intervals by transfer.
+
+Report per method/cell coverage, null false positives, widths, tail misses,
+exact binomial uncertainty and expected/attempted/valid/failed/unavailable
+counts. Compare methods on paired common-valid seeds as well as their full
+attempted denominators; a missing interval is never a coverage success.
+BCa adjusted quantiles outside the saved draw resolution are unavailable rather
+than clipped or replaced by another method. Technical availability/stability
+and empirical calibration are separate results. Method formulas and the tail
+guard are in [IDENTIFICATION.md](IDENTIFICATION.md#development-interval-candidates),
+and reproduction is in [USAGE.md](USAGE.md#development-interval-method-comparison).
+
+This development comparison selects no automatic winner or production method.
+The 20 seeds give limited coverage precision, and a single DML seed cannot
+measure coverage. The 20 fixed calendar-day clusters in this semi-synthetic
+design are not a literal IID sample of GSM days. Freeze any selected method and
+acceptance criteria before an independent final evaluation with unused seeds;
+the October 7 historical final results remain immutable. Measured results are
+recorded separately in the
+[11/10 comparison evidence](submission/days/20261011/interval_method_comparison.md).
+
+### Development day-jackknife variance sensitivity
+
+The standalone `scripts.compare_week2_variance` reuses the completed comparison
+points and original-day jackknife fits to compare `day_jackknife_t` with
+percentile/basic/BCa. Its
+[frozen plan](submission/days/20261011/results/interval_variance/development_plan.json)
+defines the jackknife variance, original-point centering and Student-t reference
+with 19 degrees of freedom before postprocessing. There are no new fits or
+bootstrap draws, and no new independent seeds: the cohort remains 40 adjusted-OLS
+RCT/null jobs and one DML execution probe from the comparison above.
+
+Require all 20 distinct successful finite day omissions for each candidate;
+incomplete or degenerate variance is unavailable without dropping omissions or
+fallback. Preserve full attempted/available counts and paired comparisons.
+Report RMS jackknife SE versus between-seed SD on a matching valid cohort;
+the DML probe is insufficient for a between-seed SD. See the
+[formula and assumptions](IDENTIFICATION.md#development-day-jackknife-variance-sensitivity)
+and [reproduction command](USAGE.md#development-day-jackknife-variance-sensitivity).
+
+This is a variance sensitivity check for individual theta cells. The t reference,
+day dependence and DML fold changes require empirical assessment; saved calendar
+days are not asserted IID. It tunes no multipliers, selects no production winner
+and closes no final-calibration gate. Record results in the
+[variance evidence](submission/days/20261011/interval_variance_comparison.md),
+then freeze any selected method and criteria before independent final evaluation.
+
+### Fresh DML day-jackknife pilot
+
+The separate `scripts.pilot_week2_dml_variance` pilot evaluates the frozen
+`day_jackknife_t` candidate on fresh development seeds 43001–43005 for RCT_SYN
+and NULL_EFFECT. The
+[outer plan](submission/days/20261011/results/dml_variance_pilot/development_plan.json)
+preserves the existing context/model settings and caps compute at 20 estimator
+jobs / 420 fits, of which 210 are DML. Each shared seed is fitted with DML and
+adjusted OLS, including the original fit and 20 original-day omissions per
+estimator. There are no day-bootstrap draws. Measure one RCT seed first, then
+execute the frozen remaining cohort; the cost probe counts once in the cohort.
+
+Adjusted OLS is the cheap paired estimator baseline on the same generated data.
+Percentile/basic/BCa are not rerun here, so the old cohort is not a paired method
+comparison for these new seeds. Preserve attempted/available/failure counts,
+exact binomial uncertainty, common-valid estimator comparisons and matched-cohort
+RMS jackknife SE versus between-seed SD. Five seeds per DGP remain a pilot,
+especially for null false positives. Changing DML folds after a day omission and
+the fixed-calendar design retain the
+[variance assumptions](IDENTIFICATION.md#development-day-jackknife-variance-sensitivity).
+It selects no production default, tunes no variance multiplier and closes no
+final-calibration gate. Reproduction is in
+[USAGE](USAGE.md#fresh-dml-day-jackknife-pilot), with results in the
+[pilot evidence](submission/days/20261011/dml_variance_pilot.md).
+
+### Development score inference diagnosis
+
+The [frozen plan](submission/days/20261011/results/score_inference/development_plan.json)
+uses unused development seeds 44001–44100 for adjusted OLS and 44001–44020 for
+DML, each under RCT_SYN and NULL_EFFECT. It caps compute at 252 point fits:
+200 OLS, 40 DML, and 12 additional DML fits with 4/10 folds on three shared seeds.
+No bootstrap or delete-day refits are performed; the two DML cost-probe jobs are
+included in the 20-seed cohorts. Native threads are limited to one, with at most
+two concurrent processes. The separate independent assessment uses reserved
+45001–45100 under its own frozen protocol; the development study chooses no
+production winner.
+
+The point model, context, support threshold and nuisance settings remain fixed.
+OLS block HC3/t uses weighted-regression leverage and residual degrees of freedom.
+DML block inference uses its actual out-of-fold residuals and orthogonal-score
+Jacobian, with a normal reference. Both also receive a day-summed CR1/t19
+sensitivity interval, whose small-group validity is not assumed. Compare the same
+points under block/day covariance, and inspect bias, RMS SE versus empirical SD,
+coverage, null false positives, widths and complete failure denominators.
+
+Joint theta/baseline covariance propagates to four baseline elasticities and
+three fixed scenarios: +10% X, +10% Y, and +10% both, at 10,000 quote sessions.
+Scenario contrasts are linear; elasticity ratios use a first-order delta method.
+All 38 outputs have individual intervals. Exact binomial flags are exploratory
+per output, without simultaneous coverage or automatic acceptance. Support
+status is retained separately, so statistical coverage cannot authorize an
+unsupported all-context policy. The fold-sensitivity cohort is never pooled with
+the main coverage cohorts. See [method assumptions](IDENTIFICATION.md#development-score-inference)
+and [execution/results](submission/days/20261011/score_inference_diagnostic.md).
+
+### Conditional variance audit and independent inference assessment
+
+`scripts.diagnose_week2_oracle_variance` reconstructs the existing 200 OLS fits
+algebraically, without estimator refits. Conditional on the frozen contexts and
+assigned prices, each block's X/Y rate covariance is
+`(diag(p_xy) - p_xy p_xy') / n_sessions`. The observed OLS linear map transforms
+this covariance into joint theta/baseline covariance. Oracle probabilities are
+evaluator references only, never an input to fitting or reported inference.
+The joint linear covariance is exact for this DGP; elasticity transforms remain
+delta-method approximations. The audit preserves old evidence and uses no new
+independent seeds.
+
+The [independent frozen plan](submission/days/20261011/results/final_inference/frozen_plan.json)
+fixes 100 previously unused seeds per RCT/null DGP, paired OLS/DML datasets,
+OLS block HC3/t and DML block orthogonal-score/normal intervals. The cap is
+400 point fits, no bootstrap/jackknife refits, retries or cohort expansion,
+one native thread and at most two experiment processes. Model settings,
+probability checks, full fixed test population and support thresholds stay fixed.
+
+Report all 38 individual outputs and every attempted/unavailable denominator.
+Baseline-before probabilities repeated by three scenarios count once in the
+assessment family, while every original row remains in evidence. The frozen
+screen uses exact one-sided binomial tests for coverage below .95 and NULL
+false positives above .05, followed by Holm adjustment in one family across
+both estimators/DGPs. This controls the diagnostic test family; it does not
+make the underlying intervals simultaneous. Also report unadjusted exploratory
+flags. Absence of rejection is not certification of nominal 95% coverage or
+permission to use an unsupported policy. No automatic method promotion or
+accepted exception follows automatically. Bun subsequently accepted the technical
+exception and selected hybrid integration on 11/10/2026; see the
+[decision record](submission/days/20261011/week2_hybrid_acceptance.md).
+Results and remaining gates are in the
+[closeout report](submission/days/20261011/week2_inference_closeout.md).
+
 ## 2. Controlled pricing-policy benchmark
 
 The initial implementation uses `configs/policy_development.toml`: independent

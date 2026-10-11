@@ -209,6 +209,7 @@ def prepare_demand_plan(
         dataclasses.replace(request, n_sessions=1),
         config,
         model_run_id,
+        inference_method="bootstrap",
     )
     status = gate.get("support_status", gate["status"])
     if gate["status"] not in ("ok", "interval_unstable", "insufficient_support"):

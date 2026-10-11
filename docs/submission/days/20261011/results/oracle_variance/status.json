@@ -1,0 +1,15 @@
+{
+  "status": "completed",
+  "plan_hash": "3d46341d6106a20b000d63975cae9fadd5dcb43a0fdd4718cebfb6ee7417da53",
+  "regenerated_datasets": 200,
+  "model_fits": 0,
+  "maximum_point_difference": 5.3179682879545e-14,
+  "maximum_conditional_bias": 5.67323965583455e-14,
+  "artifacts": {
+    "executed_runner.py": "14957e383e9e91dedf7a7af84d51d9739885633d0f38fec227c5330e0e6030db",
+    "jobs.json": "a101c77a651e44305ceeb3e30ba8eda9984cf01e48e524cff9d4b89c393e923e",
+    "protocol.json": "9f322e3995eeb822460f147674d7f024c1b6dfad99876e289d8c6ed108ace885",
+    "seed_variances.parquet": "34619e04d24a709eb2ea28382f824a6d65041b79fbff71ec9fe48a226631d161",
+    "summary.csv": "b14b8e9398bf787499d54c553d70168de2c1b34085b78bf6a58ebc49527d4ce8"
+  }
+}

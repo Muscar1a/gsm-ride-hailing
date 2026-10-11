@@ -1,0 +1,18 @@
+{
+  "status": "completed",
+  "completed_at": "2026-10-10T20:29:08.998305+00:00",
+  "protocol_hash": "c6c0a9db81e937d11d8b08010a57aca5f036a5ab3769e21c8a2e9a2f34375879",
+  "completed_estimator_jobs": 1,
+  "duration_seconds": 11.19588250000379,
+  "interpretation": "development pilot; no method change or empirical calibration acceptance",
+  "artifacts": {
+    "protocol.json": "4bd29431af89f4bc3efcb370b62159bba779f2618ca73177bdeb69d7233db1a2",
+    "RCT_SYN-41001-adjusted_ols-draws.parquet": "e51e9c52a62d4429f58c6ce579e1099cb79141305f65c2b4d3d8e507fa37a46d",
+    "RCT_SYN-41001-adjusted_ols-metrics.parquet": "fc4259947ec5ebe1f9b7d77dab09c9a5c4df5775aa2041d35d770062a2d855cc",
+    "RCT_SYN-41001-adjusted_ols.json": "d04a9187264bc38970daed7a1947232d4f2533a7d6589dbcc3d9a7764cac344e",
+    "seed_metrics.parquet": "fc4259947ec5ebe1f9b7d77dab09c9a5c4df5775aa2041d35d770062a2d855cc",
+    "summary.csv": "faa87b54b428afa3f56f8d063bb2d21146a5c0e4153acb8462bae75dcc0151b7",
+    "source_context/context_templates.json": "3cf01f3e868d9050e7062b1f937f22426d86c89ee8be4d9de9df1a358c6f79d9",
+    "source_context/context_templates.parquet": "7137136cd0687ab6c60c382576fad6568d1587ccb9953e575b57c19945531ccf"
+  }
+}

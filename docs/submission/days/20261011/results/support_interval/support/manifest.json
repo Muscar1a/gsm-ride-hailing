@@ -1,0 +1,176 @@
+{
+  "run_id": "week2-support-diagnostic-20261011-v3",
+  "created_at": "2026-10-10T20:29:33.877438+00:00",
+  "status": "succeeded",
+  "config": {
+    "project": {
+      "name": "tlc-development",
+      "context_mode": "tlc"
+    },
+    "source": {
+      "trip_url": "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2024-01.parquet",
+      "zone_url": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+      "start": "2024-01-01",
+      "end": "2024-02-01",
+      "train_end": "2024-01-21",
+      "validation_end": "2024-01-26",
+      "dashboard_end": "2024-01-08",
+      "zones": [
+        161,
+        162,
+        163,
+        164,
+        170
+      ],
+      "platforms": [
+        "HV0003",
+        "HV0005"
+      ],
+      "slot_minutes": 30,
+      "assumed_timezone": "America/New_York",
+      "min_group_count": 30,
+      "duration_difference_warning_seconds": 60,
+      "download_timeout_seconds": 60,
+      "download_retries": 3,
+      "max_download_bytes": 1000000000,
+      "duckdb_memory_limit": "4GB",
+      "threads": 4
+    },
+    "simulation": {
+      "seed": 42,
+      "dgp": "RCT_SYN",
+      "slot_minutes": 30,
+      "sessions_per_block": 50
+    },
+    "model": {
+      "estimators": [
+        "naive_ols",
+        "adjusted_ols",
+        "dml"
+      ],
+      "scenario_estimator": "dml",
+      "folds": 5,
+      "n_trees": 50,
+      "max_depth": 6,
+      "min_samples_leaf": 20,
+      "min_price_cell_count": 20,
+      "max_condition_number": 1000.0,
+      "elasticity_min_probability": 0.01
+    },
+    "evaluation": {
+      "seeds": 3,
+      "dgps": [
+        "RCT_SYN",
+        "OBSERVED_CONFOUNDING",
+        "NULL_EFFECT"
+      ],
+      "bootstrap_draws": 199,
+      "reporting_min_draws": 199,
+      "max_failure_fraction": 0.05,
+      "interval_level": 0.95,
+      "theta_rmse_target": 0.1,
+      "probability_rmse_target": 0.02
+    },
+    "scenario": {
+      "delta_price_x": 0.1,
+      "delta_price_y": 0.0,
+      "n_sessions": 10000,
+      "target_context_set": "all"
+    }
+  },
+  "config_hash": "eb8f0ec08d03551e9fdb5db6bfec752e8b4a07fbacb7b7e3519172894db5e3bb",
+  "environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0",
+      "simpy": "4.1.2"
+    },
+    "git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "source_code_sha256": "1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6",
+    "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "stages": {
+    "support_diagnostic": {
+      "status": "succeeded",
+      "started_at": "2026-10-10T20:29:33.879883+00:00",
+      "input_hash": "814d7a12bcc544d975b0f354d3af3fd0a66e93e2e7b4f3ff5626ea4288e2fa7a",
+      "outputs": {
+        "runs/week2-support-diagnostic-20261011-v3/candidate_scope.json": "4eccebbad94a5e2e50388cd3a26c87506e7f09ede9acb9eed74f41ad39080719",
+        "runs/week2-support-diagnostic-20261011-v3/training_support.csv": "e7363ad31ccffb104423c6f556712e5ca79751da932def0cfe92be9d428c9729",
+        "runs/week2-support-diagnostic-20261011-v3/scoped_contexts.parquet": "714298772a527d8b0ab91f5c447a482c5dab7a9f395e1db2ecb5babd9613b61c",
+        "runs/week2-support-diagnostic-20261011-v3/all_scenario_result.json": "d080a5954a037de7bcb6dfb45550e081a4a429320b1e3036c28fa866624f72dc",
+        "runs/week2-support-diagnostic-20261011-v3/scoped_scenario_result.json": "fb0282e0af41e30c2414b9e2a898cc242dc174114ea073c4015d47962bf5ac26",
+        "runs/week2-support-diagnostic-20261011-v3/support_diagnostic.json": "bdf06564744e89a4cffc5715dc432d4cfcd3b1aa2fcfe9193d49ccf00fe420ea"
+      },
+      "all_context_blocks": 1440,
+      "all_context_weight_sessions": 72000,
+      "retained_context_blocks": 972,
+      "retained_context_weight_sessions": 48600,
+      "excluded_context_blocks": 468,
+      "excluded_context_weight_sessions": 23400,
+      "unseen_training_group_context_blocks": 0,
+      "unseen_training_group_weight_sessions": 0,
+      "retained_session_fraction": 0.675,
+      "hypothetical_forecast_sessions": 10000,
+      "forecast_population": "fixed hypothetical quote sessions within retained scope",
+      "extrapolates_to_excluded_scope": false,
+      "context_coverage_by_weekend_peak": [
+        {
+          "is_weekend": 0,
+          "is_peak": 0,
+          "all_context_blocks": 680,
+          "all_context_weight_sessions": 34000,
+          "retained_context_blocks": 680,
+          "retained_context_weight_sessions": 34000
+        },
+        {
+          "is_weekend": 0,
+          "is_peak": 1,
+          "all_context_blocks": 280,
+          "all_context_weight_sessions": 14000,
+          "retained_context_blocks": 224,
+          "retained_context_weight_sessions": 11200
+        },
+        {
+          "is_weekend": 1,
+          "is_peak": 0,
+          "all_context_blocks": 340,
+          "all_context_weight_sessions": 17000,
+          "retained_context_blocks": 68,
+          "retained_context_weight_sessions": 3400
+        },
+        {
+          "is_weekend": 1,
+          "is_peak": 1,
+          "all_context_blocks": 140,
+          "all_context_weight_sessions": 7000,
+          "retained_context_blocks": 0,
+          "retained_context_weight_sessions": 0
+        }
+      ],
+      "duration_seconds": 2.6570344000065234,
+      "ended_at": "2026-10-10T20:29:36.536630+00:00"
+    }
+  },
+  "artifacts": {
+    "runs/week2-support-diagnostic-20261011-v3/candidate_scope.json": "4eccebbad94a5e2e50388cd3a26c87506e7f09ede9acb9eed74f41ad39080719",
+    "runs/week2-support-diagnostic-20261011-v3/training_support.csv": "e7363ad31ccffb104423c6f556712e5ca79751da932def0cfe92be9d428c9729",
+    "runs/week2-support-diagnostic-20261011-v3/scoped_contexts.parquet": "714298772a527d8b0ab91f5c447a482c5dab7a9f395e1db2ecb5babd9613b61c",
+    "runs/week2-support-diagnostic-20261011-v3/all_scenario_result.json": "d080a5954a037de7bcb6dfb45550e081a4a429320b1e3036c28fa866624f72dc",
+    "runs/week2-support-diagnostic-20261011-v3/scoped_scenario_result.json": "fb0282e0af41e30c2414b9e2a898cc242dc174114ea073c4015d47962bf5ac26",
+    "runs/week2-support-diagnostic-20261011-v3/support_diagnostic.json": "bdf06564744e89a4cffc5715dc432d4cfcd3b1aa2fcfe9193d49ccf00fe420ea"
+  },
+  "source_kind": "semi_synthetic",
+  "evidence_level": "C",
+  "dataset_id": "ds-5f26297a9194afda2d39",
+  "completed_at": "2026-10-10T20:29:36.536630+00:00"
+}

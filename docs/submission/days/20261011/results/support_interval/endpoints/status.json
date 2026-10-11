@@ -1,0 +1,25 @@
+{
+  "status": "completed",
+  "completed_at": "2026-10-10T20:22:36.232442+00:00",
+  "protocol_hash": "033760707b03f07d412f245f1c03d925aaf5fdb611f9962adc2705389e5399d9",
+  "completed_estimator_jobs": 3,
+  "duration_seconds": 206.728349099998,
+  "interpretation": "development pilot; no method change or empirical calibration acceptance",
+  "artifacts": {
+    "protocol.json": "a202922e5e127df6254ff8ccfcbb4f2819c5b9b8b4c50746fb1d9277c0a2a099",
+    "RCT_SYN-41001-adjusted_ols-draws.parquet": "29c3aea09c799aed04881c77b6a0e24d147986cc8538e9c80fcc0ceddb2fa1f9",
+    "RCT_SYN-41001-adjusted_ols-metrics.parquet": "35e4b70c2dbf2119f4a6224509db9be083666306bf0ae6d3468a02c021eae387",
+    "RCT_SYN-41001-adjusted_ols.json": "c3e31854fa9a7a098c96117fd65d73a49d86934555ced69f22b8dc8d20d3aa10",
+    "RCT_SYN-41002-adjusted_ols-draws.parquet": "bb9f61293b5fdc9f502c7d4aec92a9447d3ecf21fb87a14657350db0e3e19a9b",
+    "RCT_SYN-41002-adjusted_ols-metrics.parquet": "5aed17380b170859f4d84dde52234041602529cd1c374752daa56997cb3728e9",
+    "RCT_SYN-41002-adjusted_ols.json": "ac8efd05856898602ed84bc02e44b89d4a4e3947805f5e35231e9dc9405e7667",
+    "RCT_SYN-41003-adjusted_ols-draws.parquet": "d6476099b97b2837514af3717276899d7e66f82fd9f025da5600abd70b9b68c6",
+    "RCT_SYN-41003-adjusted_ols-metrics.parquet": "a4a7b970f182fe5faf75839d0289abf42f4562da72d0c090259625fdbaa21c98",
+    "RCT_SYN-41003-adjusted_ols.json": "7fa5ed92c0d4c0d95df16d17568cf91947ecb41f1cbd3dbe909593a3f635ecf3",
+    "runner_source.py": "575ee76add21f4d7ae4f93832543264ae0725fb79539053f56d882a3d3454365",
+    "seed_metrics.parquet": "c62b343e6ddf6c2f613e2090e917b8d797d3c95b89ed7159f61668da44c6ff0e",
+    "summary.csv": "b65617e5ea19c35dd6baf4d96a99e64702037fb3319e745b17fbf00f705d957e",
+    "source_context/context_templates.json": "3cf01f3e868d9050e7062b1f937f22426d86c89ee8be4d9de9df1a358c6f79d9",
+    "source_context/context_templates.parquet": "7137136cd0687ab6c60c382576fad6568d1587ccb9953e575b57c19945531ccf"
+  }
+}

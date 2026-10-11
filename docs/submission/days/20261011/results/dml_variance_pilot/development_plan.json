@@ -1,0 +1,208 @@
+{
+  "created_at_utc": "2026-10-11T02:12:49.409919+00:00",
+  "local_date": "2026-10-11",
+  "timezone": "Asia/Bangkok",
+  "purpose": "fresh-seed DML variance/viability development pilot with paired OLS reference; not final calibration",
+  "evidence_level": "C",
+  "seeds": [
+    43001,
+    43002,
+    43003,
+    43004,
+    43005
+  ],
+  "dgps": [
+    "RCT_SYN",
+    "NULL_EFFECT"
+  ],
+  "estimators": [
+    "adjusted_ols",
+    "dml"
+  ],
+  "interval_method": "day_jackknife_t",
+  "original_training_days": 20,
+  "degrees_of_freedom": 19,
+  "confidence_level": 0.95,
+  "variance_formula": "(G-1)/G * sum((theta_minus_g-mean(theta_minus_g))**2)",
+  "interval_formula": "original_full_point +/- t(df=G-1, 1-alpha/2) * sqrt(variance)",
+  "point_fitting": "singleton fit_all per estimator; preserve observed-only inputs, train split and validation probability gate",
+  "day_refitting": "full fit_estimator on each of 19 remaining original days using original seed; grouped folds rebuilt; no dropped failures",
+  "maximum_dataset_jobs": 10,
+  "maximum_estimator_jobs": 20,
+  "maximum_point_fits": 20,
+  "maximum_day_refits": 400,
+  "maximum_total_fits": 420,
+  "maximum_dml_fits": 210,
+  "actual_bootstrap_draws": 0,
+  "native_threads_per_process": 1,
+  "maximum_concurrent_processes": 2,
+  "probe_expansion_guard": "measure RCT43001 first; inspect before expanding if DML job exceeds 180 seconds or point/refits fail",
+  "schedule": [
+    {
+      "label": "rct_probe",
+      "seeds": [
+        43001
+      ],
+      "dgps": [
+        "RCT_SYN"
+      ],
+      "estimator_jobs": 2,
+      "maximum_fits": 42
+    },
+    {
+      "label": "rct_remainder",
+      "seeds": [
+        43002,
+        43003,
+        43004,
+        43005
+      ],
+      "dgps": [
+        "RCT_SYN"
+      ],
+      "estimator_jobs": 8,
+      "maximum_fits": 168
+    },
+    {
+      "label": "null_cohort",
+      "seeds": [
+        43001,
+        43002,
+        43003,
+        43004,
+        43005
+      ],
+      "dgps": [
+        "NULL_EFFECT"
+      ],
+      "estimator_jobs": 10,
+      "maximum_fits": 210
+    }
+  ],
+  "comparison": "full per-cell coverage/null false positives with exact binomial uncertainty, availability/failure denominators, bias/RMSE, matched-seed RMS jackknife SE versus point SD, paired DML/OLS differences and widths",
+  "independence": "fresh seeds checked unused in saved protocols/plans; combine only the three disjoint subsets of this frozen pilot; include probe regardless of result; no pooling with 41001/42001 cohorts or historical final",
+  "selection": "no multiplier tuning, threshold changes, production promotion or automatic winner; no claim of paired percentile/basic/BCa on these fresh seeds",
+  "source_comparison_root": ".cache\\week2-ci-methods-development-20261011",
+  "source_protocol_hash": "613edb77b36b4ca355a0d14a4d27191123ecb01e02375e7a1ab5bdcaa4b13083",
+  "source_protocol_sha256": "22360a661ddf92ccfbaf103c2e4ba61f95416d25c2d57df474aacc95190c1bb0",
+  "source_status_sha256": "7fded542ec6c2dc4ad49300fa793c8b89f10e7d1225152038ae6d1f7f654b3c4",
+  "source_config": {
+    "project": {
+      "name": "tlc-reporting",
+      "context_mode": "tlc"
+    },
+    "source": {
+      "trip_url": "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2024-01.parquet",
+      "zone_url": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+      "start": "2024-01-01",
+      "end": "2024-02-01",
+      "train_end": "2024-01-21",
+      "validation_end": "2024-01-26",
+      "dashboard_end": "2024-02-01",
+      "zones": [
+        161,
+        162,
+        163,
+        164,
+        170
+      ],
+      "platforms": [
+        "HV0003",
+        "HV0005"
+      ],
+      "slot_minutes": 30,
+      "assumed_timezone": "America/New_York",
+      "min_group_count": 30,
+      "duration_difference_warning_seconds": 60,
+      "download_timeout_seconds": 60,
+      "download_retries": 3,
+      "max_download_bytes": 1000000000,
+      "duckdb_memory_limit": "4GB",
+      "threads": 4
+    },
+    "simulation": {
+      "seed": 42,
+      "dgp": "RCT_SYN",
+      "slot_minutes": 30,
+      "sessions_per_block": 50
+    },
+    "model": {
+      "estimators": [
+        "naive_ols",
+        "adjusted_ols",
+        "dml"
+      ],
+      "scenario_estimator": "dml",
+      "folds": 5,
+      "n_trees": 50,
+      "max_depth": 6,
+      "min_samples_leaf": 20,
+      "min_price_cell_count": 20,
+      "max_condition_number": 1000.0,
+      "elasticity_min_probability": 0.01
+    },
+    "evaluation": {
+      "seeds": 100,
+      "dgps": [
+        "RCT_SYN",
+        "OBSERVED_CONFOUNDING",
+        "HIDDEN_CONFOUNDING",
+        "NULL_EFFECT",
+        "COLLINEAR_PRICE"
+      ],
+      "bootstrap_draws": 199,
+      "reporting_min_draws": 199,
+      "max_failure_fraction": 0.05,
+      "interval_level": 0.95,
+      "theta_rmse_target": 0.1,
+      "probability_rmse_target": 0.02
+    },
+    "scenario": {
+      "delta_price_x": 0.1,
+      "delta_price_y": 0.0,
+      "n_sessions": 10000,
+      "target_context_set": "all"
+    }
+  },
+  "context_metadata": {
+    "context_version": "c57f912ffa97db8e7b3c",
+    "source_kind": "observed_tlc",
+    "fit_start": "2024-01-01",
+    "fit_end_exclusive": "2024-01-21",
+    "distance_scale_lower_km": 2.5427635200000003,
+    "distance_scale_upper_km": 15.417515520000002,
+    "observed_trip_distance_min_km": 0.0,
+    "observed_trip_distance_max_km": 358.09513344,
+    "fallback_counts": {
+      "0": 240
+    },
+    "rows": 240,
+    "meaning": "Context of completed TLC trips only"
+  },
+  "helper_sha256": {
+    "compare_week2_intervals.py": "9a94fd2bd5bf07c677a6c4d169761060bd778e0ad401a40d1b7ca2fecbf2a9e3",
+    "compare_week2_variance.py": "bdb5632011f35c791ba5b3bfba1b281046c6a724a154726f76d30b5428fe3437",
+    "diagnose_week2_intervals.py": "d727df6bc81b0643133bb0eb3bdf50c36b2b85c37f6df61b05881079199b2cbe"
+  },
+  "environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0",
+      "simpy": "4.1.2"
+    },
+    "git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "source_code_sha256": "1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6",
+    "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "limits": "n5 per DGP gives coarse binomial and variance precision; generic DML jackknife may reflect changed folds, forests and day dependence; individual theta only; no GSM observations",
+  "plan_hash": "cf8ab5dc793085fe9cecb1d9eaa02c61180af96bd09dacc02613c578ef7ecef2"
+}

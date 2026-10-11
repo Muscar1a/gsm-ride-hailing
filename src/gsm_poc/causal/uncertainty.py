@@ -55,7 +55,9 @@ def bootstrap(
         bundle = None
         try:
             sampled = bootstrap_sample(train, rng)
-            result = fit_estimator(sampled, config, estimator, seed=actual_seed)
+            result = fit_estimator(
+                sampled, config, estimator, seed=actual_seed, prepare_analytic=False
+            )
             if result.bundle is None:
                 raise ValueError(
                     result.diagnostics.get("reason", "Bootstrap draw is not identified")

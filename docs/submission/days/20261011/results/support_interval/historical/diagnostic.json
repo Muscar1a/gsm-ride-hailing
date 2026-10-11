@@ -1,0 +1,339 @@
+{
+  "generated_at_utc": "2026-10-10T20:17:46.075661+00:00",
+  "purpose": "Read-only post-hoc diagnostics; no refit, method selection, or acceptance retuning",
+  "source_results_dir": "E:\\AI\\vric\\gsm-ride-hailing\\docs\\submission\\days\\20261007\\results\\week2",
+  "snapshot": "E:\\AI\\vric\\gsm-ride-hailing\\.cache\\week2-evaluation-574cf501-20261007",
+  "frozen_revision": "574cf501304a777827c2e04704d96a1ab563e1b2",
+  "frozen_source_sha256_verified": "8459df189c1da3d4252f1ac2445854ac684c4ee15cecf951d80cbfd5402648a0",
+  "frozen_protocol_hash": "f2f405f8ca5d4a2962628f4487224ea003c1bb9c01fc6abb679910d8e9747715",
+  "reporting_seeds": [
+    20001,
+    20100
+  ],
+  "resolved_config_comparison": {
+    "historical": {
+      "project": {
+        "name": "tlc-reporting",
+        "context_mode": "tlc"
+      },
+      "source": {
+        "trip_url": "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2024-01.parquet",
+        "zone_url": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+        "start": "2024-01-01",
+        "end": "2024-02-01",
+        "train_end": "2024-01-21",
+        "validation_end": "2024-01-26",
+        "dashboard_end": "2024-02-01",
+        "zones": [
+          161,
+          162,
+          163,
+          164,
+          170
+        ],
+        "platforms": [
+          "HV0003",
+          "HV0005"
+        ],
+        "slot_minutes": 30,
+        "assumed_timezone": "America/New_York",
+        "min_group_count": 30,
+        "duration_difference_warning_seconds": 60,
+        "download_timeout_seconds": 60,
+        "download_retries": 3,
+        "max_download_bytes": 1000000000,
+        "duckdb_memory_limit": "4GB",
+        "threads": 4
+      },
+      "simulation": {
+        "seed": 42,
+        "dgp": "RCT_SYN",
+        "slot_minutes": 30,
+        "sessions_per_block": 50
+      },
+      "model": {
+        "estimators": [
+          "naive_ols",
+          "adjusted_ols",
+          "dml"
+        ],
+        "scenario_estimator": "dml",
+        "folds": 5,
+        "n_trees": 50,
+        "max_depth": 6,
+        "min_samples_leaf": 20,
+        "min_price_cell_count": 20,
+        "max_condition_number": 1000.0,
+        "elasticity_min_probability": 0.01
+      },
+      "evaluation": {
+        "seeds": 100,
+        "dgps": [
+          "RCT_SYN",
+          "OBSERVED_CONFOUNDING",
+          "HIDDEN_CONFOUNDING",
+          "NULL_EFFECT",
+          "COLLINEAR_PRICE"
+        ],
+        "bootstrap_draws": 199,
+        "reporting_min_draws": 199,
+        "max_failure_fraction": 0.05,
+        "interval_level": 0.95,
+        "theta_rmse_target": 0.1,
+        "probability_rmse_target": 0.02
+      },
+      "scenario": {
+        "delta_price_x": 0.1,
+        "delta_price_y": 0.0,
+        "n_sessions": 10000,
+        "target_context_set": "all"
+      }
+    },
+    "live": {
+      "project": {
+        "name": "tlc-reporting",
+        "context_mode": "tlc"
+      },
+      "source": {
+        "trip_url": "https://d37ci6vzurychx.cloudfront.net/trip-data/fhvhv_tripdata_2024-01.parquet",
+        "zone_url": "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv",
+        "start": "2024-01-01",
+        "end": "2024-02-01",
+        "train_end": "2024-01-21",
+        "validation_end": "2024-01-26",
+        "dashboard_end": "2024-02-01",
+        "zones": [
+          161,
+          162,
+          163,
+          164,
+          170
+        ],
+        "platforms": [
+          "HV0003",
+          "HV0005"
+        ],
+        "slot_minutes": 30,
+        "assumed_timezone": "America/New_York",
+        "min_group_count": 30,
+        "duration_difference_warning_seconds": 60,
+        "download_timeout_seconds": 60,
+        "download_retries": 3,
+        "max_download_bytes": 1000000000,
+        "duckdb_memory_limit": "4GB",
+        "threads": 4
+      },
+      "simulation": {
+        "seed": 42,
+        "dgp": "RCT_SYN",
+        "slot_minutes": 30,
+        "sessions_per_block": 50
+      },
+      "model": {
+        "estimators": [
+          "naive_ols",
+          "adjusted_ols",
+          "dml"
+        ],
+        "scenario_estimator": "dml",
+        "folds": 5,
+        "n_trees": 50,
+        "max_depth": 6,
+        "min_samples_leaf": 20,
+        "min_price_cell_count": 20,
+        "max_condition_number": 1000.0,
+        "elasticity_min_probability": 0.01
+      },
+      "evaluation": {
+        "seeds": 100,
+        "dgps": [
+          "RCT_SYN",
+          "OBSERVED_CONFOUNDING",
+          "HIDDEN_CONFOUNDING",
+          "NULL_EFFECT",
+          "COLLINEAR_PRICE"
+        ],
+        "bootstrap_draws": 199,
+        "reporting_min_draws": 199,
+        "max_failure_fraction": 0.05,
+        "interval_level": 0.95,
+        "theta_rmse_target": 0.1,
+        "probability_rmse_target": 0.02
+      },
+      "scenario": {
+        "delta_price_x": 0.1,
+        "delta_price_y": 0.0,
+        "n_sessions": 10000,
+        "target_context_set": "all"
+      }
+    },
+    "differences": {
+      "project": {},
+      "source": {},
+      "simulation": {},
+      "model": {},
+      "evaluation": {},
+      "scenario": {}
+    },
+    "model_simulation_source_evaluation_settings_identical": true,
+    "historical_training_calendar_days": 20,
+    "training_start_inclusive": "2024-01-01",
+    "training_end_exclusive": "2024-01-21"
+  },
+  "source_checksums_verified": {
+    "evaluation_metrics.csv": "9cee52901c25189b7808266f649ff49088a5965b16b570d5399ba8b24b5801dc",
+    "execution.json": "e3974ee7083f64bcac97774c7a7363a56303346192b9c812dffd045cb73a9b9c",
+    "frozen_spec.json": "8fda615108bc06365320bdbf41fa5ded3e19423630efd360a6767c2c61e61af1",
+    "manifest.json": "cb54ac644f4c42e6bd9674a1b329b601bb568664feb46eff5378e167e5f07a47",
+    "README.md": "5e11c80a19616bd903b6379c0f719909a921b5e08048c8fe82a7e3729ce1fdb2",
+    "recovery_audit/after_resume.json": "7c733695ffbcfcb41e1824179644c2f8d2123bde82aa84c5b26bbac6353d5f30",
+    "recovery_audit/before_execution.json": "204ee1d548c9277901f1a94e3cc6a7522eaf8704bcaa82a692561dea30d374e4",
+    "recovery_audit/before_resume.json": "9f71d76c33dbcd75c02498e702fc3e5979f51ff94af7ee82c7b71c5dd5eacc8e",
+    "recovery_audit/before_status.json": "b83927960c211c0a5230912e4110bd8c6466a62969e110ddc967d3e329fc1fc7",
+    "recovery_audit/launch.json": "88f379399777588af26ee21ccd62756e27b155467aa047dafcc08278e0d9d60e",
+    "reproducibility.zip": "c01d120ef173d302aa8c48892c7eaacd68a113241c2dc52ef892bcca4143c726",
+    "seed_metrics.parquet": "37b603a12e432d075be30d2048eb4c90d52a29cfe11b439314a4bfa3100f3916",
+    "status.json": "dfbaa9a2a75162252257e2c8e31a42657ccb1f89739c43e105be92261f2fa64b"
+  },
+  "previous_statistical_review_checksums_verified": {
+    "audit.json": "a50d38002dcde9ebcf670dae42e980250172137e3594b5f6288867be33f7b821",
+    "cell_metrics.csv": "a9ca67e439353d3b60bde32ef017ed72b0c635e17ae6924faa91366fc4bff978",
+    "dgp_estimator_summary.csv": "692a08288c52f06877fe26af1b8369aeec61e6521545f7fc9dea71052ca9c1c1"
+  },
+  "source_hashes_verified_again_after_diagnosis": true,
+  "checks": {
+    "source_hashes": "passed",
+    "all_500_checkpoint_hashes": "passed",
+    "all_checkpoint_rows_equal_pool": "passed",
+    "row_keys_and_denominators": "passed",
+    "finite_values_and_flags": "passed",
+    "all_60_numeric_summary_cells": "passed",
+    "binomial_intervals_independent_beta_quantiles": "passed"
+  },
+  "counts": {
+    "seed_jobs": 500,
+    "failed_seed_jobs": 0,
+    "summary_cells": 60,
+    "coefficient_rows": 6000,
+    "identified_fits": 1200,
+    "rejected_collinear_fits": 300,
+    "requested_bootstrap_refits": 238800,
+    "successful_bootstrap_refits": 238800,
+    "invalid_baseline_draws": 0,
+    "invalid_scenarios": 0
+  },
+  "metric_definitions": {
+    "empirical_theta_sd": "Sample SD across 100 independently seeded point estimates, ddof=1",
+    "normal_equivalent_se_approximation": "Mean percentile CI width / (2*1.96); approximation, not measured bootstrap SD",
+    "truth_below_interval_count": "true_theta < theta_lower; interval wholly above truth",
+    "truth_above_interval_count": "true_theta > theta_upper; interval wholly below truth"
+  },
+  "rct_y_y": [
+    {
+      "dgp_id": "RCT_SYN",
+      "estimator": "adjusted_ols",
+      "outcome": "Y",
+      "treatment": "Y",
+      "attempted_seeds": 100,
+      "valid_estimates": 100,
+      "fit_rejections": 0,
+      "other_fit_failures": 0,
+      "unstable_intervals": 0,
+      "true_theta": -0.5,
+      "mean_theta": -0.4986998269576053,
+      "bias": 0.0013001730423947422,
+      "empirical_theta_sd": 0.012599060538233084,
+      "bias_over_empirical_sd": 0.10319603104130183,
+      "rmse": 0.012603150920375887,
+      "mean_interval_width": 0.04023086317442534,
+      "median_interval_width": 0.04119526970811127,
+      "normal_equivalent_se_approximation": 0.010262975299598302,
+      "normal_equivalent_se_over_empirical_sd_approximation": 0.8145825848248207,
+      "coverage_count": 86.0,
+      "coverage_denominator": 100.0,
+      "coverage": 0.86,
+      "truth_below_interval_count": 6.0,
+      "truth_above_interval_count": 8.0,
+      "mean_interval_center_minus_estimate": 5.551189017522495e-06,
+      "coverage_lower": 0.7762720186294322,
+      "coverage_upper": 0.9212945950730342
+    },
+    {
+      "dgp_id": "RCT_SYN",
+      "estimator": "dml",
+      "outcome": "Y",
+      "treatment": "Y",
+      "attempted_seeds": 100,
+      "valid_estimates": 100,
+      "fit_rejections": 0,
+      "other_fit_failures": 0,
+      "unstable_intervals": 0,
+      "true_theta": -0.5,
+      "mean_theta": -0.49830533617037387,
+      "bias": 0.0016946638296261513,
+      "empirical_theta_sd": 0.012630052132156615,
+      "bias_over_empirical_sd": 0.13417710488395135,
+      "rmse": 0.01268049368864742,
+      "mean_interval_width": 0.042049121504740876,
+      "median_interval_width": 0.042504522203668293,
+      "normal_equivalent_se_approximation": 0.010726816710393081,
+      "normal_equivalent_se_over_empirical_sd_approximation": 0.8493089813210019,
+      "coverage_count": 86.0,
+      "coverage_denominator": 100.0,
+      "coverage": 0.86,
+      "truth_below_interval_count": 7.0,
+      "truth_above_interval_count": 7.0,
+      "mean_interval_center_minus_estimate": 0.00026097165032307857,
+      "coverage_lower": 0.7762720186294322,
+      "coverage_upper": 0.9212945950730342
+    },
+    {
+      "dgp_id": "RCT_SYN",
+      "estimator": "naive_ols",
+      "outcome": "Y",
+      "treatment": "Y",
+      "attempted_seeds": 100,
+      "valid_estimates": 100,
+      "fit_rejections": 0,
+      "other_fit_failures": 0,
+      "unstable_intervals": 0,
+      "true_theta": -0.5,
+      "mean_theta": -0.4985114118983216,
+      "bias": 0.001488588101678372,
+      "empirical_theta_sd": 0.012448550633574458,
+      "bias_over_empirical_sd": 0.1195792301847224,
+      "rmse": 0.012475281290790953,
+      "mean_interval_width": 0.04270278622433972,
+      "median_interval_width": 0.04470908072474833,
+      "normal_equivalent_se_approximation": 0.010893567914372378,
+      "normal_equivalent_se_over_empirical_sd_approximation": 0.8750872479075434,
+      "coverage_count": 90.0,
+      "coverage_denominator": 100.0,
+      "coverage": 0.9,
+      "truth_below_interval_count": 6.0,
+      "truth_above_interval_count": 4.0,
+      "mean_interval_center_minus_estimate": 2.4734861106282536e-05,
+      "coverage_lower": 0.8237774022599773,
+      "coverage_upper": 0.9509953107785141
+    }
+  ],
+  "limitations": [
+    "Historical final reporting seeds are diagnostic evidence only; no development tuning.",
+    "Raw bootstrap draws were not saved for the 500 reporting jobs; actual bootstrap SD/skewness and quantile Monte Carlo error cannot be reconstructed.",
+    "Width-derived normal-equivalent SE approximates percentile interval variability and cannot establish the mechanism of undercoverage.",
+    "20 fixed TLC-context training days, five zones and 50 synthetic sessions/block; this is synthetic validation, not GSM evidence.",
+    "No new fit, bootstrap, or full benchmark rerun occurred."
+  ],
+  "analysis_environment": {
+    "python": "3.11.9",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scipy": "1.17.1",
+    "live_git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "analysis_script_sha256": "06d001e0dd68cf28b560a1474216790a867268d3c0f4ca929c70ec7521a6babc",
+    "validation_script_sha256": "4145ff9cd266c6d9264b0d09f999a84f528297deef297838e40ee90dcc9ed9ef"
+  },
+  "output_checksums": {
+    "cell_diagnostics.csv": "5aea7f31d5ef522ad9fa7c3af6f0e4ad6fa30961b3f9dba3290dc27e8d8f9cee"
+  }
+}

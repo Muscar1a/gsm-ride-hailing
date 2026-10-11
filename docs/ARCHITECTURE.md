@@ -40,8 +40,11 @@ flowchart TD
   Generate --> Oracle[Isolated oracle]
   Observed --> Fit[OLS + DML + baseline model]
   Fit --> Bootstrap[Day bootstrap + refits]
+  Fit --> Covariance[Compact OLS HC3 / DML score covariance]
+  Covariance --> Scenario
   Fit --> Scenario[Supported price scenarios]
-  Fit --> Demand[Verified frozen handoff + demand plan]
+  Fit --> Handoff[Independent frozen choice package + current replay]
+  Handoff --> Demand[Verified frozen handoff + demand plan]
   Snapshot[Synthetic roster + initial snapshot] --> Demand
   Demand --> Simulate[Fixed-supply simulation]
   Rules[Synthetic OD/matching rules + seed] --> Simulate
@@ -78,10 +81,30 @@ record code revision, configuration, data identity, seed, dependency lock hash,
 Python/package versions, timings, and successful artifacts.
 
 The CLI implements `ingest`, `build`, `generate`, `fit`, `evaluate`, `scenario`,
-`prepare-demand`, `simulate-marketplace` and `run-all`. Dataset and model run IDs
+`freeze-choice`, `prepare-inference`, `prepare-demand`, `simulate-marketplace` and `run-all`. Dataset and model run IDs
 explicitly select dependent artifacts.
 Synthetic mode can run without network access or TLC data. TLC mode never
 substitutes synthetic trips for missing observed records.
+
+`freeze-choice` copies every fitted estimator, effects, diagnostics, bootstrap
+draws, splits, method metrics and the historical scenario into a separate verified
+run. It preserves the original manifest bytes and training configuration/environment,
+records the packaging environment separately and writes `choice_handoff.json`.
+`current_scenario_result.json` replays the saved model and draws under current
+validation rules without fitting or reading oracle data. The handoff reports
+numeric agreement and current support/interval limitations independently of
+historical statuses; packaging success does not establish reviewer acceptance.
+Scenario and demand consumers use the original training support thresholds.
+
+Choice `scenario()` and UI default to analytic individual intervals from compact
+joint coefficient covariance; baseline uncertainty and cross-covariance propagate
+through elasticity/scenario gradients. Bootstrap is selected explicitly and loaded
+only on that inference path. Saved batch baseline/replay remains bootstrap.
+`prepare-inference` derives a new package from an older freeze-choice, verifying
+observed data hashes and point reconstruction before adding covariance sidecars;
+original model/hand-off bytes and the Week 3 rate contract remain intact.
+See the [accepted technical exception](submission/days/20261011/week2_hybrid_acceptance.md)
+and [usage](USAGE.md#hybrid-choice-inference). Integrity scans still hash registered artifacts.
 
 The demand bridge and fixed-supply simulator run in batch, using verified local
 artifacts. They preserve the frozen choice scope, apply price effects once and

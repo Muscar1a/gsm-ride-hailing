@@ -1,0 +1,227 @@
+{
+  "run_id": "week2-support-diagnostic-20261011-v3",
+  "scenario_id": "price-x-plus10",
+  "target_context_set": "all",
+  "scope": {
+    "target_context_set": "all",
+    "zones": [
+      161,
+      162,
+      163,
+      164,
+      170
+    ],
+    "selected_zone": null,
+    "context_blocks": 1440,
+    "context_weight_sessions": 72000
+  },
+  "source_kind": "semi_synthetic",
+  "evidence_level": "C",
+  "request": {
+    "scenario_id": "price-x-plus10",
+    "baseline_multiplier_x": 1.0,
+    "baseline_multiplier_y": 1.0,
+    "delta_price_x": 0.1,
+    "delta_price_y": 0.0,
+    "n_sessions": 10000,
+    "interval_level": 0.95,
+    "target_context_set": "all"
+  },
+  "units": {
+    "probability": "fraction",
+    "delta_probability": "percentage_points",
+    "bookings": "expected quote-session choices",
+    "theta": "probability / log-price"
+  },
+  "assumption": "Quote session population held fixed; X/Y are hypothetical services",
+  "interval_kind": "day-bootstrap percentile; individual intervals",
+  "interval_scope": "individual",
+  "interval_validation_scope": "technical_checks_only",
+  "interval_calibration_status": "not_evaluated_for_this_run",
+  "interval": {
+    "X_before_probability": {
+      "lower": 0.30949098796572283,
+      "upper": 0.3143464302293625
+    },
+    "Y_before_probability": {
+      "lower": 0.25800176596689023,
+      "upper": 0.2617771071029291
+    },
+    "NONE_before_probability": {
+      "lower": 0.42599929689474275,
+      "upper": 0.43102280523955316
+    },
+    "X_after_probability": {
+      "lower": 0.2526557296905654,
+      "upper": 0.2587486380495528
+    },
+    "Y_after_probability": {
+      "lower": 0.2671224909253353,
+      "upper": 0.2718692057189605
+    },
+    "NONE_after_probability": {
+      "lower": 0.47183393574211213,
+      "upper": 0.4778003550342303
+    },
+    "X_delta_percentage_points": {
+      "lower": -5.828518330692312,
+      "upper": -5.396903115061394
+    },
+    "Y_delta_percentage_points": {
+      "lower": 0.8486210235908271,
+      "upper": 1.13246691584691
+    },
+    "NONE_delta_percentage_points": {
+      "lower": 4.393756141690919,
+      "upper": 4.8862159142900525
+    },
+    "delta_expected_bookings": {
+      "lower": -488.6215914290059,
+      "upper": -439.3756141691151
+    }
+  },
+  "status": "insufficient_support",
+  "support_status": "insufficient_support",
+  "reasons": [
+    "Joint price corner (1.0, 1.0) has only 14 blocks for context zone_id=161, is_weekend=1, is_peak=0; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 9 blocks for context zone_id=161, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 14 blocks for context zone_id=162, is_weekend=0, is_peak=1; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 13 blocks for context zone_id=162, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 17 blocks for context zone_id=163, is_weekend=1, is_peak=0; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 9 blocks for context zone_id=163, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 18 blocks for context zone_id=164, is_weekend=1, is_peak=0; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 15 blocks for context zone_id=164, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 15 blocks for context zone_id=170, is_weekend=1, is_peak=0; minimum 20",
+    "Joint price corner (1.0, 1.0) has only 11 blocks for context zone_id=170, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 7 blocks for context zone_id=161, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 7 blocks for context zone_id=162, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 13 blocks for context zone_id=163, is_weekend=1, is_peak=0; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 10 blocks for context zone_id=163, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 17 blocks for context zone_id=164, is_weekend=1, is_peak=0; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 8 blocks for context zone_id=164, is_weekend=1, is_peak=1; minimum 20",
+    "Joint price corner (1.1, 1.0) has only 12 blocks for context zone_id=170, is_weekend=1, is_peak=1; minimum 20"
+  ],
+  "estimator": "dml",
+  "dataset_id": "ds-5f26297a9194afda2d39",
+  "outcome_order": [
+    "X",
+    "Y"
+  ],
+  "treatment_order": [
+    "X",
+    "Y"
+  ],
+  "theta": [
+    [
+      -0.5900358145879308,
+      0.16975992418069102
+    ],
+    [
+      0.1013471609270186,
+      -0.49859599271079985
+    ]
+  ],
+  "elasticity_at_baseline": [
+    [
+      -1.889444350689118,
+      0.5436143396492404
+    ],
+    [
+      0.39001259562356616,
+      -1.9187386751236173
+    ]
+  ],
+  "context_blocks": 1440,
+  "context_weight_sessions": 72000,
+  "probabilities": {
+    "X": {
+      "before_probability": 0.31228007026125587,
+      "after_probability": 0.2560436506818884,
+      "delta_percentage_points": -5.623641957936748,
+      "before_expected_choices": 3122.800702612559,
+      "after_expected_choices": 2560.436506818884
+    },
+    "Y": {
+      "before_probability": 0.2598561227618332,
+      "after_probability": 0.26951553889244545,
+      "delta_percentage_points": 0.9659416130612275,
+      "before_expected_choices": 2598.561227618332,
+      "after_expected_choices": 2695.1553889244547
+    },
+    "NONE": {
+      "before_probability": 0.4278638069769121,
+      "after_probability": 0.4744408104256659,
+      "delta_percentage_points": 4.657700344875376,
+      "before_expected_choices": 4278.638069769121,
+      "after_expected_choices": 4744.408104256659
+    }
+  },
+  "baseline_multiplier": [
+    1.0,
+    1.0
+  ],
+  "target_multiplier": [
+    1.1,
+    1.0
+  ],
+  "delta_log_price": [
+    0.09531017980432493,
+    0.0
+  ],
+  "before_expected_bookings": 5721.361930230891,
+  "after_expected_bookings": 5255.591895743339,
+  "delta_expected_bookings": -465.77003448755204,
+  "bootstrap": {
+    "requested_draws": 199,
+    "fit_failed_draws": 0,
+    "invalid_probability_draws": 0,
+    "valid_draws": 199,
+    "failure_fraction": 0.0,
+    "interval_status": "ok"
+  },
+  "interval_level": 0.95,
+  "theta_interval": [
+    [
+      {
+        "lower": -0.6115315638537728,
+        "upper": -0.5662462421266555
+      },
+      {
+        "lower": 0.1449781132433028,
+        "upper": 0.19570627070073046
+      }
+    ],
+    [
+      {
+        "lower": 0.0890378158275516,
+        "upper": 0.11881909342442448
+      },
+      {
+        "lower": -0.5254290359498619,
+        "upper": -0.4725934682878582
+      }
+    ]
+  ],
+  "elasticity_interval": [
+    [
+      {
+        "lower": -1.9566504435957686,
+        "upper": -1.8149805406364596
+      },
+      {
+        "lower": 0.46487137658253297,
+        "upper": 0.6290059886757017
+      }
+    ],
+    [
+      {
+        "lower": 0.343479493855461,
+        "upper": 0.4587748168236907
+      },
+      {
+        "lower": -2.0196420423004446,
+        "upper": -1.8190692844344785
+      }
+    ]
+  ]
+}

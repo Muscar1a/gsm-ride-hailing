@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "completed_at": "2026-10-10T20:27:01.910481+00:00",
+  "protocol_hash": "a79bf1998722d0e9f24a25502e9d585e172d4aada23552dfcbd741b3257dc1cc",
+  "completed_estimator_jobs": 1,
+  "duration_seconds": 500.9523221999989,
+  "interpretation": "development pilot; no method change or empirical calibration acceptance",
+  "artifacts": {
+    "protocol.json": "dd6a29e6095e7390658b6afa1284af3d6961a1f067a4e0d1c5983622c4404a6f",
+    "RCT_SYN-41001-dml-draws.parquet": "5f4968809d23bec451e0a27ec0f9bb077d74c94b5b5ef2179a577621e83cb9e9",
+    "RCT_SYN-41001-dml-metrics.parquet": "b3a4300594dc54a7549c0633e441ff78bdd6b5f9fff6c2f353af8a9c30045e52",
+    "RCT_SYN-41001-dml.json": "197d178ee21f1118974df21220fcdacb66743ef06b8cd9e2392e5c4d580b3d36",
+    "runner_source.py": "575ee76add21f4d7ae4f93832543264ae0725fb79539053f56d882a3d3454365",
+    "seed_metrics.parquet": "b3a4300594dc54a7549c0633e441ff78bdd6b5f9fff6c2f353af8a9c30045e52",
+    "summary.csv": "96cebe556662a19184ff1ad86c7dc3828adcfffa51d24c01399ab9eb000df701",
+    "source_context/context_templates.json": "3cf01f3e868d9050e7062b1f937f22426d86c89ee8be4d9de9df1a358c6f79d9",
+    "source_context/context_templates.parquet": "7137136cd0687ab6c60c382576fad6568d1587ccb9953e575b57c19945531ccf"
+  }
+}

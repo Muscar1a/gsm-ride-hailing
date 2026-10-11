@@ -2,7 +2,6 @@ import dataclasses
 
 import numpy as np
 import pytest
-
 from gsm_poc.estimate import fit_estimator
 from gsm_poc.evaluate import effect_rows
 from gsm_poc.features import date_splits
@@ -63,12 +62,23 @@ def test_draw_losing_parent_treatment_is_failed_and_safe_to_report(config, exact
         assert row["theta_upper"] == pytest.approx(TRUE_THETA[j, k])
         assert row["successful_draws"] == 2
         assert row["interval_status"] == "interval_unstable"
-    forecast = scenario(fitted.bundle, context, ScenarioRequest(), config, "test-run", draws)
+        assert row["interval_validation_scope"] == "technical_checks_only"
+        assert row["interval_calibration_status"] == "not_evaluated_for_this_run"
+    forecast = scenario(
+        fitted.bundle,
+        context,
+        ScenarioRequest(),
+        config,
+        "test-run",
+        draws,
+        inference_method="bootstrap",
+    )
     assert forecast["interval"] is None
     assert forecast["bootstrap"]["fit_failed_draws"] == 1
     assert forecast["bootstrap"]["valid_draws"] == 2
     assert forecast["bootstrap"]["failure_fraction"] == pytest.approx(1 / 3)
     assert forecast["bootstrap"]["interval_status"] == "interval_unstable"
+    assert forecast["interval_calibration_status"] == "not_evaluated_for_this_run"
 
 
 @pytest.mark.parametrize("active", [0, 1])
@@ -94,6 +104,10 @@ def test_bootstrap_preserves_legitimate_partial_parent(config, exact_blocks, act
 
     effects = effect_rows(fitted, draws, splits["test"], config, "partial-run", "partial-data")
     for row in effects:
+        assert row["interval_kind"] == "day-bootstrap percentile; individual intervals"
+        assert row["interval_scope"] == "individual"
+        assert row["interval_validation_scope"] == "technical_checks_only"
+        assert row["interval_calibration_status"] == "not_evaluated_for_this_run"
         if row["treatment"] == ("X", "Y")[active]:
             j = ("X", "Y").index(row["outcome"])
             assert row["theta_lower"] == pytest.approx(TRUE_THETA[j, active])
@@ -107,10 +121,22 @@ def test_bootstrap_preserves_legitimate_partial_parent(config, exact_blocks, act
         delta_price_x=0.1 if active == 0 else 0.0,
         delta_price_y=0.1 if active == 1 else 0.0,
     )
-    forecast = scenario(fitted.bundle, splits["test"], request, config, "partial-run", draws)
+    forecast = scenario(
+        fitted.bundle,
+        splits["test"],
+        request,
+        config,
+        "partial-run",
+        draws,
+        inference_method="bootstrap",
+    )
     assert forecast["bootstrap"]["valid_draws"] == 3
     assert forecast["bootstrap"]["fit_failed_draws"] == 0
     assert forecast["bootstrap"]["interval_status"] == "ok"
+    assert forecast["interval_kind"] == "day-bootstrap percentile; individual intervals"
+    assert forecast["interval_scope"] == "individual"
+    assert forecast["interval_validation_scope"] == "technical_checks_only"
+    assert forecast["interval_calibration_status"] == "not_evaluated_for_this_run"
     for j in range(2):
         assert forecast["theta_interval"][j][1 - active] is None
         assert forecast["theta_interval"][j][active]["lower"] == pytest.approx(
@@ -121,9 +147,16 @@ def test_bootstrap_preserves_legitimate_partial_parent(config, exact_blocks, act
         delta_price_y=0.1 if active == 0 else 0.0,
     )
     forecast = scenario(
-        fitted.bundle, splits["test"], unidentified_request, config, "partial-run", draws
+        fitted.bundle,
+        splits["test"],
+        unidentified_request,
+        config,
+        "partial-run",
+        draws,
+        inference_method="bootstrap",
     )
     assert forecast["status"] == "not_identified"
+    assert forecast["interval_calibration_status"] == "not_evaluated_for_this_run"
     assert "probabilities" not in forecast
 
 

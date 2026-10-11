@@ -80,25 +80,55 @@ development policy-value benchmark has 40/40 seed jobs. Results are in the
 [Week 2 report](submission/days/20261007/weekly_report.md).
 Completion of compute does not close all acceptance gates.
 
-The remaining work is:
+The standalone handoff and saved-model replay are implemented with
+[`freeze-choice`](USAGE.md#week-2-choice-handoff). Current technical evidence and
+gate conclusions are in the [11/10 verification](submission/days/20261011/choice_handoff_verification.md).
+Week 2 is accepted by **Bun, 11/10/2026**, with a technical exception:
+[`Technically stable`, residual 88–89% warnings and controlled scope](submission/days/20261011/week2_hybrid_acceptance.md).
+The current decisions and remaining limits are:
 
-1. Resolve how interval-calibration limitations are accepted. Record the reviewer's
-   actual conclusion or accepted exception. If the method changes, use development
-   data and a new holdout under a protocol frozen before evaluation; do not tune on
-   the existing final seeds.
-2. Freeze the final demand/choice handoff: model bundles, `effects.csv`,
-   `scenario_result.json`, diagnostics, config/scope/code/environment metadata,
-   checksums and instructions. Verify a corresponding rerun/resume. Historical
-   model runs remain evidence for their own revision.
-3. Record the actual reviewer, review date and gate conclusions in the
-   [acceptance review](submission/days/20261007/acceptance_review.md#điều-kiện-còn-lại-để-đóng-week-2).
-   Reviewer confirmation and the submission deadline have not been provided.
+1. Keep the accepted coverage limitations explicit. The
+   [development comparison](submission/days/20261011/interval_method_comparison.md)
+   implements percentile/basic/BCa trials with shared draws and original-day
+   jackknife; the
+   [variance sensitivity](submission/days/20261011/interval_variance_comparison.md)
+   reuses these fits for a day-jackknife t candidate with no new independent seeds.
+   The [fresh DML pilot](submission/days/20261011/dml_variance_pilot.md) applies
+   that candidate to five fresh RCT/null seeds with paired adjusted OLS; it adds
+   no percentile/basic/BCa bootstrap comparison on those seeds. These branches
+   select no production winner. The
+   [score diagnosis](submission/days/20261011/score_inference_diagnostic.md) now
+   adds block/day covariance comparisons, larger fresh OLS/DML cohorts, joint
+   elasticity/scenario diagnostics and separate fold sensitivity. Its coverage
+   checks remain development evidence; full-context scenario support and final
+   acceptance are separate gates. The
+   [inference closeout](submission/days/20261011/week2_inference_closeout.md)
+   completes exact conditional OLS variance diagnosis and the frozen independent
+   block-method assessment on 45001–45100: 400/400 fits and 410 repository tests
+   pass. Eight individual undercoverage rows remain; zero Holm rejections do not
+   certify every interval at 95%. Bun selected hybrid inference: analytic default
+   for causal scenario/UI, frozen bootstrap baseline preserved. Full calibration
+   of every output remains uncertified. These seeds are assessment evidence,
+   not unused tuning data. See [usage](USAGE.md#hybrid-choice-inference).
+2. Keep the supported restricted scope explicit: the
+   [11/10 support diagnosis](submission/days/20261011/support_interval_diagnostic.md)
+   selects 10/20 training strata at the unchanged 20-block minimum, retaining
+   67.5% of the evaluation-context session weight. Its replay passes support.
+   The all-context forecast remains unsupported; restoring that population needs
+   sufficient training coverage and a newly validated fit. Do not lower thresholds,
+   silently exclude groups or transfer a historical `ok` to the current revision.
+3. Retain the actual reviewer, review date and gate conclusions in the
+   [current technical review](submission/days/20261011/choice_handoff_verification.md).
+   Reviewer Bun accepted the technical exception on 11/10/2026. The submission
+   deadline has not been provided; GSM-specific confirmations still await data.
 
-The [acceptance review](submission/days/20261007/acceptance_review.md) owns the six
-gate conclusions: Data, Effect, Scenario, Reproducibility, Statistics and
-Additional benchmarks. The first four permit demand integration in week 3 once
-the final bundle and matching reproducibility checks are ready. Full Week 2
-acceptance requires all six; open work continues alongside week 3.
+The current technical review records the six gate conclusions: Data, Effect,
+Scenario, Reproducibility, Statistics and Additional benchmarks, retaining the
+[historical acceptance review](submission/days/20261007/acceptance_review.md) for
+its own revision. The first four permit demand integration in week 3 for a
+supported declared scope and matching reproducibility checks. Week 2 acceptance
+with the declared technical exception is recorded; support extension and GSM
+calibration continue alongside week 3.
 
 Keep the frozen reporting snapshot and evidence unchanged during development.
 [Benchmark execution instructions](BENCHMARK.md#reporting-execution-and-compute-provenance)
@@ -125,7 +155,7 @@ accepts queued/busy checkpoints, retains pending operational events and original
 timestamps, and supports pickup expiry and explicit prepickup cancellation.
 Compensation, driver participation/trip acceptance, energy/charging and the other
 operational constraints remain to implement.
-Completing this bridge does not close the Week 2 reviewer or final reporting gates.
+Completing this bridge does not certify nominal coverage, full-context support or GSM calibration.
 
 Offered compensation precedes decisions. Retain eligible nonparticipants and zero
 trips. Use an amount treatment for zero-base bonuses; do not count bonuses already

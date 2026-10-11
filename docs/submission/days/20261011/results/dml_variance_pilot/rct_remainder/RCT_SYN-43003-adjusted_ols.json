@@ -1,0 +1,158 @@
+{
+  "dgp_id": "RCT_SYN",
+  "seed": 43003,
+  "estimator": "adjusted_ols",
+  "dataset_id": "ds-f8891d6dd22a2d954e30",
+  "status": "succeeded",
+  "point_successful": true,
+  "point_error": null,
+  "point_diagnostics": {
+    "estimator": "adjusted_ols",
+    "status": "ok",
+    "outcome_order": [
+      "X",
+      "Y"
+    ],
+    "treatment_order": [
+      "X",
+      "Y"
+    ],
+    "active_treatments": [
+      0,
+      1
+    ],
+    "train_blocks": 4800,
+    "train_days": 20,
+    "train_sessions": 240000,
+    "weighting": "session_count",
+    "feature_allowlist": [
+      "hour_sin",
+      "hour_cos",
+      "is_weekend",
+      "is_peak",
+      "distance_scaled",
+      "zone_162",
+      "zone_163",
+      "zone_164",
+      "zone_170",
+      "weekday_1",
+      "weekday_2",
+      "weekday_3",
+      "weekday_4",
+      "weekday_5",
+      "weekday_6"
+    ],
+    "warnings": [],
+    "constant_log_prices": {},
+    "joint_price_support": [
+      {
+        "multiplier_x": 0.9,
+        "multiplier_y": 0.9,
+        "blocks": 536
+      },
+      {
+        "multiplier_x": 0.9,
+        "multiplier_y": 1.0,
+        "blocks": 541
+      },
+      {
+        "multiplier_x": 0.9,
+        "multiplier_y": 1.1,
+        "blocks": 530
+      },
+      {
+        "multiplier_x": 1.0,
+        "multiplier_y": 0.9,
+        "blocks": 535
+      },
+      {
+        "multiplier_x": 1.0,
+        "multiplier_y": 1.0,
+        "blocks": 512
+      },
+      {
+        "multiplier_x": 1.0,
+        "multiplier_y": 1.1,
+        "blocks": 535
+      },
+      {
+        "multiplier_x": 1.1,
+        "multiplier_y": 0.9,
+        "blocks": 540
+      },
+      {
+        "multiplier_x": 1.1,
+        "multiplier_y": 1.0,
+        "blocks": 551
+      },
+      {
+        "multiplier_x": 1.1,
+        "multiplier_y": 1.1,
+        "blocks": 520
+      }
+    ],
+    "residual_rank": 2,
+    "condition_number": 1.0071701412899574,
+    "validation_probability_valid": true,
+    "validation_prediction_rmse": 0.0632379510970851
+  },
+  "jackknife_successful": 20,
+  "jackknife_failed": 0,
+  "jackknife_not_attempted": 0,
+  "splits": {
+    "train": {
+      "blocks": 4800,
+      "days": [
+        "2024-01-01",
+        "2024-01-02",
+        "2024-01-03",
+        "2024-01-04",
+        "2024-01-05",
+        "2024-01-06",
+        "2024-01-07",
+        "2024-01-08",
+        "2024-01-09",
+        "2024-01-10",
+        "2024-01-11",
+        "2024-01-12",
+        "2024-01-13",
+        "2024-01-14",
+        "2024-01-15",
+        "2024-01-16",
+        "2024-01-17",
+        "2024-01-18",
+        "2024-01-19",
+        "2024-01-20"
+      ]
+    },
+    "validation": {
+      "blocks": 1200,
+      "days": [
+        "2024-01-21",
+        "2024-01-22",
+        "2024-01-23",
+        "2024-01-24",
+        "2024-01-25"
+      ]
+    },
+    "test": {
+      "blocks": 1440,
+      "days": [
+        "2024-01-26",
+        "2024-01-27",
+        "2024-01-28",
+        "2024-01-29",
+        "2024-01-30",
+        "2024-01-31"
+      ]
+    }
+  },
+  "day_folds": null,
+  "fold_record_scope": "plan; fit statuses identify executed omissions",
+  "duration_seconds": 0.7275927000009688,
+  "artifacts": {
+    "RCT_SYN-43003-adjusted_ols-point.parquet": "4a07b57d421db5f54c938ef501a04072184138aaaff2c1a7977ba6638d46b83c",
+    "RCT_SYN-43003-adjusted_ols-jackknife.parquet": "b33fac14c78e4bb8b95c591a2a2cba8c2840f9a880d80c505259f7c67f63feef",
+    "RCT_SYN-43003-adjusted_ols-metrics.parquet": "d0791a1151333fb425a0a7c74ff84bf612fa7b3d2b4e74559bdb6b952ac3cc8e"
+  }
+}

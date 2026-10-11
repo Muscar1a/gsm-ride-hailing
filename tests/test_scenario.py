@@ -4,7 +4,6 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import pytest
-
 from gsm_poc.estimate import fit_estimator
 from gsm_poc.features import date_splits
 from gsm_poc.scenario import ScenarioRequest, joint_support, scenario
@@ -20,7 +19,9 @@ def fitted(config, exact_blocks):
 
 def test_plus10_log_ratio_orientation_and_count_conservation(config, fitted):
     bundle, context = fitted
-    result = scenario(bundle, context, ScenarioRequest(), config, "test-run")
+    result = scenario(
+        bundle, context, ScenarioRequest(), config, "test-run", inference_method="bootstrap"
+    )
     values = result["probabilities"]
     assert values["X"]["delta_percentage_points"] == pytest.approx(-0.60 * np.log(1.1) * 100)
     assert values["Y"]["delta_percentage_points"] == pytest.approx(0.12 * np.log(1.1) * 100)
@@ -79,7 +80,9 @@ def test_bad_draws_are_counted_and_interval_withheld(config, fitted):
     invalid.base_rate_model.__dict__.update(bundle.base_rate_model.__dict__)
     invalid.base_rate_model.intercept_ = np.array([-0.5, 0.5])
     draws = BootstrapResult("adjusted_ols", [], [bundle, invalid, None], "ok", 3, 0.95)
-    result = scenario(bundle, context, ScenarioRequest(), config, "test-run", draws)
+    result = scenario(
+        bundle, context, ScenarioRequest(), config, "test-run", draws, inference_method="bootstrap"
+    )
     assert result["bootstrap"]["invalid_probability_draws"] == 1
     assert result["bootstrap"]["fit_failed_draws"] == 1
     assert result["bootstrap"]["failure_fraction"] == pytest.approx(2 / 3)

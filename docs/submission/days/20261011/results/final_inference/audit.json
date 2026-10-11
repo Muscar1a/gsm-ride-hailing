@@ -1,0 +1,39 @@
+{
+  "status": "verified",
+  "historical_archives_unchanged": {
+    "support_interval": 25,
+    "interval_comparison": 19,
+    "interval_variance": 10,
+    "dml_variance_pilot": 38,
+    "score_inference": 273
+  },
+  "expected_and_verified_point_fits": 400,
+  "failed_fits_or_inference": 0,
+  "unique_independent_seeds_per_estimator_dgp": 100,
+  "verified_output_rows": 15200,
+  "individual_summary_rows": 152,
+  "distinct_coverage_tests": 128,
+  "null_false_positive_tests": 40,
+  "checks": [
+    "Full Cartesian identities and source hashes",
+    "OLS/DML paired dataset IDs",
+    "No oracle input to fitting/interval functions",
+    "Joint covariance PSD and delta-method propagation",
+    "Points/endpoints/errors/coverage and exact binomial bounds",
+    "DML disjoint original-day folds"
+  ],
+  "production_method_changed": false,
+  "oracle_variance_used_for_inference": false,
+  "core_source_sha256": "f25a335a3cb469a42708c5a87f47434f9b3d3a1f43bd3dca80debb425da0a5d1",
+  "remaining_limits": [
+    "Evidence C, no GSM data",
+    "Individual intervals, no simultaneous coverage guarantee",
+    "No rejection of undercoverage is not certification of nominal 95%",
+    "Full-context policy support remains insufficient",
+    "Old percentile results remain historical"
+  ],
+  "durations_seconds_by_dgp": {
+    "RCT_SYN": 345.8767727999948,
+    "NULL_EFFECT": 344.4271945000073
+  }
+}

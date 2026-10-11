@@ -1,0 +1,209 @@
+{
+  "run_id": "week2-support-diagnostic-20261011-v3",
+  "scenario_id": "price-x-plus10",
+  "target_context_set": "training_supported",
+  "scope": {
+    "target_context_set": "training_supported",
+    "zones": [
+      161,
+      162,
+      163,
+      164,
+      170
+    ],
+    "selected_zone": null,
+    "context_blocks": 972,
+    "context_weight_sessions": 48600
+  },
+  "source_kind": "semi_synthetic",
+  "evidence_level": "C",
+  "request": {
+    "scenario_id": "price-x-plus10",
+    "baseline_multiplier_x": 1.0,
+    "baseline_multiplier_y": 1.0,
+    "delta_price_x": 0.1,
+    "delta_price_y": 0.0,
+    "n_sessions": 10000,
+    "interval_level": 0.95,
+    "target_context_set": "training_supported"
+  },
+  "units": {
+    "probability": "fraction",
+    "delta_probability": "percentage_points",
+    "bookings": "expected quote-session choices",
+    "theta": "probability / log-price"
+  },
+  "assumption": "Quote session population held fixed; X/Y are hypothetical services",
+  "interval_kind": "day-bootstrap percentile; individual intervals",
+  "interval_scope": "individual",
+  "interval_validation_scope": "technical_checks_only",
+  "interval_calibration_status": "not_evaluated_for_this_run",
+  "interval": {
+    "X_before_probability": {
+      "lower": 0.30202724095895905,
+      "upper": 0.30765832516549607
+    },
+    "Y_before_probability": {
+      "lower": 0.25231940033126954,
+      "upper": 0.25611824053339227
+    },
+    "NONE_before_probability": {
+      "lower": 0.4392087980229535,
+      "upper": 0.44326794388239654
+    },
+    "X_after_probability": {
+      "lower": 0.24459175915908674,
+      "upper": 0.2521448808934582
+    },
+    "Y_after_probability": {
+      "lower": 0.2612622479912328,
+      "upper": 0.26635409179105685
+    },
+    "NONE_after_probability": {
+      "lower": 0.4848449693319192,
+      "upper": 0.4901238281575065
+    },
+    "X_delta_percentage_points": {
+      "lower": -5.828518330692316,
+      "upper": -5.396903115061503
+    },
+    "Y_delta_percentage_points": {
+      "lower": 0.8486210235908268,
+      "upper": 1.132466915846901
+    },
+    "NONE_delta_percentage_points": {
+      "lower": 4.393756141691,
+      "upper": 4.886215914289988
+    },
+    "delta_expected_bookings": {
+      "lower": -488.6215914289993,
+      "upper": -439.37561416910603
+    }
+  },
+  "status": "ok",
+  "support_status": "ok",
+  "reasons": [],
+  "estimator": "dml",
+  "dataset_id": "ds-5f26297a9194afda2d39",
+  "outcome_order": [
+    "X",
+    "Y"
+  ],
+  "treatment_order": [
+    "X",
+    "Y"
+  ],
+  "theta": [
+    [
+      -0.5900358145879308,
+      0.16975992418069102
+    ],
+    [
+      0.1013471609270186,
+      -0.49859599271079985
+    ]
+  ],
+  "elasticity_at_baseline": [
+    [
+      -1.9362655643563855,
+      0.5570853281650041
+    ],
+    [
+      0.39891335724354304,
+      -1.962527608481014
+    ]
+  ],
+  "context_blocks": 972,
+  "context_weight_sessions": 48600,
+  "probabilities": {
+    "X": {
+      "before_probability": 0.30472876523218995,
+      "after_probability": 0.24849234565282288,
+      "delta_percentage_points": -5.623641957936706,
+      "before_expected_choices": 3047.2876523218993,
+      "after_expected_choices": 2484.9234565282286
+    },
+    "Y": {
+      "before_probability": 0.2540580782436536,
+      "after_probability": 0.2637174943742663,
+      "delta_percentage_points": 0.9659416130612664,
+      "before_expected_choices": 2540.580782436536,
+      "after_expected_choices": 2637.174943742663
+    },
+    "NONE": {
+      "before_probability": 0.4412131565241567,
+      "after_probability": 0.48779015997291053,
+      "delta_percentage_points": 4.657700344875382,
+      "before_expected_choices": 4412.131565241567,
+      "after_expected_choices": 4877.901599729105
+    }
+  },
+  "baseline_multiplier": [
+    1.0,
+    1.0
+  ],
+  "target_multiplier": [
+    1.1,
+    1.0
+  ],
+  "delta_log_price": [
+    0.09531017980432493,
+    0.0
+  ],
+  "before_expected_bookings": 5587.868434758436,
+  "after_expected_bookings": 5122.098400270891,
+  "delta_expected_bookings": -465.77003448754476,
+  "bootstrap": {
+    "requested_draws": 199,
+    "fit_failed_draws": 0,
+    "invalid_probability_draws": 0,
+    "valid_draws": 199,
+    "failure_fraction": 0.0,
+    "interval_status": "ok"
+  },
+  "interval_level": 0.95,
+  "theta_interval": [
+    [
+      {
+        "lower": -0.6115315638537728,
+        "upper": -0.5662462421266555
+      },
+      {
+        "lower": 0.1449781132433028,
+        "upper": 0.19570627070073046
+      }
+    ],
+    [
+      {
+        "lower": 0.0890378158275516,
+        "upper": 0.11881909342442448
+      },
+      {
+        "lower": -0.5254290359498619,
+        "upper": -0.4725934682878582
+      }
+    ]
+  ],
+  "elasticity_interval": [
+    [
+      {
+        "lower": -2.0074985771187754,
+        "upper": -1.8557327396685366
+      },
+      {
+        "lower": 0.47696568880889645,
+        "upper": 0.6447836517499524
+      }
+    ],
+    [
+      {
+        "lower": 0.35119808641561495,
+        "upper": 0.46794618203391913
+      },
+      {
+        "lower": -2.0653816567957892,
+        "upper": -1.8628159287673158
+      }
+    ]
+  ]
+}

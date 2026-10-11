@@ -1,0 +1,85 @@
+{
+  "environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0",
+      "simpy": "4.1.2"
+    },
+    "git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "source_code_sha256": "f79b08bccad30b715431f019604b3b260778636fe9253962ee4e4a35a1e380cf",
+    "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "baseline_run_id": "week2-choice-handoff-20261011-v2",
+  "hybrid_run_id": "week2-hybrid-inference-20261011-v3",
+  "baseline_manifest_sha256": "35849460841ed2a542c3f9ae111508c40204aee0fc5f9f522ac2889c4aeff34f",
+  "baseline_files_preserved": 20,
+  "methods": {
+    "adjusted_ols": "block_hc3_t",
+    "dml": "block_score_normal"
+  },
+  "covariance_bytes": {
+    "adjusted_ols": 40927,
+    "dml": 40882
+  },
+  "dml_bootstrap_bytes": 1871812,
+  "dml_point_bundle_bytes": 19226,
+  "bootstrap_load_seconds": 0.4150423000101,
+  "scenario_timings": {
+    "analytic": {
+      "runs": 5,
+      "median_seconds": 0.030477099993731827,
+      "seconds": [
+        0.03064079998875968,
+        0.03026849999150727,
+        0.030477099993731827,
+        0.03223470000375528,
+        0.030170599988196045
+      ]
+    },
+    "bootstrap": {
+      "runs": 5,
+      "median_seconds": 1.1219459999992978,
+      "seconds": [
+        1.1094319999974687,
+        1.1219459999992978,
+        1.149830499998643,
+        1.1949262999987695,
+        1.0994407999969553
+      ]
+    }
+  },
+  "timing_scope": "five warm in-memory full-context scenarios per method; no I/O or refits in timer",
+  "full_context": {
+    "blocks": 1440,
+    "support_status": "insufficient_support"
+  },
+  "restricted_context": {
+    "blocks": 972,
+    "sessions": 48600,
+    "support_status": "ok"
+  },
+  "analytic_point_replay_matches": true,
+  "bootstrap_point_and_interval_replay_matches": true,
+  "immutable_archive_files_verified": {
+    "dml_variance_pilot": 38,
+    "final_inference": 412,
+    "interval_comparison": 19,
+    "interval_variance": 10,
+    "oracle_variance": 7,
+    "score_inference": 273,
+    "support_interval": 25
+  },
+  "reviewer": "Bun",
+  "review_date": "2026-10-11",
+  "review_status": "technical_exception_accepted",
+  "calibration_status": "not_certified_at_nominal_95"
+}

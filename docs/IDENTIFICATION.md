@@ -205,17 +205,132 @@ Bootstrap draws must retain the original training sample's active treatments.
 A draw that loses variation in an originally varying price counts as a failed refit,
 so coefficient columns stay aligned and the failure enters the interval-quality checks.
 
-Intervals are individual day-bootstrap percentile intervals, not simultaneous
-intervals. The reporting profile requires at least 199 successful draws, at most
+Frozen reporting/effects intervals are individual day-bootstrap percentile intervals,
+not simultaneous intervals. The reporting profile requires at least 199 successful draws, at most
 5% fit failures, and no large half/full width sensitivity. Scenario intervals are
 also withheld when any draw produces invalid probabilities. Development intervals
 in effects/metrics remain explicitly labeled `interval_unstable`; scenarios show
 the valid point estimate while withholding those intervals.
 
-With only 20 independent training days, statistical inference needs empirical
+With only 20 original training-day clusters, statistical inference needs empirical
 coverage checks. Monte Carlo reports the interval denominator, failed or
 unidentified estimates, per-cell bias/RMSE, coverage and exact binomial bounds.
 Small development runs do not establish nominal coverage.
+
+The hybrid choice scenario/UI defaults to compact analytic inference: adjusted
+OLS HC3/t or DML orthogonal block-score/normal. Joint covariance includes all
+theta and baseline coefficients, with delta-method elasticity and fixed-context
+scenario gradients. This assumes independent block scores and conditional DML
+nuisances; it does not account for arbitrary market dependence. It is not the
+EconML default IID interval. Select bootstrap for the frozen baseline. Missing
+covariance is unavailable; invalid/stale covariance is rejected. Individual CI
+labels, unchanged support/probability checks and the 88–89% coverage warning remain.
+Bun accepted this technical exception on 11/10/2026; no absolute calibration or
+GSM identification follows. See [acceptance](submission/days/20261011/week2_hybrid_acceptance.md).
+
+#### Development interval candidates
+
+The standalone development comparator preserves production percentile intervals
+and nominal 95%. It compares only the four theta cells on the same observed
+point estimate $\hat\theta$ and saved day-bootstrap draws. Percentile endpoints
+are the 2.5%/97.5% draw quantiles; basic endpoints are
+$[2\hat\theta-q_{.975},\ 2\hat\theta-q_{.025}]$.
+
+BCa uses a midrank bias correction
+$z_0=\Phi^{-1}((\#\{\theta^*<\hat\theta\}+0.5\#\{\theta^*=\hat\theta\})/B)$
+and acceleration
+$a=\sum_d u_d^3/[6(\sum_d u_d^2)^{3/2}]$, where
+$u_d=\overline{\hat\theta_{(-d)}}-\hat\theta_{(-d)}$.
+Each delete-one-day fit refits all learned components on 19 original days with
+the original seed and day fold groups. For $\alpha\in\{.025,.975\}$ the adjusted
+quantile is
+$\Phi(z_0+(z_0+z_\alpha)/(1-a(z_0+z_\alpha)))$.
+Undefined correction/acceleration, a failed jackknife or invalid adjusted
+quantiles yield an unavailable candidate. Both adjusted quantiles must lie
+within $[1/(B+1),\ B/(B+1)]$ for $B$ successful saved draws; the comparator neither
+clips unresolved tails nor substitutes percentile intervals. Definitions follow
+the [SciPy bootstrap reference](https://docs.scipy.org/doc/scipy-1.17.0/reference/generated/scipy.stats.bootstrap.html)
+and [R boot interval reference](https://stat.ethz.ch/R-manual/R-devel/library/boot/html/boot.ci.html);
+the explicit finite-draw guard is this development protocol's restriction.
+
+Coverage/false positives retain attempted and valid denominators, exact binomial
+uncertainty and paired common-valid seeds. Technical interval stability does not
+establish calibration. Twenty fixed calendar-day clusters and 20 independent
+simulation seeds provide development evidence C; days are not asserted IID and
+none of these intervals identifies GSM effects. Elasticity and scenario
+calibration require separate evaluation. The
+[comparison protocol](BENCHMARK.md#development-interval-method-comparison) requires
+a frozen method and fresh final evaluation before any production promotion.
+
+#### Development day-jackknife variance sensitivity
+
+The separate postprocessor reuses the 20 complete saved day omissions, without
+refitting. For each individual theta cell it computes
+$\hat V_J=(G-1)/G\sum_{g=1}^G(\hat\theta_{(-g)}-\overline{\hat\theta_{(-g)}})^2$
+and the candidate interval
+$\hat\theta\pm t_{G-1,.975}\sqrt{\hat V_J}$, with $G=20$ and the original
+full-data point $\hat\theta$. The variance formula follows the
+[jackknife reference, §3.8.2](https://www.stat.ethz.ch/CRAN/web/packages/rbmi/vignettes/stat_specs.html);
+using a t reference with 19 degrees of freedom is this frozen sensitivity
+protocol's choice, not an established calibration guarantee for this model.
+
+Every original day needs one successful finite omission estimate; missing,
+duplicate or failed omissions and degenerate variance withhold the candidate.
+Retain failures and paired denominators. Compare RMS jackknife SE with empirical
+between-seed SD on the same valid seeds. No new fits or independent seeds are
+added. Generic jackknife assumptions need assessment for the fixed calendar-day
+design and nonlinear DML, whose nuisance/fold assignments change when a day is
+removed. The result remains development evidence C for theta only; it does not
+calibrate elasticity/scenario or GSM effects. The
+[variance protocol](BENCHMARK.md#development-day-jackknife-variance-sensitivity)
+keeps final acceptance and production inference unchanged.
+
+The [fresh DML pilot](BENCHMARK.md#fresh-dml-day-jackknife-pilot) applies that
+same candidate to new seeds 43001–43005, with full original-day refits and
+adjusted OLS as a paired estimator baseline. It runs no percentile/basic/BCa
+bootstrap on these seeds. Its five-seed RCT/null cohorts assess execution and
+limited development variability; generic jackknife/t19 assumptions, day
+dependence and DML fold changes still need assessment. No production inference,
+final-calibration conclusion or elasticity/scenario claim follows from the pilot.
+
+#### Development score inference
+
+The [score diagnosis](BENCHMARK.md#development-score-inference-diagnosis) distinguishes
+the fixed-calendar, block-independent assignment/count DGP from day-resampling
+uncertainty. It does not establish the assignment or dependence unit for GSM.
+OLS HC3 provides a conditional block reference; day CR1/t19 is sensitivity.
+DML uses the same fitted LinearDML point and actual cached out-of-fold Y/T
+residuals. Row order is checked against the original controls, and the score
+Jacobian must reconstruct the fitted theta. Residual capture is opt-in and
+leaves the default fit and production interval methods unchanged.
+
+The research covariance contains theta XX/XY/YX/YY and both evaluation-context
+baseline probabilities. The baseline influence includes the effect of estimating
+theta; theta/baseline and X/Y covariances are retained. Elasticity gradients
+include both `1/p0` and `-theta/p0^2`; scenario gradients retain joint effects.
+Ratio intervals are delta-method approximations, not inherited theta calibration.
+Neither block score asymptotics nor a t19 reference guarantees DML inference with
+20 groups. Separate 4/10-fold fits inspect partition sensitivity and do not add
+independent Monte Carlo seeds. Fresh RCT/null evaluation and the existing support
+and probability gates remain necessary; no production promotion or final
+calibration follows automatically. See [the evidence](submission/days/20261011/score_inference_diagnostic.md).
+
+The evaluator-only OLS variance audit conditions on the fixed context and
+assigned price design. It uses the known multinomial rate covariance to check
+the joint linear estimator's conditional mean and covariance. This reference
+cannot be used for operational intervals when the DGP probabilities are unknown.
+For this block-independent generator, day CR1 can underestimate baseline
+variance when weekday controls absorb variation within its small set of day
+groups; it remains sensitivity rather than the selected block assessment.
+
+The independent 45001–45100 assessment fixes HC3/t for OLS and orthogonal-score
+normal inference for DML, without oracle variance inputs or interval scaling.
+Exact binomial/Holm tests assess undercoverage and NULL overrejection across
+the frozen output family. No rejection does not establish exact nominal
+coverage; its individual intervals have no simultaneous guarantee. Full-context
+support and GSM identification/assignment/dependence must be assessed separately.
+See [protocol](BENCHMARK.md#conditional-variance-audit-and-independent-inference-assessment)
+and [closeout](submission/days/20261011/week2_inference_closeout.md).
 
 ### Price scenarios
 

@@ -1,0 +1,125 @@
+{
+  "status": "independent_assessment_completed_calibration_not_certified",
+  "evidence_level": "C",
+  "source_kind": "semi_synthetic",
+  "plan_hash": "8615438f1639f959457642b110d4280c019f6524d7a39e15db908cf2ea0a70aa",
+  "environment": {
+    "python": "3.11.9",
+    "packages": {
+      "gsm-poc": "0.1.0",
+      "numpy": "2.4.6",
+      "pandas": "2.3.3",
+      "duckdb": "1.5.6",
+      "pyarrow": "23.0.1",
+      "scikit-learn": "1.6.1",
+      "econml": "0.16.0",
+      "streamlit": "1.65.0",
+      "scipy": "1.17.1",
+      "joblib": "1.6.0",
+      "simpy": "4.1.2"
+    },
+    "git_revision": "89b3bbdca5de5c5053397f56b2c1ad6fa89cfa09",
+    "source_code_sha256": "f25a335a3cb469a42708c5a87f47434f9b3d3a1f43bd3dca80debb425da0a5d1",
+    "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "script_sha256": "708c86835ef8f2cf6510616188e1eac234a0363caa483d2df9a5c3fdb6661753",
+  "oracle_audit": {
+    "status": "completed",
+    "plan_hash": "3d46341d6106a20b000d63975cae9fadd5dcb43a0fdd4718cebfb6ee7417da53",
+    "regenerated_datasets": 200,
+    "model_fits": 0,
+    "maximum_point_difference": 5.3179682879545e-14,
+    "maximum_conditional_bias": 5.67323965583455e-14,
+    "artifacts": {
+      "executed_runner.py": "14957e383e9e91dedf7a7af84d51d9739885633d0f38fec227c5330e0e6030db",
+      "jobs.json": "a101c77a651e44305ceeb3e30ba8eda9984cf01e48e524cff9d4b89c393e923e",
+      "protocol.json": "9f322e3995eeb822460f147674d7f024c1b6dfad99876e289d8c6ed108ace885",
+      "seed_variances.parquet": "34619e04d24a709eb2ea28382f824a6d65041b79fbff71ec9fe48a226631d161",
+      "summary.csv": "b14b8e9398bf787499d54c553d70168de2c1b34085b78bf6a58ebc49527d4ce8"
+    }
+  },
+  "inference_audit": {
+    "status": "verified",
+    "historical_archives_unchanged": {
+      "support_interval": 25,
+      "interval_comparison": 19,
+      "interval_variance": 10,
+      "dml_variance_pilot": 38,
+      "score_inference": 273
+    },
+    "expected_and_verified_point_fits": 400,
+    "failed_fits_or_inference": 0,
+    "unique_independent_seeds_per_estimator_dgp": 100,
+    "verified_output_rows": 15200,
+    "individual_summary_rows": 152,
+    "distinct_coverage_tests": 128,
+    "null_false_positive_tests": 40,
+    "checks": [
+      "Full Cartesian identities and source hashes",
+      "OLS/DML paired dataset IDs",
+      "No oracle input to fitting/interval functions",
+      "Joint covariance PSD and delta-method propagation",
+      "Points/endpoints/errors/coverage and exact binomial bounds",
+      "DML disjoint original-day folds"
+    ],
+    "production_method_changed": false,
+    "oracle_variance_used_for_inference": false,
+    "core_source_sha256": "f25a335a3cb469a42708c5a87f47434f9b3d3a1f43bd3dca80debb425da0a5d1",
+    "remaining_limits": [
+      "Evidence C, no GSM data",
+      "Individual intervals, no simultaneous coverage guarantee",
+      "No rejection of undercoverage is not certification of nominal 95%",
+      "Full-context policy support remains insufficient",
+      "Old percentile results remain historical"
+    ],
+    "durations_seconds_by_dgp": {
+      "RCT_SYN": 345.8767727999948,
+      "NULL_EFFECT": 344.4271945000073
+    }
+  },
+  "checks": {
+    "full_repository_tests": {
+      "passed": 410,
+      "warnings": 2,
+      "duration_seconds": 108.36
+    },
+    "ui_tests": {
+      "passed": 3,
+      "duration_seconds": 5.26,
+      "sandbox_limitation": "Windows socketpair blocked; rerun with local socket access passed"
+    },
+    "focused_new_tests": {
+      "passed": 8,
+      "duration_seconds": 0.56
+    },
+    "ruff": "passed",
+    "ty": "passed",
+    "diff_check": "passed"
+  },
+  "results": {
+    "point_fits": 400,
+    "failed_fits_or_inference": 0,
+    "output_rows": 15200,
+    "independent_seeds_per_estimator_dgp": 100,
+    "holm_family_tests": 168,
+    "holm_rejections": 0,
+    "exploratory_undercoverage_rows": 8,
+    "null_overreject_rows": 0,
+    "scenario_support_counts": {
+      "insufficient_support": 12000
+    }
+  },
+  "completed": [
+    "Exact conditional OLS joint variance diagnosis with 200 regenerated datasets and zero model refits",
+    "Independent frozen RCT/null assessment with OLS/DML and joint elasticity/scenarios",
+    "False-positive and availability/failure assessment, with repeated-baseline deduplication",
+    "Full test suite including formerly blocked AppTest",
+    "Archived source/evidence and historical hash checks"
+  ],
+  "remaining": [
+    "Coverage below nominal remains on individual outputs; no certification of every interval",
+    "Full-context scenario population remains unsupported",
+    "No GSM data or validated GSM assignment/dependence",
+    "No promotion of new methods into the current production percentile path"
+  ]
+}

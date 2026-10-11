@@ -1,0 +1,26 @@
+{
+  "status": "completed",
+  "plan_hash": "5c6aff21bd988d1070f0863b827da659de47b88a57f5adb4ccf9b2270f2c8b55",
+  "stage": "dml_probe",
+  "expected_point_fits": 2,
+  "attempted_point_fits": 2,
+  "successful_point_fits": 2,
+  "failed_point_fits": 0,
+  "failed_inference_jobs": 0,
+  "bootstrap_or_jackknife_fits": 0,
+  "duration_seconds": 11.119740399997681,
+  "artifacts": {
+    "day_scores.csv": "c7657c0ae544607525b3f28efdee7ffc0554a6d7f0e995eb9ca0a3e49d1b8979",
+    "estimate_source.py": "d4aa9ef87831315397430a4ee04df5883c702e0a4d2b7dea5524c431b6f4df27",
+    "NULL_EFFECT-44001-dml-5fold-influence.parquet": "2d7119877b7dda0ce45ce9efdafb4e79b08df24e0f43bab33408f6969b5b9e2e",
+    "NULL_EFFECT-44001-dml-5fold.json": "814a77870de63c9dce1f7a9a743b46d330e0ccbf20b2dbd6c514daa6ea8200af",
+    "protocol.json": "c9dee1051b6b17d8b25990ea8df39d612a75a8569f47626b4ddfe162d2446f05",
+    "RCT_SYN-44001-dml-5fold-influence.parquet": "1823f858759cc36d9ebe266108e4de20e096c8051cfff10358cb2e4abf6457b7",
+    "RCT_SYN-44001-dml-5fold.json": "1bb49e4822a416fd1cb7a8b813d66a64675a5329c475ef71007463fc68279732",
+    "runner_source.py": "5898c74b0b0064011afe27dbf20dcac40d8a048c64a462a1fb8b817f5f0941e3",
+    "seed_metrics.parquet": "42c2c83f54b99eb131d10f72ec9c31ce42deadef4e7feba8c67f584cb59a1032",
+    "summary.csv": "4258b8258c4a1abf2c92a6137ee8d09b45b2f4f52fad90a795fb0d360c876988",
+    "source_context/context_templates.json": "3cf01f3e868d9050e7062b1f937f22426d86c89ee8be4d9de9df1a358c6f79d9",
+    "source_context/context_templates.parquet": "7137136cd0687ab6c60c382576fad6568d1587ccb9953e575b57c19945531ccf"
+  }
+}

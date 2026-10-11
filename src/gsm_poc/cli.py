@@ -23,6 +23,8 @@ def parser() -> argparse.ArgumentParser:
         "fit",
         "evaluate",
         "scenario",
+        "freeze-choice",
+        "prepare-inference",
         "prepare-demand",
         "simulate-marketplace",
         "run-all",
@@ -59,6 +61,8 @@ def parser() -> argparse.ArgumentParser:
             cmd.add_argument("--delta-y", type=float, default=0.0)
             cmd.add_argument("--baseline-x", type=float, default=1.0)
             cmd.add_argument("--baseline-y", type=float, default=1.0)
+        if name in ("freeze-choice", "prepare-inference"):
+            cmd.add_argument("--model-run-id", required=True)
         if name == "prepare-demand":
             cmd.add_argument("--snapshot", type=Path, required=True)
         if name == "simulate-marketplace":
@@ -75,6 +79,9 @@ def parser() -> argparse.ArgumentParser:
                 "--carry-in-run-id", help="Completed operational checkpoint run to continue"
             )
         if name == "scenario":
+            cmd.add_argument(
+                "--inference-method", choices=("analytic", "bootstrap"), default="analytic"
+            )
             cmd.add_argument("--n-sessions", type=int, default=10000)
             cmd.add_argument("--zone", type=int)
             cmd.add_argument("--target-context-set", default=None)
@@ -127,6 +134,12 @@ def main(argv: list[str] | None = None) -> int:
             pipeline.scenario()
         elif args.command == "evaluate":
             pipeline.evaluate(args.build_id)
+        elif args.command == "freeze-choice":
+            result = pipeline.freeze_choice(args.model_run_id)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "prepare-inference":
+            result = pipeline.prepare_inference(args.model_run_id)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         elif args.command == "scenario":
             if args.target_context_set is not None:
                 target_context_set = args.target_context_set
@@ -144,7 +157,9 @@ def main(argv: list[str] | None = None) -> int:
                 config.evaluation.interval_level,
                 target_context_set=target_context_set,
             )
-            result = pipeline.scenario(request, args.model_run_id, args.zone)
+            result = pipeline.scenario(
+                request, args.model_run_id, args.zone, inference_method=args.inference_method
+            )
             print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         elif args.command == "prepare-demand":
             result = pipeline.prepare_demand(

@@ -846,7 +846,19 @@ Keep copies of each original unit on the same side of cross-fitting.
 
 ### 12.2 Refit and simulation per draw
 
-Refit responses, baselines, and learned calibration components relevant to the
+For the implemented fixed-population choice scenarios, use the hybrid path:
+`inference_method="analytic"` defaults to compact OLS HC3/t or DML block-score/normal
+joint coefficient covariance; `"bootstrap"` preserves the frozen reporting baseline.
+Fit covariance offline, including theta/baseline cross-covariance; propagate it
+through elasticity and context/price scenario gradients. Old models need a verified
+offline preparation step; rendering never refits. Keep individual CI qualification,
+`Technically stable`, residual 88–89% coverage warnings and unchanged support gates.
+This choice-only conditional approximation does not supply operational/equilibrium
+CI. Bun accepted its technical exception on 11/10/2026; see
+[the decision](../submission/days/20261011/week2_hybrid_acceptance.md).
+
+For the proposed integrated marketplace uncertainty path, refit responses,
+baselines, and learned calibration components relevant to the
 uncertainty target; fixed business rules remain fixed. Solve baseline/target in
 each draw. Conditional forecasts keep roster/snapshot/context fixed; resampling
 these requires another declared target.

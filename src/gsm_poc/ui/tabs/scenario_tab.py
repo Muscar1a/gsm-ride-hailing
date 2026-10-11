@@ -28,6 +28,11 @@ STATUS_LABELS = {
     "not_identified": "Not identified",
     "interval_unstable": "Not ready for reporting",
 }
+INTERVAL_STATUS_LABELS = {
+    "ok": "Technically stable",
+    "interval_unstable": "Not ready for reporting",
+    "interval_unavailable": "Unavailable",
+}
 
 
 def scenario_tab(
@@ -77,7 +82,12 @@ def scenario_tab(
         delta_x = st.number_input(
             "Price X change to inspect (%)", min_value=-90.0, max_value=100.0, value=20.0, step=1.0
         )
-    bundle, draws = model_loader(workspace, manifest, estimator)
+    inference_method = st.selectbox(
+        "Inference method",
+        ("analytic", "bootstrap"),
+        format_func=lambda method: "Analytic" if method == "analytic" else "Bootstrap",
+    )
+    bundle, draws = model_loader(workspace, manifest, estimator, inference_method)
     target_context_set = "all" if zone == "All zones" else f"zone_{zone}"
     request = ScenarioRequest(
         "interactive-price-scenario",
@@ -87,7 +97,16 @@ def scenario_tab(
         interval_level=config.evaluation.interval_level,
         target_context_set=target_context_set,
     )
-    result = scenario(bundle, context, request, config, manifest["run_id"], draws)
+    result = scenario(
+        bundle,
+        context,
+        request,
+        config,
+        manifest["run_id"],
+        draws,
+        inference_method=inference_method,
+    )
+    st.warning(result["coverage_warning"])
     if result["status"] in ("out_of_support", "not_identified", "invalid_probability"):
         st.warning(" · ".join(result["reasons"]))
     else:
@@ -143,7 +162,14 @@ def scenario_tab(
             scope_label = "All zones" if zone == "All zones" else ZONE_NAMES.get(zone, str(zone))
             st.write(f"Scope: **{scope_label}**")
             st.write(f"Support: **{STATUS_LABELS[result['support_status']]}**")
-            st.write(f"Interval: **{STATUS_LABELS[result['bootstrap']['interval_status']]}**")
+            interval_status = result["interval_status"]
+            interval_label = INTERVAL_STATUS_LABELS.get(interval_status, interval_status)
+            st.write(f"Interval: **{interval_label}**")
+            st.caption(
+                f"{result['interval_kind']}; nominal "
+                f"{result.get('interval_level', request.interval_level):.0%}. Technical stability "
+                "does not establish empirical coverage. Calibration is not evaluated for this run."
+            )
         st.dataframe(table, hide_index=True, width="stretch")
         if result["interval"] is not None:
             st.subheader("Uncertainty")
