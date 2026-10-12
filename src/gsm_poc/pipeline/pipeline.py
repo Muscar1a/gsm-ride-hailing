@@ -35,6 +35,7 @@ from gsm_poc.data.context import build_context
 from gsm_poc.data.ingest import ingest
 from gsm_poc.data.marts import build_marts
 from gsm_poc.data.silver import build_silver
+from gsm_poc.simulation.compensation import validate_compensation
 from gsm_poc.simulation.demand import DemandPlan, prepare_demand_plan
 from gsm_poc.simulation.dgp import generate, save_generated
 from gsm_poc.simulation.marketplace import simulate_marketplace
@@ -925,22 +926,35 @@ class Pipeline:
         window_start: str | None = None,
         window_end: str | None = None,
         carry_in_run_id: str | None = None,
+        compensation_path: Path | None = None,
     ) -> dict:
         """Freeze a verified demand run before one bounded fixed-supply trajectory."""
         if demand_run_id == self.run.run_id:
             raise ValueError("simulate-marketplace requires a separate output run")
         if carry_in_run_id == self.run.run_id:
             raise ValueError("Carry-in and simulation output must use separate runs")
+        simulation_artifact = f"runs/{self.run.run_id}/simulation_result.json"
+        if simulation_artifact in self.run.manifest["artifacts"]:
+            earnings_artifact = f"runs/{self.run.run_id}/earnings_result.json"
+            had_compensation = earnings_artifact in self.run.manifest["artifacts"]
+            if had_compensation != (compensation_path is not None):
+                raise ValueError("Use a new run ID when adding or removing compensation")
+            old_version = read_json(self.run.path / "simulation_spec.json")["schema_version"]
+            new_version = read_json(rules_path).get("schema_version")
+            if (old_version == 3) != (new_version == 3):
+                raise ValueError("Use a new run ID when changing the dispatch mode")
         source_manifest: dict = {}
         source_artifacts: dict[str, str] = {}
         rules: dict = {}
         requests_checksum: str | None = None
         carry_manifest: dict = {}
         carry_checksum: str | None = None
+        compensation: dict | None = None
 
         def simulation_inputs():
             nonlocal source_manifest, source_artifacts, rules, requests_checksum
             nonlocal carry_manifest, carry_checksum
+            nonlocal compensation
             source_manifest = completed_run(self.config.workspace, demand_run_id)
             if (
                 source_manifest.get("stages", {}).get("prepare_demand", {}).get("status")
@@ -963,6 +977,11 @@ class Pipeline:
             if read_json(source / "demand_result.json").get("usable_for_simulation") is not True:
                 raise ValueError("Demand usable_for_simulation gate is false or unavailable")
             rules = read_json(rules_path)
+            compensation = (
+                validate_compensation(read_json(compensation_path))
+                if compensation_path is not None
+                else None
+            )
             requests_checksum = sha256_file(requests_path) if requests_path else None
             if carry_in_run_id is not None:
                 carry_manifest = completed_run(self.config.workspace, carry_in_run_id)
@@ -982,6 +1001,7 @@ class Pipeline:
                 "rules": rules,
                 "seed": self.config.simulation.seed,
                 "prescribed_requests_sha256": requests_checksum,
+                "compensation": compensation,
                 "window_start": window_start,
                 "window_end": window_end,
                 "carry_in_run_id": carry_in_run_id,
@@ -1004,6 +1024,10 @@ class Pipeline:
                 write_json(source_path, source_manifest)
                 write_json(rules_copy, rules)
                 paths.extend([source_path, rules_copy])
+                if compensation is not None:
+                    compensation_copy = frozen / "compensation.json"
+                    write_json(compensation_copy, compensation)
+                    paths.append(compensation_copy)
                 carry_in = None
                 if carry_in_run_id is not None:
                     destination = frozen / "carry_in.json"
@@ -1052,12 +1076,19 @@ class Pipeline:
                     window_start=window_start,
                     window_end=window_end,
                     carry_in=carry_in,
+                    compensation=compensation,
                 )
-                for name, frame in (
-                    ("requests", simulation.requests),
-                    ("request_events", simulation.request_events),
-                    ("vehicle_intervals", simulation.vehicle_intervals),
-                ):
+                frames = dict(
+                    requests=simulation.requests,
+                    request_events=simulation.request_events,
+                    vehicle_intervals=simulation.vehicle_intervals,
+                )
+                frames.update(simulation.financial_tables or {})
+                if simulation.driver_offers is not None:
+                    frames["driver_offers"] = simulation.driver_offers
+                if simulation.offer_events is not None:
+                    frames["offer_events"] = simulation.offer_events
+                for name, frame in frames.items():
                     for extension in ("parquet", "csv"):
                         path = self.run.path / f"{name}.{extension}"
                         write_frame(path, frame)
@@ -1070,6 +1101,10 @@ class Pipeline:
                     path = self.run.path / name
                     write_json(path, value)
                     paths.append(path)
+                if simulation.financial_tables is not None:
+                    earnings_path = self.run.path / "earnings_result.json"
+                    write_json(earnings_path, simulation.result["earnings"])
+                    paths.append(earnings_path)
                 self.run.manifest["simulation_source"] = {
                     "demand_run_id": demand_run_id,
                     "source_environment": source_manifest["environment"],

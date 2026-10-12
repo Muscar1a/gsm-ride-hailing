@@ -16,7 +16,9 @@ import simpy
 
 from gsm_poc.core.artifacts import fingerprint
 from gsm_poc.core.config import Config
+from gsm_poc.simulation.compensation import resolve_compensation, settle_earnings
 from gsm_poc.simulation.demand import DemandPlan, validate_snapshot
+from gsm_poc.simulation.rules import normalize_rules
 
 REQUEST_COLUMNS = [
     "request_id",
@@ -61,6 +63,9 @@ class SimulationResult:
     end_snapshot: dict[str, Any]
     result: dict[str, Any]
     spec: dict[str, Any]
+    financial_tables: dict[str, pd.DataFrame] | None = None
+    driver_offers: pd.DataFrame | None = None
+    offer_events: pd.DataFrame | None = None
 
 
 class _Budget:
@@ -730,6 +735,7 @@ EVENT_PRIORITY = {
     "shift_start": 2,
     "shift_end": 2,
     "arrival": 3,
+    "offer_response": 2,
 }
 EXTRA_REQUEST_COLUMNS = [
     "cancel_at",
@@ -760,35 +766,7 @@ def _iso(nanoseconds: int) -> str:
 
 
 def _normalize_rules(rules: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(rules, dict):
-        raise ValueError("Simulation rules must be an object")
-    base = copy.deepcopy(rules)
-    version = base.get("schema_version")
-    if type(version) is not int or version not in (1, 2):
-        raise ValueError("Unsupported simulation rules schema_version")
-    if version == 2:
-        if "max_wait_seconds" not in base or "cancel_policy" not in base:
-            raise ValueError("Version 2 rules require max_wait_seconds and cancel_policy")
-        maximum_wait = base.pop("max_wait_seconds")
-        cancel_policy = base.pop("cancel_policy")
-    else:
-        maximum_wait, cancel_policy = None, "before_pickup_finish_leg"
-    if maximum_wait is not None and (
-        type(maximum_wait) not in (int, float) or not np.isfinite(maximum_wait) or maximum_wait < 0
-    ):
-        raise ValueError("max_wait_seconds must be null or finite and nonnegative")
-    if cancel_policy != "before_pickup_finish_leg":
-        raise ValueError("Unsupported cancel_policy")
-    if (
-        maximum_wait is not None
-        and maximum_wait
-        > (pd.Timestamp.max.value - _timestamp(snapshot["horizon_end"], "horizon_end").value) / 1e9
-    ):
-        raise ValueError("max_wait_seconds exceeds the supported timestamp range")
-    base["schema_version"] = 1
-    normalized = validate_rules(base, snapshot)
-    normalized.update(schema_version=2, max_wait_seconds=maximum_wait, cancel_policy=cancel_policy)
-    return normalized
+    return normalize_rules(rules, snapshot)
 
 
 def _arrival_schedule(
@@ -1109,6 +1087,386 @@ class _WindowMarketplace:
             self._close_interval(vehicle)
 
 
+OFFER_COLUMNS = [
+    "offer_id",
+    "request_id",
+    "vehicle_id",
+    "driver_id",
+    "service_id",
+    "offered_at",
+    "response_at",
+    "resolved_at",
+    "state",
+    "pickup_seconds",
+    "trip_seconds",
+    "vehicle_zone_id",
+    "origin_zone_id",
+    "destination_zone_id",
+    "displayed_fare",
+    "offered_driver_pay",
+    "currency",
+    "terms_version",
+]
+OFFER_EVENT_COLUMNS = ["offer_event_id", *OFFER_COLUMNS, "timestamp"]
+OFFER_DTYPES = {
+    key: "int64" for key in ("vehicle_zone_id", "origin_zone_id", "destination_zone_id")
+} | {
+    key: "float64"
+    for key in ("pickup_seconds", "trip_seconds", "displayed_fare", "offered_driver_pay")
+}
+
+
+def _offer_id(seed: int, request_id: str, vehicle_id: str) -> str:
+    return fingerprint({"seed": seed, "request_id": request_id, "vehicle_id": vehicle_id})
+
+
+def _offer_outcome(offer_id: str, rules: dict[str, Any]) -> str:
+    if rules["response_seconds"] >= rules["response_timeout_seconds"]:
+        return "timed_out"
+    # shortcut: acceptance is synthetic and price-independent; fit behavior only with decision data.
+    draw = int(offer_id[:16], 16) / 2**64
+    return "accepted" if draw < rules["acceptance_probability"] else "rejected"
+
+
+class _OfferMarketplace(_WindowMarketplace):
+    def __init__(
+        self,
+        snapshot: dict[str, Any],
+        rules: dict[str, Any],
+        schedule: list[dict[str, Any]],
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        budget: _Budget,
+        checkpoint: dict[str, Any] | None,
+        seed: int,
+        compensation: dict[str, Any] | None,
+    ) -> None:
+        super().__init__(snapshot, rules, schedule, start, end, budget, checkpoint)
+        self.seed, self.compensation = seed, compensation
+        self.offers = (
+            {row["offer_id"]: copy.deepcopy(row) for row in checkpoint["offer_records"]}
+            if checkpoint
+            else {}
+        )
+        self.offer_events: list[dict[str, Any]] = []
+        self.next_offer_event_id = checkpoint["next_offer_event_id"] if checkpoint else 0
+        self.open_offers_start = {
+            key for key, row in self.offers.items() if row["state"] == "offered"
+        }
+        self.new_offer_ids: set[str] = set()
+        if checkpoint is None:
+            self.pending = [
+                event for event in self.pending if event[3] not in ("shift_start", "shift_end")
+            ]
+            heapq.heapify(self.pending)
+            for vehicle in self.vehicles.values():
+                vehicle["pending_offer_id"] = None
+
+    def _close_interval(self, vehicle: dict[str, Any]) -> None:
+        offer_id = vehicle.get("pending_offer_id")
+        if offer_id:
+            vehicle["active_request_id"] = self.offers[offer_id]["request_id"]
+        super()._close_interval(vehicle)
+        if offer_id:
+            vehicle["active_request_id"] = None
+
+    def _release(self, vehicle: dict[str, Any], zone_id: int) -> None:
+        self._set_vehicle_state(vehicle, "idle")
+        vehicle.update(
+            zone_id=zone_id,
+            active_request_id=None,
+            pending_action=None,
+            next_event_at=None,
+            pending_offer_id=None,
+        )
+
+    def _offer_state(self, offer: dict[str, Any], state: str) -> None:
+        offer.update(state=state, resolved_at=None if state == "offered" else _iso(self.now))
+        self.offer_events.append(
+            {
+                "offer_event_id": self.next_offer_event_id,
+                **copy.deepcopy(offer),
+                "timestamp": _iso(self.now),
+            }
+        )
+        self.next_offer_event_id += 1
+
+    def _dispatch(self) -> None:
+        if self.now >= self.end:
+            return
+        pending_requests = {
+            row["request_id"] for row in self.offers.values() if row["state"] == "offered"
+        }
+        attempts: dict[str, set[str]] = {}
+        for offer in self.offers.values():
+            attempts.setdefault(offer["request_id"], set()).add(offer["vehicle_id"])
+        for request in sorted(
+            (row for row in self.records.values() if row["state"] == "queued"),
+            key=lambda row: (row["created_at"], row["request_id"]),
+        ):
+            request_id = request["request_id"]
+            tried = attempts.get(request_id, set())
+            if request_id in pending_requests or len(tried) >= self.rules["max_offer_attempts"]:
+                continue
+            candidates = []
+            for vehicle in self.vehicles.values():
+                if vehicle["state"] != "idle" or vehicle["vehicle_id"] in tried:
+                    continue
+                self.budget.consume()
+                pickup = self.travel[vehicle["zone_id"], request["origin_zone_id"]][
+                    "pickup_seconds"
+                ]
+                if (
+                    request["service_id"] in vehicle["eligible_services"]
+                    and pickup <= self.rules["max_pickup_seconds"]
+                ):
+                    candidates.append((pickup, vehicle["vehicle_id"]))
+            if not candidates:
+                continue
+            pickup, vehicle_id = min(candidates)
+            vehicle = self.vehicles[vehicle_id]
+            offer_id = _offer_id(self.seed, request_id, vehicle_id)
+            compensation = self.compensation
+            amount = (
+                compensation["effective_fares"][request["service_id"]] if compensation else None
+            )
+            due = self.now + round(
+                min(self.rules["response_seconds"], self.rules["response_timeout_seconds"]) * 1e9
+            )
+            if due > pd.Timestamp.max.value:
+                raise ValueError("Offer response exceeds the supported timestamp range")
+            offer = {
+                "offer_id": offer_id,
+                "request_id": request_id,
+                "vehicle_id": vehicle_id,
+                "driver_id": vehicle["driver_id"],
+                "service_id": request["service_id"],
+                "offered_at": _iso(self.now),
+                "response_at": _iso(due),
+                "resolved_at": None,
+                "state": "offered",
+                "pickup_seconds": float(pickup),
+                "trip_seconds": float(
+                    self.travel[request["origin_zone_id"], request["destination_zone_id"]][
+                        "trip_seconds"
+                    ]
+                ),
+                "displayed_fare": amount,
+                "offered_driver_pay": amount,
+                "vehicle_zone_id": vehicle["zone_id"],
+                "origin_zone_id": request["origin_zone_id"],
+                "destination_zone_id": request["destination_zone_id"],
+                "currency": compensation["contract"]["currency"] if compensation else None,
+                "terms_version": compensation["terms_version"] if compensation else None,
+            }
+            self.offers[offer_id] = offer
+            self.new_offer_ids.add(offer_id)
+            self._offer_state(offer, "offered")
+            self._set_vehicle_state(vehicle, "dispatch")
+            vehicle["pending_offer_id"] = offer_id
+            self._push(due, "offer_response", offer_id)
+
+    def _handle(self, kind: str, entity_id: str) -> None:
+        if kind == "offer_response":
+            offer = self.offers[entity_id]
+            if offer["state"] != "offered":
+                return
+            vehicle = self.vehicles[offer["vehicle_id"]]
+            request = self.records[offer["request_id"]]
+            outcome = _offer_outcome(entity_id, self.rules)
+            self._offer_state(offer, outcome)
+            self._set_vehicle_state(vehicle, "idle")
+            vehicle["pending_offer_id"] = None
+            if outcome != "accepted":
+                return
+            request.update(
+                vehicle_id=vehicle["vehicle_id"],
+                assigned_at=_iso(self.now),
+                dispatch_eta_seconds=offer["pickup_seconds"],
+                trip_seconds=offer["trip_seconds"],
+            )
+            self._request_state(request, "assigned")
+            self._set_vehicle_state(vehicle, "to_pickup")
+            pickup_at = self.now + round(offer["pickup_seconds"] * 1e9)
+            vehicle.update(
+                active_request_id=request["request_id"],
+                pending_action=None,
+                next_event_at=_iso(pickup_at),
+            )
+            self._request_state(request, "pickup")
+            self._push(pickup_at, "pickup_complete", vehicle["vehicle_id"])
+            return
+        if kind in ("cancel", "expire"):
+            for offer in self.offers.values():
+                if offer["request_id"] == entity_id and offer["state"] == "offered":
+                    self._offer_state(offer, "withdrawn")
+                    vehicle = self.vehicles[offer["vehicle_id"]]
+                    self._set_vehicle_state(vehicle, "idle")
+                    vehicle["pending_offer_id"] = None
+        super()._handle(kind, entity_id)
+
+
+def _validate_offers(
+    offers: Any,
+    vehicles: dict[str, dict[str, Any]],
+    requests: dict[str, dict[str, Any]],
+    rules: dict[str, Any],
+    seed: int,
+    start: pd.Timestamp,
+    compensation: dict[str, Any] | None,
+) -> None:
+    if not isinstance(offers, list) or len(offers) > rules["max_requests"] * min(
+        len(vehicles), rules["max_offer_attempts"]
+    ):
+        raise ValueError("Carry-in offer history exceeds its bounded cohort")
+    ids, pairs, accepted = set(), set(), set()
+    pending: dict[str, dict[str, Any]] = {}
+    periods: dict[str, list[tuple[int, int]]] = {}
+    request_periods: dict[str, list[tuple[int, int]]] = {}
+    attempts: Counter = Counter()
+    travel = {
+        (row["origin_zone_id"], row["destination_zone_id"]): row for row in rules["travel_times"]
+    }
+    for offer in offers:
+        if not isinstance(offer, dict) or set(offer) != set(OFFER_COLUMNS):
+            raise ValueError("Carry-in offer record is malformed")
+        offer_id, request_id, vehicle_id = (
+            offer[key] for key in ("offer_id", "request_id", "vehicle_id")
+        )
+        if (
+            not all(isinstance(key, str) for key in (offer_id, request_id, vehicle_id))
+            or request_id not in requests
+            or vehicle_id not in vehicles
+            or offer_id != _offer_id(seed, request_id, vehicle_id)
+            or offer_id in ids
+            or (request_id, vehicle_id) in pairs
+        ):
+            raise ValueError("Carry-in offer identity is invalid or repeated")
+        ids.add(offer_id)
+        pairs.add((request_id, vehicle_id))
+        attempts[request_id] += 1
+        if attempts[request_id] > rules["max_offer_attempts"]:
+            raise ValueError("Carry-in request exceeds its offer attempt budget")
+        request, vehicle = requests[request_id], vehicles[vehicle_id]
+        if (
+            offer["driver_id"] != vehicle["driver_id"]
+            or offer["service_id"] != request["service_id"]
+            or request["service_id"] not in vehicle["eligible_services"]
+            or any(
+                type(offer[key]) is not int
+                for key in ("vehicle_zone_id", "origin_zone_id", "destination_zone_id")
+            )
+            or offer["origin_zone_id"] != request["origin_zone_id"]
+            or offer["destination_zone_id"] != request["destination_zone_id"]
+            or (offer["vehicle_zone_id"], offer["origin_zone_id"]) not in travel
+            or any(
+                type(offer[key]) not in (int, float)
+                or not np.isfinite(offer[key])
+                or offer[key] < 0
+                for key in ("pickup_seconds", "trip_seconds")
+            )
+            or offer["pickup_seconds"]
+            != travel[offer["vehicle_zone_id"], offer["origin_zone_id"]]["pickup_seconds"]
+            or offer["pickup_seconds"] > rules["max_pickup_seconds"]
+            or offer["trip_seconds"]
+            != travel[offer["origin_zone_id"], offer["destination_zone_id"]]["trip_seconds"]
+        ):
+            raise ValueError("Carry-in offer changed its eligible driver, route or durations")
+        expected = {
+            "displayed_fare": compensation["effective_fares"][request["service_id"]]
+            if compensation
+            else None,
+            "offered_driver_pay": compensation["effective_fares"][request["service_id"]]
+            if compensation
+            else None,
+            "currency": compensation["contract"]["currency"] if compensation else None,
+            "terms_version": compensation["terms_version"] if compensation else None,
+        }
+        if any(offer[key] != value for key, value in expected.items()):
+            raise ValueError("Carry-in offer compensation terms changed")
+        if compensation and any(
+            type(offer[key]) not in (int, float) or not np.isfinite(offer[key]) or offer[key] < 0
+            for key in ("displayed_fare", "offered_driver_pay")
+        ):
+            raise ValueError("Carry-in offer monetary amounts are invalid")
+        offered = _timestamp(offer["offered_at"], "offered_at")
+        due = _timestamp(offer["response_at"], "response_at")
+        if not _timestamp(
+            request["created_at"], "created_at"
+        ) <= offered <= start or due.value != offered.value + round(
+            min(rules["response_seconds"], rules["response_timeout_seconds"]) * 1e9
+        ):
+            raise ValueError("Carry-in offer timestamp or original response deadline changed")
+        state = offer["state"]
+        if state not in ("offered", "accepted", "rejected", "timed_out", "withdrawn"):
+            raise ValueError("Carry-in offer state is invalid")
+        if state == "offered":
+            if (
+                offer["resolved_at"] is not None
+                or due <= start
+                or request["state"] != "queued"
+                or request_id in pending
+            ):
+                raise ValueError("Carry-in pending offer/request is inconsistent")
+            pending[request_id] = offer
+            stopping = start
+        else:
+            stopping = _timestamp(offer["resolved_at"], "resolved_at")
+            if not offered <= stopping <= start:
+                raise ValueError("Carry-in offer decision time is inconsistent")
+            if state == "withdrawn":
+                terminal_at = request["canceled_at"] or request["expired_at"]
+                if (
+                    terminal_at is None
+                    or stopping != _timestamp(terminal_at, "terminal_at")
+                    or stopping > due
+                ):
+                    raise ValueError("Carry-in withdrawn offer has no original cancellation/expiry")
+            elif stopping != due or state != _offer_outcome(offer_id, rules):
+                raise ValueError("Carry-in offer decision changed its frozen draw or response time")
+        request_periods.setdefault(request_id, []).append((offered.value, stopping.value))
+        if state == "accepted":
+            if (
+                request_id in accepted
+                or request["vehicle_id"] != vehicle_id
+                or request["assigned_at"] != offer["resolved_at"]
+                or request["dispatch_eta_seconds"] != offer["pickup_seconds"]
+                or request["trip_seconds"] != offer["trip_seconds"]
+            ):
+                raise ValueError("Carry-in accepted offer and request assignment differ")
+            accepted.add(request_id)
+            occupancy_end = due.value + round(offer["pickup_seconds"] * 1e9)
+            if request["state"] not in ("canceled", "expired"):
+                occupancy_end += round(offer["trip_seconds"] * 1e9)
+            periods.setdefault(vehicle_id, []).append((offered.value, occupancy_end))
+        elif request["assigned_at"] is not None and stopping > _timestamp(
+            request["assigned_at"], "assigned_at"
+        ):
+            raise ValueError("Carry-in offer occurred after driver assignment")
+        if state != "accepted":
+            periods.setdefault(vehicle_id, []).append((offered.value, stopping.value))
+    if any(
+        request["assigned_at"] is not None and key not in accepted
+        for key, request in requests.items()
+    ):
+        raise ValueError("Carry-in driver assignment has no accepted offer")
+    for groups in (periods, request_periods):
+        for group in groups.values():
+            ordered = sorted(group)
+            if any(left[1] > right[0] for left, right in zip(ordered, ordered[1:], strict=False)):
+                raise ValueError("Carry-in offer reservations overlap")
+    reservations = {offer["vehicle_id"]: offer for offer in pending.values()}
+    if len(reservations) != len(pending):
+        raise ValueError("Carry-in pending offers reserve a vehicle twice")
+    for vehicle_id, vehicle in vehicles.items():
+        offer = reservations.get(vehicle_id)
+        if offer:
+            if vehicle["state"] != "dispatch" or vehicle["pending_offer_id"] != offer["offer_id"]:
+                raise ValueError("Carry-in offer and vehicle reservation differ")
+        elif vehicle["state"] == "dispatch" or vehicle["pending_offer_id"] is not None:
+            raise ValueError("Carry-in vehicle reservation has no pending offer")
+
+
 def validate_carry_in(
     checkpoint: dict[str, Any],
     snapshot: dict[str, Any],
@@ -1116,7 +1474,9 @@ def validate_carry_in(
     plan_version: str,
     seed: int,
     start: pd.Timestamp,
+    resolved_compensation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    fixed_online = rules["schema_version"] == 3
     required = {
         "schema_version",
         "artifact_type",
@@ -1141,10 +1501,12 @@ def validate_carry_in(
         "resume_supported",
         "checkpoint_version",
     }
+    if fixed_online:
+        required |= {"offer_records", "next_offer_event_id"}
     if not isinstance(checkpoint, dict) or set(checkpoint) != required:
         raise ValueError("Carry-in has missing or unknown checkpoint fields")
     fixed = {
-        "schema_version": 2,
+        "schema_version": 3 if fixed_online else 2,
         "artifact_type": "operational_checkpoint",
         "timezone": snapshot["timezone"],
         "source_kind": "synthetic",
@@ -1305,7 +1667,7 @@ def validate_carry_in(
                 raise ValueError("Carry-in request durations are invalid")
             assigned_time = _timestamp(assigned_at, "assigned_at")
             pickup_time = assigned_time.value + round(eta * 1e9)
-            if (
+            if not fixed_online and (
                 not _timestamp(vehicle["shift_start"], "shift_start") <= assigned_time
                 or pickup_time + round(trip * 1e9)
                 > _timestamp(vehicle["shift_end"], "shift_end").value
@@ -1363,7 +1725,9 @@ def validate_carry_in(
         or not isinstance(v.get("vehicle_id"), str)
         or v.get("vehicle_id") not in roster
         or set(v)
-        != set(roster[v["vehicle_id"]]) | {"active_request_id", "pending_action", "next_event_at"}
+        != set(roster[v["vehicle_id"]])
+        | {"active_request_id", "pending_action", "next_event_at"}
+        | ({"pending_offer_id"} if fixed_online else set())
         for v in vehicles
     ):
         raise ValueError("Carry-in vehicle row is malformed")
@@ -1391,6 +1755,7 @@ def validate_carry_in(
             "unavailable",
             "to_pickup",
             "on_trip",
+            *(("dispatch",) if fixed_online else ()),
         ):
             raise ValueError("Carry-in vehicle state or zone is invalid")
         in_shift = (
@@ -1398,8 +1763,10 @@ def validate_carry_in(
             <= start
             < _timestamp(vehicle["shift_end"], "shift_end")
         )
-        if vehicle["state"] != "offline" and not in_shift:
+        if vehicle["state"] != "offline" and not in_shift and not fixed_online:
             raise ValueError("Carry-in active vehicle is outside its shift")
+        if fixed_online and vehicle["state"] in ("offline", "unavailable"):
+            raise ValueError("Fixed-online checkpoint removed an online driver")
         if vehicle["state"] == "idle" and vehicle["soc"] < rules["minimum_soc"]:
             raise ValueError("Carry-in idle vehicle has ineligible SOC")
         active, action = vehicle.get("active_request_id"), vehicle.get("pending_action")
@@ -1430,7 +1797,9 @@ def validate_carry_in(
             elif request["state"] != expected_state:
                 raise ValueError("Carry-in vehicle and request phases differ")
             finish = _timestamp(vehicle.get("next_event_at"), "next_event_at")
-            if not start < finish <= _timestamp(vehicle["shift_end"], "shift_end"):
+            if not start < finish or (
+                not fixed_online and finish > _timestamp(vehicle["shift_end"], "shift_end")
+            ):
                 raise ValueError("Carry-in next phase event is invalid")
             base_time = (
                 request["assigned_at"] if vehicle["state"] == "to_pickup" else request["pickup_at"]
@@ -1444,6 +1813,16 @@ def validate_carry_in(
                 raise ValueError("Carry-in phase completion time changed")
         elif active or action or vehicle.get("next_event_at") is not None:
             raise ValueError("Carry-in nonbusy vehicle has an active phase")
+    offers: list[dict[str, Any]] = []
+    if fixed_online:
+        offers = checkpoint["offer_records"]
+        _validate_offers(offers, restored, requests, rules, seed, start, resolved_compensation)
+        expected_offer_events = sum(1 + (offer["state"] != "offered") for offer in offers)
+        if (
+            type(checkpoint["next_offer_event_id"]) is not int
+            or checkpoint["next_offer_event_id"] != expected_offer_events
+        ):
+            raise ValueError("Carry-in offer event counter differs from history")
     if any(r["request_id"] not in assigned for r in records if r["state"] in ("pickup", "on_trip")):
         raise ValueError("Carry-in busy request has no vehicle")
     sequences = set()
@@ -1462,7 +1841,7 @@ def validate_carry_in(
                 if timestamp > start.value:
                     expected_events[(timestamp, kind, request_id)] += 1
     for vehicle_id, vehicle in restored.items():
-        for kind in ("shift_start", "shift_end"):
+        for kind in () if fixed_online else ("shift_start", "shift_end"):
             timestamp = _timestamp(vehicle[kind], kind).value
             if timestamp > start.value:
                 expected_events[(timestamp, kind, vehicle_id)] += 1
@@ -1471,6 +1850,10 @@ def validate_carry_in(
             expected_events[
                 (_timestamp(vehicle["next_event_at"], "next_event_at").value, kind, vehicle_id)
             ] += 1
+    for offer in offers:
+        timestamp = _timestamp(offer["response_at"], "offer response_at").value
+        if timestamp > start.value:
+            expected_events[(timestamp, "offer_response", offer["offer_id"])] += 1
     if not isinstance(checkpoint["pending_events"], list):
         raise ValueError("Carry-in pending_events must be a list")
     for event in checkpoint["pending_events"]:
@@ -1503,6 +1886,9 @@ def validate_carry_in(
         elif kind in ("shift_start", "shift_end"):
             if entity_id not in restored:
                 raise ValueError("Carry-in shift event has no vehicle")
+        elif kind == "offer_response":
+            if entity_id not in {offer["offer_id"] for offer in offers}:
+                raise ValueError("Carry-in offer response has no offer")
         elif entity_id not in requests:
             raise ValueError("Carry-in request timer has no request")
     if actual_events != expected_events:
@@ -1549,11 +1935,13 @@ def simulate_marketplace_continuation(
     window_start: str | None = None,
     window_end: str | None = None,
     carry_in: dict[str, Any] | None = None,
+    resolved_compensation: dict[str, Any] | None = None,
 ) -> SimulationResult:
     if type(seed) is not int or seed < 0:
         raise ValueError("seed must be a nonnegative integer")
     frame, snapshot = _validate_plan(plan, config)
     rules = _normalize_rules(rules, snapshot)
+    fixed_online = rules["schema_version"] == 3
     source_start = _timestamp(snapshot["horizon_start"], "horizon_start")
     source_end = _timestamp(snapshot["horizon_end"], "horizon_end")
     start = _timestamp(window_start, "window_start") if window_start is not None else source_start
@@ -1566,7 +1954,9 @@ def simulate_marketplace_continuation(
     plan_version = plan.result["demand_plan_version"]
     checkpoint = None
     if carry_in is not None:
-        checkpoint = validate_carry_in(carry_in, snapshot, rules, plan_version, seed, start)
+        checkpoint = validate_carry_in(
+            carry_in, snapshot, rules, plan_version, seed, start, resolved_compensation
+        )
         schedule = checkpoint["arrival_schedule"]
         arrival_mode = checkpoint["arrival_mode"]
         if prescribed_requests is not None:
@@ -1576,7 +1966,13 @@ def simulate_marketplace_continuation(
     else:
         schedule = _arrival_schedule(frame, snapshot, rules, seed, prescribed_requests, budget)
         arrival_mode = "prescribed" if prescribed_requests is not None else "piecewise_poisson"
-    engine = _WindowMarketplace(snapshot, rules, schedule, start, end, budget, checkpoint)
+    engine = (
+        _OfferMarketplace(
+            snapshot, rules, schedule, start, end, budget, checkpoint, seed, resolved_compensation
+        )
+        if fixed_online
+        else _WindowMarketplace(snapshot, rules, schedule, start, end, budget, checkpoint)
+    )
     engine.run()
     window_ids = engine.open_start | engine.created_ids
     rows = []
@@ -1632,7 +2028,7 @@ def simulate_marketplace_continuation(
         raise RuntimeError("Simulation request conservation failed")
     hours = {
         state: float(intervals.loc[intervals.state.eq(state), "duration_hours"].sum())
-        for state in ("idle", "to_pickup", "on_trip", "offline", "unavailable")
+        for state in ("idle", "dispatch", "to_pickup", "on_trip", "offline", "unavailable")
     }
     total_hours = len(engine.vehicles) * (end - start).total_seconds() / 3600
     if not np.isclose(sum(hours.values()), total_hours, rtol=1e-10, atol=1e-10):
@@ -1665,9 +2061,12 @@ def simulate_marketplace_continuation(
             f"{state}_requests_end": sum(r["state"] == state for r in engine.records.values())
             for state in ("queued", "pickup", "on_trip")
         },
-        "serviceable_hours": hours["idle"] + hours["to_pickup"] + hours["on_trip"],
+        "serviceable_hours": hours["idle"]
+        + hours["dispatch"]
+        + hours["to_pickup"]
+        + hours["on_trip"],
         "idle_hours": hours["idle"],
-        "dispatch_hours": 0.0,
+        "dispatch_hours": hours["dispatch"],
         "pickup_hours": hours["to_pickup"],
         "on_trip_hours": hours["on_trip"],
         "offline_hours": hours["offline"],
@@ -1687,8 +2086,8 @@ def simulate_marketplace_continuation(
         ),
     }
     spec = {
-        "schema_version": 2,
-        "simulation_mode": "fixed_supply_continuation",
+        "schema_version": 3 if fixed_online else 2,
+        "simulation_mode": "fixed_online_offers" if fixed_online else "fixed_supply_continuation",
         "seed": seed,
         "rules": rules,
         "rules_version": fingerprint(rules),
@@ -1720,7 +2119,7 @@ def simulate_marketplace_continuation(
     }
     version = fingerprint(spec)
     result = {
-        "schema_version": 2,
+        "schema_version": 3 if fixed_online else 2,
         "simulation_version": version,
         "status": "ok",
         "simulation_mode": spec["simulation_mode"],
@@ -1759,7 +2158,9 @@ def simulate_marketplace_continuation(
         "wait_quantile_method": "linear",
         "wait_status": "ok" if waits else "unavailable_no_pickups",
         "request_accounting": "open_start + created = completed + canceled + expired + open_end",
-        "vehicle_accounting": "serviceable = idle + pickup + on_trip; shared fleet counted once",
+        "vehicle_accounting": (
+            "serviceable = idle + dispatch + pickup + on_trip; shared fleet counted once"
+        ),
         "interval_status": "interval_unavailable",
         "interval_reason": "Single synthetic trajectory",
         "unavailable_metrics": {
@@ -1775,7 +2176,7 @@ def simulate_marketplace_continuation(
         for _, vehicle in sorted(engine.vehicles.items())
     ]
     end_snapshot = {
-        "schema_version": 2,
+        "schema_version": 3 if fixed_online else 2,
         "artifact_type": "operational_checkpoint",
         "timestamp": end.isoformat(),
         "timezone": snapshot["timezone"],
@@ -1801,7 +2202,65 @@ def simulate_marketplace_continuation(
         "resume_supported": True,
     }
     end_snapshot["checkpoint_version"] = fingerprint(end_snapshot)
-    return SimulationResult(requests, events, intervals, end_snapshot, result, spec)
+    simulation = SimulationResult(requests, events, intervals, end_snapshot, result, spec)
+    if isinstance(engine, _OfferMarketplace):
+        offer_ids = engine.open_offers_start | engine.new_offer_ids
+        simulation.driver_offers = pd.DataFrame(
+            [engine.offers[key] for key in sorted(offer_ids)], columns=pd.Index(OFFER_COLUMNS)
+        ).astype(OFFER_DTYPES)
+        simulation.offer_events = pd.DataFrame(
+            engine.offer_events, columns=pd.Index(OFFER_EVENT_COLUMNS)
+        ).astype(OFFER_DTYPES | {"offer_event_id": "int64"})
+        outcomes = {
+            state: sum(row["state"] == state for row in engine.offer_events)
+            for state in ("offered", "accepted", "rejected", "timed_out", "withdrawn")
+        }
+        pending_end = sum(row["state"] == "offered" for row in engine.offers.values())
+        if (
+            len(engine.open_offers_start) + outcomes["offered"]
+            != sum(outcomes[state] for state in ("accepted", "rejected", "timed_out", "withdrawn"))
+            + pending_end
+        ):
+            raise RuntimeError("Simulation offer conservation failed")
+        denominator = outcomes["accepted"] + outcomes["rejected"] + outcomes["timed_out"]
+        result["offers"] = {
+            **outcomes,
+            "pending_start": len(engine.open_offers_start),
+            "pending_end": pending_end,
+            "acceptance_rate": outcomes["accepted"] / denominator if denominator else None,
+            "acceptance_denominator": denominator,
+            "acceptance_population": (
+                "accepted + rejected + timed_out response events in this window; "
+                "withdrawals excluded"
+            ),
+            "acceptance_status": "ok" if denominator else "unavailable_no_responses",
+            "accounting": (
+                "pending_start + offered = accepted + rejected + timed_out "
+                "+ withdrawn + pending_end"
+            ),
+        }
+        result["scope"].update(
+            online_drivers=len(engine.vehicles), online_population_rule="fixed_roster"
+        )
+        summary["online_hours"] = total_hours
+        summary["online_drivers"] = len(engine.vehicles)
+        spec.update(
+            online_population_rule="fixed_roster",
+            acceptance_model="declared_synthetic_price_independent",
+            tie_rule=(
+                "phase completion; request expiry/cancel; offer response; arrivals; FIFO matching"
+            ),
+            horizon_rule=(
+                "observation only; unfinished trips/offers remain censored with resumable state"
+            ),
+        )
+        result["simulation_version"] = fingerprint(spec)
+        end_snapshot.update(
+            offer_records=[copy.deepcopy(engine.offers[key]) for key in sorted(engine.offers)],
+            next_offer_event_id=engine.next_offer_event_id,
+        )
+        end_snapshot["checkpoint_version"] = fingerprint(_checkpoint_payload(end_snapshot))
+    return simulation
 
 
 def simulate_marketplace(
@@ -1814,15 +2273,42 @@ def simulate_marketplace(
     window_start: str | None = None,
     window_end: str | None = None,
     carry_in: dict[str, Any] | None = None,
+    compensation: dict[str, Any] | None = None,
 ) -> SimulationResult:
     """Run a legacy trajectory or a resumable operational window."""
+    resolved = (
+        resolve_compensation(compensation, plan.spec["policy"])
+        if compensation is not None
+        else None
+    )
+    source_checkpoint_version = None
+    if carry_in is not None:
+        if not isinstance(carry_in, dict):
+            raise ValueError("Carry-in checkpoint must be an object")
+        context = carry_in.get("compensation_context")
+        if context is not None:
+            if fingerprint(_checkpoint_payload(carry_in)) != carry_in.get("checkpoint_version"):
+                raise ValueError("Compensation checkpoint checksum differs")
+            if resolved is None or context != {
+                "compensation_version": resolved["compensation_version"],
+                "terms_version": resolved["terms_version"],
+            }:
+                raise ValueError(
+                    "Continuation requires the same frozen compensation and fare terms"
+                )
+            source_checkpoint_version = carry_in["checkpoint_version"]
+            carry_in = copy.deepcopy(carry_in)
+            carry_in.pop("compensation_context")
+            carry_in["checkpoint_version"] = fingerprint(_checkpoint_payload(carry_in))
+        elif resolved is not None:
+            raise ValueError("Cannot add compensation to a checkpoint without frozen fare terms")
     if (
         window_start is not None
         or window_end is not None
         or carry_in is not None
-        or (isinstance(rules, dict) and rules.get("schema_version") == 2)
+        or (isinstance(rules, dict) and rules.get("schema_version") in (2, 3))
     ):
-        return simulate_marketplace_continuation(
+        simulation = simulate_marketplace_continuation(
             plan,
             rules,
             config,
@@ -1831,5 +2317,40 @@ def simulate_marketplace(
             window_start=window_start,
             window_end=window_end,
             carry_in=carry_in,
+            resolved_compensation=resolved,
         )
-    return _simulate_marketplace_v1(plan, rules, config, seed, prescribed_requests)
+    else:
+        simulation = _simulate_marketplace_v1(plan, rules, config, seed, prescribed_requests)
+    if resolved is not None:
+        # shortcut: fixed attendance; add identified income response before changing labor hours.
+        scope = simulation.result["scope"]
+        financial = settle_earnings(
+            simulation.requests,
+            simulation.request_events,
+            simulation.vehicle_intervals,
+            plan.snapshot,
+            resolved,
+            scope["horizon_start"],
+            scope["horizon_end"],
+        )
+        simulation.financial_tables = {
+            name: financial[name]
+            for name in ("quote_terms", "driver_pay_terms", "earnings_ledger", "driver_income")
+        }
+        simulation.spec["compensation"] = resolved
+        if source_checkpoint_version is not None:
+            simulation.spec["carry_in_version"] = source_checkpoint_version
+        simulation.result["simulation_version"] = fingerprint(simulation.spec)
+        simulation.result["earnings"] = financial["result"]
+        simulation.result["unavailable_metrics"]["economics"] = (
+            "Gross fare and driver pay supplied; costs, GSM profit and ROI not evaluated"
+        )
+        if simulation.end_snapshot.get("resume_supported") is True:
+            simulation.end_snapshot["compensation_context"] = {
+                "compensation_version": resolved["compensation_version"],
+                "terms_version": resolved["terms_version"],
+            }
+            simulation.end_snapshot["checkpoint_version"] = fingerprint(
+                _checkpoint_payload(simulation.end_snapshot)
+            )
+    return simulation

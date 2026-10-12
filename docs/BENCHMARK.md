@@ -13,9 +13,11 @@ It must allow zero uplift, negative uplift and a simpler estimator winning.
 | Layer | What it establishes | Implementation / evidence |
 |---|---|---|
 | Controlled method benchmark | Recovery of known effects under specified assumptions | Implemented in `evaluate.py`; reporting results in the [Week 2 report](submission/days/20261007/weekly_report.md), earlier measurements in [historical validation](submission/days/20261003/validation.md) |
+| Controlled offered-incentive benchmark | Recovery of participation and eligible-cohort labor/serviceable-hour effects, driver-level intervals and null false positives | Implemented in `causal/benchmarks/supply.py`; separate [contract/protocol](WEEK3_SUPPLY.md) and [independent assessment](submission/days/20261011/week3_supply_progress.md). Retained scientific evidence; schedule/income feedback are outside the current fixed-online PoC |
 | Separate Swissmetro choice baseline | Predictive choice performance on held-out people | Implemented in `swissmetro.py`; MNL versus intercept-only results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
 | Controlled pricing-policy benchmark | Quality of decisions against independent simulated truth | Implemented in `policy.py`; development profile and results in the [Week 2 report](submission/days/20261007/weekly_report.md) |
-| Core engine validation | State/accounting correctness, repeatability, failure behavior and measured operating limits | Demand bridge and fixed-supply development checks exist; full engine protocol and release evidence remain required |
+| Fixed-online operational assessment | Conditional baseline/price simulation, known offer-mechanism recovery and workload measurements | Implemented in `simulation/evaluation.py` through `evaluate-marketplace`; [frozen Week-3 protocol](#week-3-fixed-online-operational-assessment). [12 October closeout](submission/days/20261012/week3_poc_closeout.md): 303/303 jobs and frozen gates passed for synthetic PoC scope, ready for Bun's review |
+| Core engine validation | State/accounting correctness, repeatability, failure behavior and measured operating limits | Fixed-online offer, checkpoint and compensation checks implemented; broader energy/supply/equilibrium capabilities remain outside current PoC. Release conclusions require recorded evidence for the applicable scope |
 | GSM offline policy evaluation | Estimated value under verified real-data identification and support | Requires GSM logs and a separate evaluator |
 | GSM randomized validation | Measured causal effects and the preregistered business outcome under the tested deployment | Requires a designed and executed GSM experiment |
 
@@ -46,7 +48,10 @@ diagnostics, acceptance criteria and unresolved inputs.
 ### Baselines and learner/evaluator separation
 
 Declare the simplest valid comparator for each estimand before fitting. These
-are prospective choices, not implemented or measured supply results:
+are the Week-1 baseline specifications; current controlled supply implementation
+uses the no-response baseline and a fixed randomized driver-mean contrast under
+its [separate protocol](WEEK3_SUPPLY.md). Conditional-hours regression and
+operational driver-response integration remain prospective:
 
 | Estimand | Baseline specification |
 |---|---|
@@ -113,8 +118,10 @@ and false-positive rates, widths/endpoint stability, attempted/expected/valid/
 failed/rejected counts and unavailable intervals. Coverage among valid intervals
 must accompany its valid/attempted denominator; missing or failed intervals
 cannot improve a pass rate. Placebo conclusions and stress cases retain their
-identification limits. No new supply thresholds or passes are asserted here;
-the historical demand targets below remain confined to their frozen DGP/protocol.
+identification limits. Initial controlled supply thresholds and their independent
+assessment are recorded in [WEEK3_SUPPLY.md](WEEK3_SUPPLY.md); they do not certify
+nominal coverage or GSM readiness. The historical demand targets below remain
+confined to their frozen DGP/protocol.
 
 Week 1 also records a preliminary experiment strategy: candidate assignment
 unit, treatment/effect horizon, interference and carryover risks, required power
@@ -548,6 +555,10 @@ This protocol defines required validation as engine capabilities are implemented
 The two-vehicle development fixture is one correctness case. Release conclusions
 require evidence for the implemented scope under the
 [engine delivery standard](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard).
+The table also covers broader research extensions. The
+[current fixed-online PoC](WEEK3_POC_SCOPE.md) does not require behavioral schedules,
+incentive policies, charging or endogenous equilibrium; apply those cases only
+when the corresponding capability enters the authorized scope.
 
 | Layer | Cases and independent checks |
 |---|---|
@@ -571,6 +582,74 @@ checks use independent seeds. Failed/rejected attempts remain in reported counts
 Analytic accounting, controlled statistical accuracy and real GSM calibration
 have separate conclusions. Release gates are maintained in the
 [core design](reference/CORE_ENGINE_DESIGN.md#173-acceptance-gates).
+
+## Week 3 fixed-online operational assessment
+
+`evaluate-marketplace` evaluates frozen supported baseline/target demand plans with
+the same choice model/source, initial roster and two-hour horizon, version-3 offer
+rules and 100%-displayed-fare compensation. It does not fit demand, acceptance or
+labor responses, read the choice oracle or select a policy as optimal. The
+baseline has unchanged pricing; the target remains inside demand support.
+
+The checked-in [pilot](../configs/week3_poc_pilot.json) uses 72001–72003; the
+[independent assessment](../configs/week3_poc_assessment.json) uses 73001–73100.
+Rules, gates and profiles are frozen before assessment. These seeds cannot become
+tuning data for the same assessment claim. Both profiles bound the full evaluator
+at 600 seconds, keeping failed attempts and their reasons in exported records.
+The [12 October closeout](submission/days/20261012/week3_poc_closeout.md) and
+[verification](submission/days/20261012/week3_poc_verification.json) record
+`week3-poc-assessment-20261012-v3`: 200 paired Poisson trajectories, 100 controlled
+trajectories and three workload checks, **303/303 succeeded**, zero failed jobs,
+all frozen gates passed, 100.158 seconds total. Controlled mean completions/pay were
+14.47 against truth 15, and idle hours 1.733833 against truth 1.725, within their
+preregistered tolerances. This supports the scoped synthetic technical package,
+ready for Bun's review; it does not record reviewer acceptance or GSM calibration.
+
+| Layer | Independent check and frozen gate |
+|---|---|
+| Paired price scenarios | One baseline and target Poisson trajectory per seed under the same roster, OD/arrival seed plan and declared acceptance rule; retain trips/wait/idle/offer/earnings means, paired differences and attempted/available/failed denominators |
+| Poisson request generation | Compare zone/service mean created requests with the sum of frozen expected bookings; all seeds available and absolute standardized mean error at most 4. Zero-rate strata must stay exactly zero |
+| Known offer mechanism | 30 separated X requests, one driver, acceptance 0.5, response 3 seconds, pickup 0, trip 60 seconds, one offer per request, no overlapping service. Expected completions/acceptances 15, gross pay 15 × frozen baseline X fare, dispatch 0.025 hours, on-trip 0.25 hours, idle 1.725 hours and online 2 hours |
+| Controlled recovery | All seeds available; completed/accepted mean error at most 1.2, pay mean error at most 1.2 × fare; on-trip/idle mean error at most 0.02 hours. Created/offered counts, dispatch and online hours use numerical tolerance 1e-12 |
+| Declared workload | Target trajectories with 2/20/100 shared-roster drivers, at most 10,000 requests and 500,000 work units each; complete within 60 seconds and peak traced Python allocation at most 256 MiB. Python allocation is not process RSS or a production hardware guarantee |
+| Accounting and failures | Retain request/offer/state-time/ledger identities and every failed/unavailable output. Exhaustion/invalid input cannot publish a successful-looking partial forecast; execution completion and statistical gate status remain separate |
+
+Measured target workloads used 452 requests each under seed 73001:
+
+| Online drivers | Wall time (seconds) | Peak traced Python allocation (MB, decimal) |
+|---:|---:|---:|
+| 2 | 2.447 | 5.135 |
+| 20 | 5.068 | 8.797 |
+| 100 | 7.712 | 10.856 |
+
+These are bounded local measurements for the recorded environment; they do not
+validate execution at the 10,000-request cap or measure process RSS. Replay of the
+fixture and same-policy Poisson case matched 22 output files byte for byte.
+Pending-offer continuation retained request/offer traces, settled earnings and
+final checkpoint. Full repository verification passed 609 tests with two historical
+Pandas FutureWarnings. Exact source recovery/checksum scope is in the dated report;
+the damaged original Week-3 training run is not claimed intact.
+
+The default operational assumption is acceptance 0.8 independent of fare, response
+3 seconds, timeout 10 seconds and at most 20 attempts per request. No repeated draw
+for the same driver/request pair is allowed. Constant acceptance is a declared
+synthetic baseline, not evidence that driver response to price or pay is zero.
+Withdrawn and pending offers stay outside the resolved-response acceptance rate;
+timeouts remain in its denominator. Refusal does not remove online hours.
+
+Individual Student-t intervals across independent seeds concern the **mean paired
+trajectory difference conditional on fixed fitted demand and declared rules**.
+They describe Monte Carlo integration uncertainty, not a future single trajectory,
+causal demand-parameter uncertainty, full-chain coverage, simultaneous intervals
+or GSM effects. Missing waits/rates retain unavailable counts rather than invented
+zeros. No GSM calibration, profit/ROI or original driver labor elasticity is
+certified by these checks.
+
+Exports are `marketplace_evaluation.json`, `marketplace_seed_records.csv`,
+`marketplace_controlled_records.csv` and `marketplace_workload_records.csv`, with
+frozen input/source identities, environment and hashes. Commands and read-only
+UI/export usage are in [USAGE](USAGE.md#week-3-fixed-online-poc); dated evidence
+belongs to the submission records.
 
 ## 5. Reproducing Week 2 benchmarks
 

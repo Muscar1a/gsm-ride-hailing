@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": "assessment",
+  "seed_start": 73001,
+  "n_seeds": 100,
+  "max_seconds": 600,
+  "interval_level": 0.95,
+  "max_completed_mean_error": 1.2,
+  "max_idle_mean_error": 0.02,
+  "max_poisson_standardized_error": 4,
+  "max_workload_seconds": 60,
+  "max_peak_python_bytes": 268435456
+}

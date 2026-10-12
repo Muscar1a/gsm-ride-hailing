@@ -1,0 +1,54 @@
+{
+  "schema_version": 3,
+  "rules_id": "week3-fixed-online-offers-v3",
+  "source_kind": "synthetic",
+  "evidence_level": "C",
+  "calibration_status": "not_calibrated",
+  "arrival_process": "piecewise_poisson",
+  "matching_rule": "fifo_min_pickup_eta",
+  "acceptance_rule": "bernoulli_offer",
+  "shift_end_rule": "observation_only",
+  "boundary_rule": "closed_cluster",
+  "max_pickup_seconds": 300,
+  "minimum_soc": 0.1,
+  "max_requests": 10000,
+  "max_events": 100000,
+  "max_seconds": 60,
+  "travel_times": [
+    {
+      "origin_zone_id": 161,
+      "destination_zone_id": 161,
+      "pickup_seconds": 60,
+      "trip_seconds": 600,
+      "destination_probability": 0.5
+    },
+    {
+      "origin_zone_id": 161,
+      "destination_zone_id": 162,
+      "pickup_seconds": 180,
+      "trip_seconds": 900,
+      "destination_probability": 0.5
+    },
+    {
+      "origin_zone_id": 162,
+      "destination_zone_id": 161,
+      "pickup_seconds": 180,
+      "trip_seconds": 900,
+      "destination_probability": 0.5
+    },
+    {
+      "origin_zone_id": 162,
+      "destination_zone_id": 162,
+      "pickup_seconds": 60,
+      "trip_seconds": 600,
+      "destination_probability": 0.5
+    }
+  ],
+  "max_wait_seconds": 300,
+  "cancel_policy": "before_pickup_finish_leg",
+  "online_population_rule": "fixed_roster",
+  "acceptance_probability": 0.8,
+  "response_seconds": 3,
+  "response_timeout_seconds": 10,
+  "max_offer_attempts": 20
+}

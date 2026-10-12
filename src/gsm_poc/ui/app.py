@@ -14,7 +14,7 @@ from gsm_poc.causal.estimate import ModelBundle
 from gsm_poc.causal.uncertainty import BootstrapResult
 from gsm_poc.core.artifacts import completed_run, read_json
 from gsm_poc.core.config import Config
-from gsm_poc.ui.tabs import method_tab, observed_tab, scenario_tab
+from gsm_poc.ui.tabs import method_tab, observed_tab, scenario_tab, simulation_tab
 
 
 @st.cache_data
@@ -80,14 +80,21 @@ def main() -> None:
         )
         st.html(f"<style>{css}</style>")
     st.title("GSM Causal Marketplace")
-    st.caption("First two weeks · controlled PoC")
+    st.caption("First three weeks · controlled PoC")
     available = []
+    simulations = []
     run_configs = {}
     for path in sorted((workspace / "runs").glob("*/manifest.json"), reverse=True):
         try:
             record = read_json(path)
         except (ValueError, OSError):
             continue
+        if (
+            record.get("status") == "succeeded"
+            and record.get("stages", {}).get("simulate_marketplace", {}).get("status")
+            == "succeeded"
+        ):
+            simulations.append(record["run_id"])
         if record.get("status") == "succeeded" and any(
             record.get("stages", {}).get(stage, {}).get("status") == "succeeded"
             for stage in ("fit", "freeze_choice")
@@ -96,7 +103,13 @@ def main() -> None:
             run_configs[record["run_id"]] = record.get("choice_source", {}).get(
                 "source_config", record["config"]
             )
+    if args.run_id in simulations:
+        simulation_tab(workspace, simulations, args.run_id, artifact)
+        return
     if not available:
+        if simulations:
+            simulation_tab(workspace, simulations, args.run_id, artifact)
+            return
         st.info(
             "No completed model run yet. Run the offline demo command in the README, "
             "then refresh this page."
@@ -144,13 +157,19 @@ def main() -> None:
             st.caption(f"Source model run {choice_source['model_run_id']}")
             with st.expander("Packaging environment and versions"):
                 st.json(manifest["environment"])
-    tabs = st.tabs(["Observed", "Method evaluation", "Price scenario"])
+    tab_names = ["Observed", "Method evaluation", "Price scenario"]
+    if simulations:
+        tab_names.append("Simulation results")
+    tabs = st.tabs(tab_names)
     with tabs[0]:
         observed_tab(workspace, manifest, artifact)
     with tabs[1]:
         method_tab(workspace, manifest, artifact)
     with tabs[2]:
         scenario_tab(workspace, manifest, config, artifact, load_model)
+    if simulations:
+        with tabs[3]:
+            simulation_tab(workspace, simulations, args.run_id, artifact)
 
 
 if __name__ == "__main__":

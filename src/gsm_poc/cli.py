@@ -10,7 +10,14 @@ from pathlib import Path
 
 from gsm_poc.causal.scenario import ScenarioRequest
 from gsm_poc.core.config import DGPS, ESTIMATORS, Config
+from gsm_poc.pipeline.marketplace import evaluate_marketplace_run
 from gsm_poc.pipeline.pipeline import Pipeline
+from gsm_poc.pipeline.supply import (
+    evaluate_supply_run,
+    fit_supply_run,
+    generate_supply_run,
+    supply_scenario_run,
+)
 
 
 def parser() -> argparse.ArgumentParser:
@@ -27,11 +34,38 @@ def parser() -> argparse.ArgumentParser:
         "prepare-inference",
         "prepare-demand",
         "simulate-marketplace",
+        "evaluate-marketplace",
+        "generate-supply",
+        "fit-supply",
+        "scenario-supply",
+        "evaluate-supply",
         "run-all",
     ):
         cmd = commands.add_parser(name)
         cmd.add_argument("--config", default="configs/demo.toml")
         cmd.add_argument("--run-id", help="Resume only a matching code/config/environment run")
+        if name == "evaluate-marketplace":
+            cmd.set_defaults(dgp=None, seed=None, bootstrap_draws=None, estimator=None)
+            cmd.add_argument("--baseline-demand-run-id", required=True)
+            cmd.add_argument("--target-demand-run-id", required=True)
+            cmd.add_argument("--rules", type=Path, required=True)
+            cmd.add_argument("--compensation", type=Path, required=True)
+            cmd.add_argument("--protocol", type=Path, required=True)
+            continue
+        if name.endswith("-supply"):
+            cmd.set_defaults(dgp=None, seed=None, bootstrap_draws=None, estimator=None)
+            if name in ("generate-supply", "evaluate-supply"):
+                cmd.add_argument(
+                    "--supply-spec", type=Path, default=Path("configs/week3_supply.json")
+                )
+            if name == "fit-supply":
+                cmd.add_argument("--supply-run-id", required=True)
+            if name == "scenario-supply":
+                cmd.add_argument("--model-run-id", required=True)
+                cmd.add_argument("--incentive-amount", type=float, required=True)
+            if name == "evaluate-supply":
+                cmd.add_argument("--protocol", type=Path, required=True)
+            continue
         cmd.add_argument("--dgp", choices=DGPS)
         cmd.add_argument("--seed", type=int)
         cmd.add_argument("--bootstrap-draws", type=int)
@@ -68,6 +102,11 @@ def parser() -> argparse.ArgumentParser:
         if name == "simulate-marketplace":
             cmd.add_argument("--demand-run-id", required=True)
             cmd.add_argument("--rules", type=Path, required=True)
+            cmd.add_argument(
+                "--compensation",
+                type=Path,
+                help="Frozen synthetic driver-pay and fare specification",
+            )
             cmd.add_argument(
                 "--requests", type=Path, help="Prescribed request CSV instead of Poisson arrivals"
             )
@@ -183,6 +222,16 @@ def main(argv: list[str] | None = None) -> int:
                     allow_nan=False,
                 )
             )
+        elif args.command == "evaluate-marketplace":
+            result = evaluate_marketplace_run(
+                pipeline.run,
+                args.baseline_demand_run_id,
+                args.target_demand_run_id,
+                args.rules,
+                args.compensation,
+                args.protocol,
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         elif args.command == "simulate-marketplace":
             result = pipeline.simulate_marketplace(
                 args.demand_run_id,
@@ -191,7 +240,20 @@ def main(argv: list[str] | None = None) -> int:
                 window_start=args.window_start,
                 window_end=args.window_end,
                 carry_in_run_id=args.carry_in_run_id,
+                compensation_path=args.compensation,
             )
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "generate-supply":
+            result = generate_supply_run(pipeline.run, args.supply_spec)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "fit-supply":
+            result = fit_supply_run(pipeline.run, args.supply_run_id)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "scenario-supply":
+            result = supply_scenario_run(pipeline.run, args.model_run_id, args.incentive_amount)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "evaluate-supply":
+            result = evaluate_supply_run(pipeline.run, args.supply_spec, args.protocol)
             print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         if args.command != "run-all":
             pipeline.run.complete()

@@ -24,6 +24,25 @@ from gsm_poc.pipeline import Pipeline
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _pay_policy(plan):
+    plan.spec["policy"] = {
+        "baseline_multiplier_x": 1.0,
+        "baseline_multiplier_y": 1.0,
+        "delta_price_x": 0.1,
+        "delta_price_y": 0.0,
+    }
+    plan.spec["policy_version"] = fingerprint(plan.spec["policy"])
+    version = fingerprint(plan.spec)
+    plan.result["demand_plan_version"] = version
+    plan.frame["demand_plan_version"] = version
+    plan.frame["policy_version"] = plan.spec["policy_version"]
+
+
+@pytest.fixture
+def compensation():
+    return read_json(ROOT / "configs/week3_compensation.json")
+
+
 @pytest.fixture
 def rules():
     value = read_json(ROOT / "configs/week3_simulation.json")
@@ -1027,3 +1046,196 @@ def test_unrepresentable_patience_is_rejected(config, market_plan, window_rules)
     window_rules["max_wait_seconds"] = 1e300
     with pytest.raises(ValueError, match="timestamp range"):
         _simulate(market_plan, window_rules, config)
+
+
+def test_compensation_keeps_operational_trajectory_and_frozen_inputs(
+    config, market_plan, rules, prescribed, compensation
+):
+    _pay_policy(market_plan)
+    original = copy.deepcopy(market_plan)
+    baseline = simulate_marketplace(market_plan, rules, config, 42, prescribed)
+    paid = simulate_marketplace(
+        market_plan, rules, config, 42, prescribed, compensation=compensation
+    )
+    pd.testing.assert_frame_equal(baseline.requests, paid.requests)
+    pd.testing.assert_frame_equal(baseline.request_events, paid.request_events)
+    pd.testing.assert_frame_equal(baseline.vehicle_intervals, paid.vehicle_intervals)
+    assert baseline.result["summary"] == paid.result["summary"]
+    assert paid.spec["compensation"]["effective_fares"] == {"X": 1.1, "Y": 1.0}
+    assert paid.financial_tables is not None
+    assert len(paid.financial_tables["earnings_ledger"]) == 3
+    assert paid.result["simulation_version"] == fingerprint(paid.spec)
+    assert paid.result["simulation_version"] != baseline.result["simulation_version"]
+    assert market_plan.spec == original.spec and market_plan.snapshot == original.snapshot
+    pd.testing.assert_frame_equal(market_plan.frame, original.frame)
+
+
+@pytest.mark.parametrize("cut", ["08:00:30", "08:04:00", "08:11:00", "08:12:00"])
+def test_compensated_windows_settle_once_and_reproduce_whole_checkpoint(
+    config, market_plan, window_rules, prescribed, compensation, cut
+):
+    _pay_policy(market_plan)
+    boundary = f"2024-01-26T{cut}-05:00"
+    whole = simulate_marketplace(
+        market_plan, window_rules, config, 42, prescribed, compensation=compensation
+    )
+    first = simulate_marketplace(
+        market_plan,
+        window_rules,
+        config,
+        42,
+        prescribed,
+        window_end=boundary,
+        compensation=compensation,
+    )
+    saved = copy.deepcopy(first.end_snapshot)
+    second = simulate_marketplace(
+        market_plan,
+        window_rules,
+        config,
+        42,
+        window_start=boundary,
+        carry_in=first.end_snapshot,
+        compensation=compensation,
+    )
+    assert first.end_snapshot == saved
+    assert whole.end_snapshot == second.end_snapshot
+    assert first.financial_tables is not None and second.financial_tables is not None
+    assert whole.financial_tables is not None
+    ledger = pd.concat(
+        [
+            frame
+            for frame in (
+                first.financial_tables["earnings_ledger"],
+                second.financial_tables["earnings_ledger"],
+            )
+            if not frame.empty
+        ],
+        ignore_index=True,
+    )
+    assert not ledger.request_id.duplicated().any()
+    pd.testing.assert_frame_equal(whole.financial_tables["earnings_ledger"], ledger)
+
+
+@pytest.mark.parametrize("change", ["omit", "fare", "missing_history", "checksum"])
+def test_compensation_checkpoint_rejects_changed_or_missing_terms(
+    config, market_plan, window_rules, prescribed, compensation, change
+):
+    _pay_policy(market_plan)
+    first = simulate_marketplace(
+        market_plan,
+        window_rules,
+        config,
+        42,
+        prescribed,
+        window_end=CUT,
+        compensation=None if change == "missing_history" else compensation,
+    )
+    if change == "omit":
+        compensation = None
+    elif change == "fare":
+        compensation["baseline_fares"]["X"] = 2.0
+    elif change == "checksum":
+        first.end_snapshot["compensation_context"]["terms_version"] = "tampered"
+    with pytest.raises(ValueError, match="compensation|Compensation"):
+        simulate_marketplace(
+            market_plan,
+            window_rules,
+            config,
+            42,
+            window_start=CUT,
+            carry_in=first.end_snapshot,
+            compensation=compensation,
+        )
+
+
+def test_empty_compensation_is_invalid(config, market_plan, rules, prescribed):
+    with pytest.raises(ValueError):
+        simulate_marketplace(market_plan, rules, config, 42, prescribed, compensation={})
+
+
+def test_compensation_reconciles_poisson_fractional_timestamps(
+    config, market_plan, window_rules, compensation
+):
+    _pay_policy(market_plan)
+    simulation = simulate_marketplace(
+        market_plan, window_rules, config, 42, compensation=compensation
+    )
+    assert simulation.result["earnings"]["summary"]["presence_hours"] == pytest.approx(
+        simulation.result["summary"]["total_vehicle_hours"]
+        - simulation.result["summary"]["offline_hours"],
+        abs=1e-10,
+    )
+    assert (
+        simulation.result["earnings"]["summary"]["settled_completed_trips"]
+        == (simulation.result["summary"]["completed_trips"])
+    )
+
+
+def test_cli_freezes_compensation_exports_and_reuses_verified_ledgers(
+    demand_run, market_plan, window_rules, compensation, monkeypatch, capsys
+):
+    config = demand_run.config
+    _pay_policy(market_plan)
+    # Replace only this isolated test's registered demand fixture with a complete policy.
+    source = demand_run.run.path
+    write_frame(source / "demand_plan.parquet", market_plan.frame)
+    write_json(source / "demand_spec.json", market_plan.spec)
+    write_json(source / "demand_result.json", market_plan.result)
+    for name in ("demand_plan.parquet", "demand_spec.json", "demand_result.json"):
+        relative = f"runs/{demand_run.run.run_id}/{name}"
+        demand_run.run.manifest["artifacts"][relative] = sha256_file(source / name)
+    write_json(demand_run.run.manifest_path, demand_run.run.manifest)
+    original_source_hash = sha256_file(demand_run.run.manifest_path)
+    rules_path = config.workspace / "rules-pay.json"
+    pay_path = config.workspace / "pay.json"
+    write_json(rules_path, window_rules)
+    write_json(pay_path, compensation)
+    monkeypatch.setattr("gsm_poc.cli.Config.load", lambda _: config)
+    args = [
+        "simulate-marketplace",
+        "--demand-run-id",
+        demand_run.run.run_id,
+        "--rules",
+        str(rules_path),
+        "--requests",
+        str(ROOT / "configs/week3_requests.csv"),
+        "--compensation",
+        str(pay_path),
+        "--run-id",
+        "paid-simulation",
+    ]
+    assert main(args) == 0
+    output = config.workspace / "runs/paid-simulation"
+    manifest = completed_run(config.workspace, "paid-simulation")
+    assert read_json(output / "simulation_inputs/compensation.json") == compensation
+    assert len(pd.read_csv(output / "earnings_ledger.csv")) == 3
+    for name in ("quote_terms", "driver_pay_terms", "earnings_ledger", "driver_income"):
+        assert f"runs/paid-simulation/{name}.csv" in manifest["artifacts"]
+        assert f"runs/paid-simulation/{name}.parquet" in manifest["artifacts"]
+    assert (
+        read_json(output / "earnings_result.json")
+        == read_json(output / "simulation_result.json")["earnings"]
+    )
+    capsys.readouterr()
+    assert main(args) == 0
+    assert "reuse verified artifacts" in capsys.readouterr().out
+    (output / "earnings_ledger.csv").write_text("corrupt", encoding="utf-8")
+    assert main(args) == 0
+    assert len(pd.read_csv(output / "earnings_ledger.csv")) == 3
+    assert sha256_file(demand_run.run.manifest_path) == original_source_hash
+    ledger_hash = sha256_file(output / "earnings_ledger.csv")
+    args_without_pay = [item for item in args if item not in ("--compensation", str(pay_path))]
+    capsys.readouterr()
+    assert main(args_without_pay) == 1
+    assert "new run ID" in capsys.readouterr().err
+    assert sha256_file(output / "earnings_ledger.csv") == ledger_hash
+    assert "earnings" in read_json(output / "simulation_result.json")
+    retry_args = ["failed-paid-simulation" if item == "paid-simulation" else item for item in args]
+    write_json(pay_path, compensation | {"driver_fare_share": 0.5})
+    assert main(retry_args) == 1
+    write_json(pay_path, compensation)
+    assert main(retry_args) == 0
+    assert (
+        len(pd.read_csv(config.workspace / "runs/failed-paid-simulation/earnings_ledger.csv")) == 3
+    )

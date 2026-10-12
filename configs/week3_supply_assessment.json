@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": "assessment",
+  "rct_seed_start": 61001,
+  "null_seed_start": 62001,
+  "n_seeds": 100,
+  "max_seconds": 600.0,
+  "coverage_floor": 0.90,
+  "max_null_false_positive_rate": 0.10,
+  "max_participation_bias": 0.04,
+  "max_hours_bias": 0.20,
+  "max_participation_rmse": 0.08,
+  "max_hours_rmse": 0.30
+}

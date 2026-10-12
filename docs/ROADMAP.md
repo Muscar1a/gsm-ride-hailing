@@ -15,6 +15,14 @@ profit and ROI stay `not_evaluated`.
 
 ## Delivery objective
 
+The three-response research objective below remains the broader target.
+Bun narrowed the current operational PoC on **12/10/2026** to a fixed online
+driver roster, per-request acceptance decisions and 100% displayed-fare driver
+pay; [WEEK3_POC_SCOPE.md](WEEK3_POC_SCOPE.md) governs that active scope.
+Incentives, endogenous online/offline behavior, shift allocation and income-supply
+equilibrium are outside the current PoC. This restriction does not establish
+driver labor elasticity or complete the broader original research objective.
+
 Estimate and validate rider-price, driver-labor-supply and own/cross-service
 responses for one cluster and two services, using the estimands in
 [IDENTIFICATION.md](IDENTIFICATION.md). Use supported results for policy
@@ -35,13 +43,14 @@ and frozen quality gates; unfinished requirements remain open at handoff.
 
 ## Weekly inputs and outputs
 
-These are weekly requirements and targets, not completion records.
+These are planning targets, not completion records. Week 3 reflects the current
+PoC scope; later research targets remain conditional on their required inputs.
 
 | Week | Required input | Expected output and acceptance |
 |---|---|---|
 | 1 | Labeled raw/public/synthetic sources, metadata/keys, market/rules/estimands and business decision | Reviewed causal specifications, source/mapping readiness, decision register and evaluation plan; validate available research tables, quality reports, manifests and splits. Pending GSM confirmations keep the corresponding closure conditions open. |
 | 2 | Choice/assignment records or controlled blocks; separate Swissmetro data and independent evaluator | Rider demand/choice results, common matrix or identified columns, baseline/support/interval diagnostics and method/choice/policy reports; state unidentified responses and prevent oracle leakage |
-| 3 | Frozen demand/choice bundle; offered compensation, dispatch decisions, eligible participation/shift/state records or declared synthetic truth; shared roster, rules, initial snapshot, seeds and budgets | Driver labor-supply results and separate acceptance diagnostics; supported integrated forecasts with feasible plans/snapshots, offer/operational trajectories, earnings ledger, equilibrium status and baseline-error report; invariant, failure and independent controlled benchmark evidence |
+| 3 | Frozen supported demand/choice bundle; fixed online driver/vehicle roster, displayed-fare compensation terms, dispatch rules, initial snapshot, seeds and budgets | Separate offer/acceptance diagnostics and supported price/earnings forecasts; request/vehicle trajectories, idle hours, trips/wait/cancel and earnings ledger; accounting, replay, failure and controlled validation evidence. Existing scientific labor-supply evidence is retained independently; labor elasticity and endogenous equilibrium are outside this PoC. |
 | 4 | Supported response bundles and validated operational inputs; finance sources/rules to the extent required by the chosen criterion; uncertainty specification, movement/carryover and power assumptions | Independently evaluated finite policy comparisons, intervals and sensitivity, pilot recommendations with guardrail/evidence status; conditional economic comparison/cost bridge, workload checks, experiment/A/A specification and frozen forecasts; dashboard/exports expose the same results |
 | 5 | Versioned causal/policy/engine artifacts, correctness/statistical/performance evidence and acceptance records; actual experiment logs if an experiment occurs | Reproducible evidence package, rerun instructions, identified/unidentified scope and gate status; runnable supporting PoC, pilot handoff and forecast-versus-effect reconciliation when experiment data qualify |
 
@@ -68,7 +77,7 @@ Preparing specifications does not complete causal measurements or imply reviewer
 acceptance; the handoff records its supported scope and remaining conditions.
 
 Week 1 requires the evaluation and experiment strategy. Driver-model
-implementation belongs to week 3; executable schedules, calibrated power,
+implementation belongs to week 3; executable experiment schedules, calibrated power,
 frozen forecasts and A/A/pilot evidence remain week 4–5 work under the
 appropriate data and authorization conditions.
 
@@ -136,10 +145,18 @@ retain the original seeds, finite job budgets, source identities and resume proc
 
 ## 2. Implement week 3
 
-Keep the quote population fixed and use `reduced_form_policy`. Start with a
-two-vehicle fixture and prescribed requests. The small demo has one cluster,
-2-4 zones, two services sharing a roster, and a two-hour horizon. These are
-validation assumptions, not GSM observations.
+Follow the [current PoC scope](WEEK3_POC_SCOPE.md): keep a declared driver roster
+online throughout the observation horizon, with freedom to accept or reject
+each offered request. Online supply is fixed independently of price, income and
+incentives. The PoC does not allocate shifts or infer when drivers open/close the
+app. Rejection leaves a driver online; no available willing driver means the
+request waits, expires or is canceled under the declared rules.
+
+Keep the quote population fixed and use `reduced_form_policy`. The small demo
+has one cluster, 2-4 zones, two services sharing a roster and a two-hour horizon,
+starting with a two-vehicle fixture and prescribed requests. These are validation
+assumptions, not GSM observations. Fixed online supply does not identify labor
+elasticity; trip acceptance remains a separate dispatch response.
 
 Step 1 is implemented with `prepare-demand`: verified choice handoff, versioned
 X/Y rates in requests/hour, policy/specs and a validated shared-roster snapshot.
@@ -149,19 +166,50 @@ calibration remain unavailable. Step 2 is implemented with `simulate-marketplace
 a bounded fixed-roster SimPy run, prescribed or piecewise-Poisson requests,
 synthetic matching/OD durations, request and vehicle trajectories, wait/idle/trips
 and end-horizon censoring. See [simulation usage](USAGE.md#week-3-fixed-supply-simulation).
-It uses immediate acceptance, trips finishing within fixed shifts and static SOC.
-The state/carryover and cancellation portion of step 3 is implemented: version 2
-accepts queued/busy checkpoints, retains pending operational events and original
-timestamps, and supports pickup expiry and explicit prepickup cancellation.
-Compensation, driver participation/trip acceptance, energy/charging and the other
-operational constraints remain to implement.
-Completing this bridge does not certify nominal coverage, full-context support or GSM calibration.
+The current version-3 rules keep the online roster fixed over the observation
+horizon, retain static SOC and introduce bounded individual offers. Each pending
+offer reserves an idle vehicle; a stable seeded Bernoulli decision resolves to
+acceptance, rejection or timeout. Expiry/cancellation withdraws the offer;
+refusal leaves the driver online and the original request deadline unchanged.
+The default acceptance probability 0.8 is a declared price-independent synthetic
+assumption, with response 3 seconds, timeout 10 seconds and at most 20 offers per
+request. No driver/request pair is redrawn. Legacy shift fields validate coverage
+of the horizon; they do not implement scheduled hours or online/offline decisions.
+State/carryover and cancellation preserve queued/busy requests, pending offers,
+reserved vehicles, frozen terms and original event timing. Version-3 checkpoints
+require compatible version-3 rules; V1/V2 immediate-acceptance controls remain
+separately reproducible.
+The independent controlled labor-supply branch is implemented with
+`generate-supply`, `fit-supply`, `scenario-supply` and `evaluate-supply`: complete
+eligible driver/shift observations, randomized offered-incentive contrasts,
+driver-level Welch intervals, support gates and separate RCT/null assessment.
+See the [supply contract/protocol](WEEK3_SUPPLY.md). This scientific branch is
+preserved independently, outside the current PoC delivery path; its effects and
+declared availability fraction do not change the fixed online roster.
+Optional minimal compensation
+settlement is implemented: drivers receive 100% of displayed app fares on completed
+trips under Bun's approved synthetic assumption, with frozen quotes/pay terms,
+per-driver earnings and presence-hour denominators, including zero-trip drivers.
+Financial continuation preserves the financial context and settles each completion
+only once. See [compensation usage](USAGE.md#week-3-minimal-compensation).
+`driver_offers` and `offer_events` retain exposure, response, unresolved offers
+and immutable predecision terms. Acceptance rates report their actual response
+denominator and keep pending/withdrawn offers separate. The read-only dashboard
+selects completed simulation runs independently of choice fits and exports the
+same metrics/statuses.
+Behavioral schedules, incentive response, endogenous online/offline behavior,
+income-supply equilibrium and detailed energy/charging are outside this PoC scope.
+The [supply increment evidence](submission/days/20261011/week3_supply_progress.md)
+records 200 independent RCT/null seed jobs and 472 passing repository tests;
+it does not close complete Week-3 or GSM acceptance.
+Completing the current PoC does not certify nominal coverage, full-context support
+or GSM calibration.
 
-Offered compensation precedes decisions. Retain eligible nonparticipants and zero
-trips. Use an amount treatment for zero-base bonuses; do not count bonuses already
-included in expected income twice. Count shared fleet once. Relocation creates
-no new hours; charging is not subtracted twice. Separate controlled observations,
-rules, and oracle.
+Displayed fare and driver compensation terms precede acceptance decisions;
+realized earnings follow completed trips. Retain zero-trip online drivers in
+earnings summaries, and count the shared X/Y fleet once. Separate controlled
+observations, rules and oracle. Rejecting a trip does not remove an online driver
+or multiply physical hours by an acceptance rate.
 
 The customer-and-driver target architecture separates participation/working hours,
 dispatch offer exposure and trip acceptance. A driver can reject a trip and remain
@@ -170,37 +218,40 @@ Decision-time offer terms and realized earnings have separate lineage. Follow th
 [execution design](reference/CORE_ENGINE_DESIGN.md#23-customer-and-driver-execution)
 and [driver models](reference/CORE_ENGINE_DESIGN.md#7-supply-response-engine).
 
-Week-3 primary outputs are driver participation/conditional-hours estimates,
-their intervals, decision populations, support and evidence, followed by
-supported demand/supply forecasts. Acceptance remains a separate dispatch
-response. Integrated forecast metrics include demand X/Y/total, net choice changes,
-offer exposure
-and trip acceptance, serviceable/idle hours, completed trips, wait/cancel,
-driver earnings summary and simulated gross booking value. Include source, unit,
+Current Week-3 PoC outputs are supported price forecasts, per-request offer and
+acceptance diagnostics, demand X/Y/total and net choice changes, online/serviceable
+and idle hours, completed trips, wait/cancel, driver earnings summary and simulated
+gross booking value. Include source, unit,
 denominator, support, evidence C, and status. Full GSM profit remains conditional
 on confirmed accounting definitions and retains the explicit status not_evaluated.
 
 Required tests: request/offer accounting with carry-in/out; nonoverlapping states;
-legacy immediate acceptance, zero acceptance, unchanged driver terms, feasible
-participation, zero supply/bonus, relocation, insufficient support and nonconvergence.
-Energy extensions also require SOC/charger-capacity and charging-bottleneck checks.
+legacy immediate acceptance, zero acceptance, rejection while remaining online,
+bounded attempts/timeouts, unchanged driver terms, zero online supply,
+insufficient demand support and completion-only settlement without duplicate pay.
 Compare baseline errors with controlled truth; do not call this GSM calibration.
 Run repository checks and demand regression checks.
 
-After the implemented state/carryover and cancellation work, prioritize compensation
-and bounded trip offers/acceptance with the existing fixed roster and static SOC.
-Then add participation, feasible driver/vehicle schedules, income-supply equilibrium
-and paired price-only, incentive-only and combined policy comparisons. Validate
-baseline behavior and each component's equations, accounting and failures throughout.
-Detailed energy/charging remains an open operational extension rather than a
-prerequisite for the first driver-response integration; retain availability
-assumptions and any unimplemented acceptance requirements explicitly.
-Extend beyond the small fixture using the
-[core engine validation protocol](BENCHMARK.md#core-engine-validation-protocol).
+The implemented `evaluate-marketplace` compares supported baseline/price scenarios
+under the same roster, frozen model/source and paired seeds. It checks Poisson
+request means against the frozen rates, a known separated-offer mechanism against
+controlled truth and 2/20/100-driver workloads under finite budgets. Its individual
+Student-t intervals describe paired Monte Carlo mean differences conditional on
+the fitted demand and declared rules; they do not cover causal fitting uncertainty.
+The [frozen operational protocol](BENCHMARK.md#week-3-fixed-online-operational-assessment)
+separates pilot seeds 72001–72003 from assessment seeds 73001–73100. The
+[12 October closeout](submission/days/20261012/week3_poc_closeout.md) records
+303/303 assessment jobs with all frozen gates passed, 609 passing tests, replay
+and pending-offer continuation checks. The scoped Week-3 PoC is ready for Bun's
+review; no reviewer acceptance or original three-response/GSM completion is
+implied. Retain every failed/unavailable count and do not tune on these assessment
+seeds. Measured workload evidence covers 2/20/100 drivers at about 450 requests,
+not the 10,000-request cap. Incentive scenarios, allocated schedules and
+income-to-hours feedback are not current prerequisites.
 
-Use core solver defaults: damping 0.3, at most 50 iterations, 600 seconds/job.
-Freeze event budgets/tolerances/replicates before execution; confirm with
-independent seeds. Organize the logical components within the existing packages
+Freeze event budgets and replicates before execution; confirm with independent
+seeds. An endogenous equilibrium solver is not required for this fixed-online
+PoC. Organize the logical components within the existing packages
 under [target architecture](ARCHITECTURE.md); create separate files only where
 implementation responsibilities require them.
 SimPy is now declared and locked for the implemented fixed-supply simulator.

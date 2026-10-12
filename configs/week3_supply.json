@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "seed": 51000,
+  "n_drivers": 800,
+  "n_shifts": 7,
+  "shift_hours": 8.0,
+  "start_at": "2026-01-01T08:00:00+00:00",
+  "baseline_incentive": 0.0,
+  "target_incentive": 20.0,
+  "currency": "SYNTHETIC_UNIT",
+  "participation_base": 0.45,
+  "participation_effect": 0.15,
+  "conditional_hours_base": 5.0,
+  "conditional_hours_effect": 1.0,
+  "serviceable_fraction_min": 0.75,
+  "serviceable_fraction_max": 0.95,
+  "min_drivers_per_arm": 20,
+  "interval_level": 0.95
+}

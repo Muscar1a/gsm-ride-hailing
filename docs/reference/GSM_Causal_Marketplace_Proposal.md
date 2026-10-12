@@ -2,6 +2,19 @@
 
 Problem 06 | Nguyễn Thành An
 
+**Current PoC scope (Bun, 12 October 2026):** assume a fixed online driver roster,
+model acceptance of individual requests separately, and retain 100% displayed-fare
+driver pay. Incentives, driver online/offline response, scheduled hours and
+income-supply equilibrium are outside this increment. The original research
+questions below remain broader targets. See [current PoC scope](../WEEK3_POC_SCOPE.md).
+The current V3 PoC implements bounded per-offer decisions, checkpointed operations,
+100%-fare completion settlement and read-only exports, with a frozen operational
+evaluator. Independent assessment and technical checks passed for this scope;
+the package is ready for Bun's review, not recorded as accepted. See the
+[12 October closeout](../submission/days/20261012/week3_poc_closeout.md). The active path and
+its limits are in [USAGE](../USAGE.md#week-3-fixed-online-poc); completing this
+restricted PoC does not close the original three-response research objective.
+
 GSM source requirements, export formats, keys and units follow
 [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). Algorithms follow
 [CORE_ENGINE_DESIGN.md](CORE_ENGINE_DESIGN.md). This document defines the target
@@ -170,6 +183,15 @@ An expected-income causal channel requires its own identification basis. Fixed
 shifts/salaries may imply zero additional hours; extra shifts, acceptance, and
 charging timing need separate outcomes. Track neighbors to distinguish extra total
 supply from relocation.
+
+The approved minimum development compensation assumption gives drivers **100%
+of the fare displayed on the app on completed trips**, while GSM's actual policy
+is unavailable. An explicit synthetic tariff defines the amounts; cancellations
+and expiry pay zero. Freeze displayed fares and driver terms before simulation,
+retain individual earnings and zero-trip presence hours, and settle completions
+once across compatible windows. This conditional accounting rule does not by
+itself identify an income elasticity or a price-induced labor response. See the
+[compensation design](CORE_ENGINE_DESIGN.md#72-compensationmodel).
 
 Two matrix columns require independent residual price variation. Report request
 X/Y/total and conversion separately. `NONE` means no booking in a complete

@@ -1,8 +1,13 @@
 # Identification and interpretation
 
 This document records the Week-1 causal specifications for three core responses
-and the implemented controlled demand/choice model. GSM specifications below are
+and the implemented controlled demand/choice and offered-incentive models. GSM specifications below are
 planned identification/evaluation contracts, not implemented or identified models.
+
+The [current PoC scope](WEEK3_POC_SCOPE.md) fixes the online driver population;
+incentive/labor response is outside that operational increment. Fixed online supply
+does not identify a zero labor elasticity, and accepting/refusing a trip is not
+the labor-participation outcome specified below.
 
 ## Sources and evidence
 
@@ -75,7 +80,7 @@ and [§6.4](reference/CORE_ENGINE_DESIGN.md#64-support-and-alternative-forms).
 | Inference unit | Match incentive/shift assignment and dependence across repeated shifts of a driver, shared fleets and geographic/time spillovers. Freeze the grouping, chronological splits and resampling for this response before evaluation; do not inherit session-IID inference from quote data. |
 | Identification | Assess assignment, contemporaneous shortage shocks, overlap, anticipation and feasible contract adjustments. Randomized offered terms or valid historical policy changes may identify their own contrasts. Expected income is a mechanism/information treatment requiring separate identification; an incentive effect does not identify an unrestricted income elasticity. |
 | Support | Restrict terms and decision horizons to observed/approved variation, eligible driver/vehicle capacity and the compensation mechanism under which the effect was identified. Separate added total hours from relocation; fixed attendance is a declared mode, not an estimated zero labor response. |
-| Current status | Labor estimation, the serviceable-hour bridge and income-response identification are planned. GSM participation/hours and supply effects are `not_evaluated`; no behavioral supply model is claimed by this specification. |
+| Current status | The [controlled supply package](WEEK3_SUPPLY.md) implements randomized offered-incentive effects on participation and total eligible-cohort hours, with driver-level intervals and a declared synthetic serviceable fraction. Physical schedules and income-response identification remain to implement. GSM participation/hours and supply effects are `not_evaluated`; the controlled estimates are not GSM coefficients. |
 
 Outcome/compensation boundaries and candidate response forms follow
 [Core design §7](reference/CORE_ENGINE_DESIGN.md#7-supply-response-engine).

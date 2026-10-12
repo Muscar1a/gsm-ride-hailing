@@ -111,9 +111,52 @@ def normalize_rules(rules: dict[str, Any], snapshot: dict[str, Any]) -> dict[str
         raise ValueError("Simulation rules must be an object")
     base = copy.deepcopy(rules)
     version = base.get("schema_version")
-    if type(version) is not int or version not in (1, 2):
+    if type(version) is not int or version not in (1, 2, 3):
         raise ValueError("Unsupported simulation rules schema_version")
-    if version == 2:
+    offer_rules = {}
+    if version == 3:
+        fixed = {
+            "acceptance_rule": "bernoulli_offer",
+            "shift_end_rule": "observation_only",
+            "online_population_rule": "fixed_roster",
+        }
+        fields = set(fixed) | {
+            "acceptance_probability",
+            "response_seconds",
+            "response_timeout_seconds",
+            "max_offer_attempts",
+        }
+        if not fields <= set(base) or any(base[key] != value for key, value in fixed.items()):
+            raise ValueError("Version 3 requires declared fixed-online offer rules")
+        offer_rules = {key: base[key] for key in fields}
+        for key in ("acceptance_probability", "response_seconds", "response_timeout_seconds"):
+            value = offer_rules[key]
+            if type(value) not in (int, float) or not np.isfinite(value) or value < 0:
+                raise ValueError(f"{key} must be finite and nonnegative")
+        if (
+            offer_rules["acceptance_probability"] > 1
+            or offer_rules["response_seconds"] > 600
+            or not 0 < offer_rules["response_timeout_seconds"] <= 600
+            or type(offer_rules["max_offer_attempts"]) is not int
+            or not 1 <= offer_rules["max_offer_attempts"] <= 10000
+        ):
+            raise ValueError("Version 3 offer probability, latency or attempt budget is invalid")
+        for key in fields:
+            base.pop(key)
+        base.update(acceptance_rule="immediate", shift_end_rule="finish_within_shift")
+        horizon_start = parse_timestamp(snapshot["horizon_start"], "horizon_start")
+        horizon_end = parse_timestamp(snapshot["horizon_end"], "horizon_end")
+        if any(
+            vehicle["state"] != "idle"
+            or vehicle["soc"] < base["minimum_soc"]
+            or parse_timestamp(vehicle["shift_start"], "legacy start") > horizon_start
+            or parse_timestamp(vehicle["shift_end"], "legacy end") < horizon_end
+            for vehicle in snapshot["vehicles"]
+        ):
+            raise ValueError(
+                "Fixed-online roster must start idle, eligible and cover the whole horizon"
+            )
+    if version in (2, 3):
         if "max_wait_seconds" not in base or "cancel_policy" not in base:
             raise ValueError("Version 2 rules require max_wait_seconds and cancel_policy")
         maximum_wait = base.pop("max_wait_seconds")
@@ -129,14 +172,16 @@ def normalize_rules(rules: dict[str, Any], snapshot: dict[str, Any]) -> dict[str
     if (
         maximum_wait is not None
         and maximum_wait
-        > (
-            pd.Timestamp.max.value
-            - parse_timestamp(snapshot["horizon_end"], "horizon_end").value
-        )
+        > (pd.Timestamp.max.value - parse_timestamp(snapshot["horizon_end"], "horizon_end").value)
         / 1e9
     ):
         raise ValueError("max_wait_seconds exceeds the supported timestamp range")
     base["schema_version"] = 1
     normalized = validate_rules(base, snapshot)
-    normalized.update(schema_version=2, max_wait_seconds=maximum_wait, cancel_policy=cancel_policy)
+    normalized.update(
+        schema_version=version if version == 3 else 2,
+        max_wait_seconds=maximum_wait,
+        cancel_policy=cancel_policy,
+    )
+    normalized.update(offer_rules)
     return normalized

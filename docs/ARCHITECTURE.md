@@ -23,9 +23,20 @@ gsm-ride-hailing/
 
 ## Current implemented flow
 
-The following flow describes the current demand/choice PoC and fixed-roster
-simulator. Driver participation, compensation-aware trip acceptance and the
-income-supply solver below are target capabilities, not implemented stages.
+The [current PoC scope](WEEK3_POC_SCOPE.md), confirmed by Bun on 12 October 2026,
+holds the online roster fixed and separates trip acceptance from labor supply.
+Incentive-driven schedules and income feedback below are broader extensions;
+the existing controlled supply branch is retained scientific evidence, not a
+required simulator input. Version-3 operations implement individual offer refusal
+without removing online drivers or multiplying physical hours by acceptance.
+
+The following flow describes the current demand/choice PoC, independent controlled
+offered-incentive estimation and fixed-roster simulator with optional minimal
+compensation settlement and bounded individual offers. Synthetic acceptance is
+declared independently of rider price; no GSM acceptance coefficient is fitted.
+Physical behavioral schedules and the income-supply solver below describe the
+broader research architecture. Supply assumptions, schemas and inference
+follow [WEEK3_SUPPLY.md](WEEK3_SUPPLY.md).
 
 ```mermaid
 flowchart TD
@@ -46,15 +57,32 @@ flowchart TD
   Fit --> Handoff[Independent frozen choice package + current replay]
   Handoff --> Demand[Verified frozen handoff + demand plan]
   Snapshot[Synthetic roster + initial snapshot] --> Demand
-  Demand --> Simulate[Fixed-supply simulation]
+  Demand --> Simulate[Fixed-online simulation + bounded offers]
   Rules[Synthetic OD/matching rules + seed] --> Simulate
   Simulate --> Trajectories[Requests, vehicle intervals, end snapshot, metrics]
+  Compensation[Explicit synthetic tariff + 100% driver share] --> Terms[Frozen rider quote and driver pay terms]
+  Demand --> Terms
+  Terms --> Earnings[Completed-trip earnings + per-driver presence-hour income]
+  Terms --> Simulate
+  Trajectories --> Earnings
+  Simulate --> Offers[Driver offers + acceptance/rejection/timeout/withdrawal]
+  Offers --> UI
+  Trajectories --> UI
+  Earnings --> UI
+  Demand --> MarketEvaluate[Paired operational assessment + controlled truth + workloads]
   Bootstrap --> Scenario
   Oracle --> Evaluate[Method evaluation only]
   Fit --> Evaluate
   Mart --> UI[Streamlit]
   Evaluate --> UI
   Scenario --> UI
+  SupplySpec[Declared synthetic driver cohort + incentive assignment] --> SupplyGenerate[Controlled labor generator]
+  SupplyGenerate --> SupplyObserved[Complete observed driver/shift decisions + contract]
+  SupplyGenerate --> SupplyOracle[Separate conditional-mean oracle]
+  SupplyObserved --> SupplyFit[Randomized driver-mean contrast + Welch intervals]
+  SupplyFit --> SupplyScenario[Supported fixed-cohort incentive forecast + CSV/JSON]
+  SupplyFit --> SupplyEvaluate[Independent RCT/null seed assessment]
+  SupplyOracle --> SupplyEvaluate
 ```
 
 ## Boundaries
@@ -63,6 +91,22 @@ The generator may create oracle artifacts. Only the evaluator and method
 verification tab may read them. The estimator receives the observed block table;
 its encoder constructs W from a fixed allowlist. Scenarios use a fitted model
 bundle and frozen held-out context, never oracle probabilities.
+The supply estimator receives only complete observed driver decisions and the
+observed contract, never generator truth. Its fixed randomized contrast has no
+learned preprocessing or method selection; independent assessment uses new seeds.
+Supply forecasts are expected responses, not physical vehicle schedules; there is
+no automatic connection to the demand-plan/simulator until population/horizon and
+feasible admission constraints qualify.
+
+The optional compensation fixture uses Bun's approved assumption that drivers
+receive 100% of the displayed app fare. Frozen quote and driver-pay terms precede
+simulation; only completed trips settle earnings. The fixed roster includes drivers
+with zero trips in presence-hour summaries. Financial continuations
+require the same frozen context and settle only current-window completions.
+Version-3 quote and driver-pay terms are immutable before offer decisions;
+rejected, timed-out, withdrawn and pending offers earn no completion settlement.
+These realized earnings do not identify a predecision income response or feed back
+automatically into supply hours. See [compensation usage](USAGE.md#week-3-minimal-compensation).
 
 TLC operational records have `source_kind=observed_tlc`. Offline simulations have
 `source_kind=synthetic`; simulations using train-fitted TLC context have
@@ -81,7 +125,8 @@ record code revision, configuration, data identity, seed, dependency lock hash,
 Python/package versions, timings, and successful artifacts.
 
 The CLI implements `ingest`, `build`, `generate`, `fit`, `evaluate`, `scenario`,
-`freeze-choice`, `prepare-inference`, `prepare-demand`, `simulate-marketplace` and `run-all`. Dataset and model run IDs
+`freeze-choice`, `prepare-inference`, `prepare-demand`, `simulate-marketplace`,
+`evaluate-marketplace`, the four controlled supply commands and `run-all`. Dataset and model run IDs
 explicitly select dependent artifacts.
 Synthetic mode can run without network access or TLC data. TLC mode never
 substitutes synthetic trips for missing observed records.
@@ -109,13 +154,24 @@ and [usage](USAGE.md#hybrid-choice-inference). Integrity scans still hash regist
 The demand bridge and fixed-supply simulator run in batch, using verified local
 artifacts. They preserve the frozen choice scope, apply price effects once and
 count the shared X/Y fleet once. The simulator uses explicit synthetic OD/matching
-rules, fixed shifts and static SOC. Version 2 supports consecutive windows with
-queued/busy carry-in, pickup deadlines and explicit customer cancellation before
-pickup. Operational checkpoints retain the frozen arrival schedule, original
-request timestamps, vehicle activity and pending events; aborted pickup legs
-finish before vehicle release. Request/state-time accounting is checked per
-window. Supply response, energy/charging, operational calibration and the solver
-remain later work. Execution instructions and artifact-reading guidance are in
+rules and static SOC. Recommended version 3 validates a fixed online roster for
+the complete observation horizon, reserves vehicles during pending offers and
+resolves one seeded decision per driver/request pair. Request expiry/cancellation
+withdraws pending offers; refusal leaves drivers online. Consecutive windows
+preserve pending decisions, attempts, original deadlines and immutable financial
+terms, alongside arrivals, request history and vehicle activity. Aborted pickup
+legs finish before vehicle release. Request/offer/state-time/ledger accounting is
+checked per window. Legacy V1/V2 fixture shift constraints and immediate acceptance
+remain separate controls. Supply response, charging and income equilibrium are
+outside the current PoC; GSM calibration and full-chain uncertainty remain open.
+The evaluator freezes supported baseline/target demand runs, rules, compensation,
+protocol and source snapshots, then exports paired seed records, controlled-truth
+checks and workloads. Its Monte Carlo intervals condition on the fitted demand;
+they are not causal/full-chain intervals. Independent assessment and technical
+checks passed for the scoped Week-3 PoC; see the
+[12 October closeout](submission/days/20261012/week3_poc_closeout.md). The package
+is ready for Bun's review; GSM/original research acceptance remains separate.
+Execution instructions and artifact-reading guidance are in
 [USAGE.md](USAGE.md).
 
 ## Target customer and driver architecture
@@ -332,13 +388,15 @@ is indexed in [docs README](README.md).
 |---|---|---|
 | `demand_plan` | Implemented choice-to-request bridge | Zone/service, block start/end, requests/hour, model/source references, fixed quote exposure and support; baseline rates accompany target rates |
 | `driver_response_bundle` | Proposed participation and acceptance interfaces | Separate participation/conditional-hours and offered-trip acceptance models, decision populations, predecision features, estimands, units, splits, support, diagnostics and evidence |
-| `compensation_spec` | Proposed driver-pay interface | Versioned offered terms and applicable pay/incentive rules, eligibility/effective periods, currency/decision basis, payment conditions and source/evidence; separate from customer tariff |
+| `compensation_spec` | Minimal 100% fare-share fixture implemented; richer rules proposed | Explicit synthetic baseline X/Y fares, currency, fixed driver share and completed-only settlement; source/configuration/policy references. Fixed pay, bonuses and actual GSM rules remain unimplemented |
 | `admission_plan` | Proposed physical supply interface | Eligible-population/model references, participation decisions, driver/vehicle/shift keys, shift start/end, service eligibility, roster reference, target and feasible serviceable hours, capacity gaps and compensation version |
-| `trip_offer_log` | Proposed simulator decision trace | Offer/request/dispatch/driver/vehicle/shift keys, immutable predecision terms/version, exposure and response events, acceptance-model reference and seeded decision provenance; preserve unaccepted offers |
-| `earnings_ledger` | Proposed compensation outcome | Individual driver/shift/trip pay, bonus/deduction and currency entries under frozen rules; offered-term references, earned/paid basis and zero-trip outcomes; separate from rider-payment and cost entries |
+| `driver_offers`, `offer_events` | Implemented V3 simulator decision trace | Offer/request/driver/vehicle/service keys, immutable predecision fare/pay/context and terms version; seeded one-draw decisions, response/resolution timestamps and accepted/rejected/timed-out/withdrawn/pending states. Current window includes newly offered and pending-at-start rows; transitions retain their own event times |
+| `quote_terms`, `driver_pay_terms` | Implemented minimal compensation inputs | Separate frozen displayed fares and driver terms from tariff/policy; request/service keys, currency, rule references and completion-only payment condition. V3 terms precede actual individual offers |
+| `earnings_ledger`, `driver_income`, `earnings_result` | Implemented minimal compensation outcomes | Completion settlement under frozen terms, zero earnings for cancellations/expiry, unresolved earnings not settled; all roster drivers in income summaries, presence hours including idle/unavailable time, zero-denominator status, evidence C and no GSM profit/ROI |
 | `economic_ledger` | Proposed economic summary | Simulated gross booking value from completed trips and driver payouts under frozen policy rules; revenue, contribution margin, profit and ROI require their respective confirmed measurement/accounting inputs and retain unavailable status when unsupported |
 | `equilibrium_result` | Proposed income-supply interface | Expected/realized income and hours by decision group, unit/denominator, residuals, iteration/replicate budgets and convergence/failure status; references to the common initial snapshot |
-| `operational_checkpoint` | Implemented fixed-supply continuation; driver-decision extension proposed | Current `end_snapshot.json` preserves arrivals, requests, vehicles and pending events; future versions must also preserve offer attempts/decisions, remaining driver activity and compatible model/compensation references |
+| `operational_checkpoint` | Implemented fixed-online offer and financial continuation | `end_snapshot.json` preserves arrivals, requests, vehicles, pending events and frozen financial context; V3 retains individual offers, attempts, pending reservations/responses and matching versioned rules. No replayed decisions or duplicate completion pay |
+| `marketplace_evaluation`, `marketplace_seed_records`, `marketplace_controlled_records`, `marketplace_workload_records` | Implemented fixed-online operational assessment | Frozen baseline/target/source/rules/compensation/protocol identities; per-seed failures and unavailable denominators, paired Monte Carlo summaries, known controlled means and 2/20/100-driver workload measurements. Evidence C, not calibrated; execution/assessment results remain separate from implementation |
 | `scenario_result` | Choice scenarios implemented; full marketplace comparison proposed | Scenario/run/model references and scope. Proposed marketplace extension: baseline/target/delta for causal demand/supply/substitution responses and supported operational metrics (completed trips, fill rate, wait time, idle vehicle-hours), simulated booking value and driver earnings; conditional economics with explicit `not_evaluated` reasons; snapshot references, estimands/assumptions, support/evidence, statistical intervals versus simulation/sensitivity uncertainty, confirmed decision criterion/guardrails, independent evaluation and pilot recommendation status |
 | `prediction_record` | Proposed experiment record | Frozen model/snapshot/policy/assignment references, scope/horizon, forecast points/intervals, guardrails and analysis plan; reconciliation appends matching measured causal effects, forecast errors and limitations without overwriting the frozen forecast |
 
@@ -363,10 +421,16 @@ generation once; a fitted choice model alone does not forecast completed trips.
 
 ## Dashboard conventions
 
-The Streamlit workbench uses a run/DGP/seed selector and three sections:
-Operations, Method checks, and Price scenarios, with exports and interpretation
-notes beside the outputs. Charts read computed artifacts. Source, support and
-uncertainty labels remain adjacent to results.
+The Streamlit workbench preserves the choice run/DGP/seed selector and its three
+sections: Observed, Method evaluation and Price scenario. A separate Simulation
+results view selects completed operational runs; it also works without a choice
+fit in the workspace. An explicit simulation `--run-id` routes directly to this
+view before loading any choice artifacts; a mixed workspace without that argument
+retains the separate simulation tab. It reads checksum-verified artifacts, shows fixed-online
+counts, trips/wait/idle/expiry, offer acceptance with unresolved denominators and
+gross driver pay, and exports frozen CSV/JSON. Invalid artifacts show an error and
+withhold results. UI actions do not execute simulations. Source, support and
+uncertainty labels remain adjacent; single-trajectory operational CI is unavailable.
 
 The existing Hallmark design uses cool paper, restrained cobalt, Bahnschrift
 display text and Segoe UI body text. Portable values live in `tokens.css`;

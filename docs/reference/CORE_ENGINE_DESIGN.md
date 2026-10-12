@@ -7,6 +7,23 @@ is one cluster and two services, with a five-week development plan.
 **Document type:** implementation and acceptance design. Formulas, interfaces,
 and starting values are design choices, not measurements or implementation status.
 
+**Current PoC scope (Bun, 12 October 2026):** use a fixed online driver roster,
+individual trip acceptance and the 100%-displayed-fare pay assumption. Incentives,
+behavioral scheduling, online/offline dynamics and income-supply equilibrium below
+are broader research extensions, not required work for this increment. Follow
+[the current scope](../WEEK3_POC_SCOPE.md); fixed online supply and trip acceptance
+do not identify driver labor-supply elasticity.
+The current V3 implementation includes fixed-online offer decisions, immutable
+100%-fare terms/earnings, strict pending-offer continuation, read-only simulation
+views and a frozen paired/controlled/workload evaluator. Its scoped independent
+assessment and technical checks passed; it is ready for Bun's review, with no
+reviewer acceptance implied. See the
+[12 October closeout](../submission/days/20261012/week3_poc_closeout.md),
+[current execution](../USAGE.md#week-3-fixed-online-poc) and
+[operational protocol](../BENCHMARK.md#week-3-fixed-online-operational-assessment).
+Broader formulas and component tables below are research design, not extra PoC
+requirements or measured GSM effects.
+
 GSM source requests, export formats, keys and units follow
 [GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). This document specifies algorithms;
 current progress and executed evidence are indexed in [docs README](../README.md).
@@ -478,6 +495,18 @@ admitted physical schedules rather than treating expected hours as physical cars
 
 ### 7.2 CompensationModel
 
+The current minimal development rule, approved by Bun while GSM policy is unknown,
+gives the driver **100% of the fare displayed on the app for a completed trip**.
+The explicit fixture uses baseline fares X=Y=1 `SYNTHETIC_UNIT`; effective fares
+apply the frozen policy baseline multiplier and price delta. This is a declared
+synthetic tariff/pay assumption, not GSM policy or VND. Frozen customer quotes and
+driver-pay terms remain separate from realized earnings. Cancellations/expiry pay
+zero and unresolved trips remain unsettled. Presence-hour income includes idle
+and unavailable nonoffline time and zero-trip drivers; a zero denominator is
+unavailable. Compatible version-2 continuations retain the same financial context
+and settle current-window completions once. This rule alone identifies no income
+elasticity, changes no attendance/hours, and establishes no GSM profit or ROI.
+
 Represent fixed pay, commissions/revenue share, piece rates, threshold bonuses,
 guarantees, caps, and payment timing. Produce predecision offered terms and
 post-simulation earnings ledgers. Customer price changes with unchanged expected
@@ -603,11 +632,12 @@ Initial kWh/km and capped fixed charging power are declared assumptions. Calibra
 telemetry/logs before interpreting GSM results. Enforce SOC in [0,1], capacity,
 and energy conservation without clipping away errors.
 
-Energy/charging is an operational availability constraint. The first driver-response
-integration retains the current fixed shifts/static-SOC assumptions while adding
-compensation and trip acceptance; participation and income-supply feedback follow
-with explicit availability assumptions. Detailed energy/station behavior remains
-a separately validated extension and is not evidence of a driver pay response.
+Energy/charging is an operational availability constraint. The current V3 PoC
+retains static SOC and a fixed online roster over the observation horizon while
+implementing compensation and trip acceptance. Legacy V1/V2 shift constraints are
+historical controls. Participation, schedules and income-supply feedback are broader
+extensions with explicit availability assumptions, outside this PoC. Detailed
+energy/station behavior needs separate validation and is not a driver pay response.
 
 ### 8.5 Boundaries and carryover
 

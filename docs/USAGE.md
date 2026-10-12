@@ -63,7 +63,8 @@ Every command accepts `--config`, optional `--run-id`, `--seed`, `--dgp`,
 | evaluate | Checkpointed repeated-seed evaluation | Optional TLC `--build-id`; `--seeds`, `--dgps` |
 | scenario | Scenario from a completed model | `--model-run-id` |
 | prepare-demand | Freeze choice handoff; prepare request rates and initial snapshot | `--model-run-id`, `--snapshot` |
-| simulate-marketplace | Fixed-supply request/vehicle trajectories and operational metrics | `--demand-run-id`, `--rules`; optional `--requests` CSV |
+| simulate-marketplace | Fixed-online offers, request/vehicle trajectories and operational metrics; optional 100%-fare settlement | `--demand-run-id`, `--rules`; optional `--requests` CSV, `--compensation` and window/carry-in flags |
+| evaluate-marketplace | Frozen paired baseline/price, controlled-truth and workload assessment | `--baseline-demand-run-id`, `--target-demand-run-id`, `--rules`, `--compensation`, `--protocol` |
 | run-all | Complete batch workflow | Synthetic or TLC profile |
 
 Examples:
@@ -433,10 +434,126 @@ evidence C, not completed trips or GSM operational forecasts.
 
 Resume with the same demand run ID and arguments. Source, snapshot, policy, code,
 environment and output checksums must match. The command uses a separate output
-run and never modifies the frozen source run. The fixed-supply simulator consumes
-this handoff; supply response, operational constraints and equilibrium remain later work.
+run and never modifies the frozen source run. The fixed-online simulator consumes
+this handoff. Endogenous supply response and equilibrium are outside the current PoC.
+
+## Week 3 fixed-online PoC
+
+Use the [current PoC scope](WEEK3_POC_SCOPE.md) and version-3 rules in
+`configs/week3_poc.json`. The roster remains online over the observation horizon,
+shared across X/Y. Snapshot `shift_start`/`shift_end` fields must cover that horizon;
+they are compatibility fields, not scheduled work allocations. Busy/reserved
+drivers cannot serve another trip, and refusal leaves the driver online. No
+incentive response, online/offline dynamics or income-supply solver is run.
+
+The current verified sources are `week3-poc-demand-baseline-20261012-v3` and
+`week3-poc-demand-x-plus10-20261012-v3`. These frozen packages are the recommended
+inputs below. Six registered training-data files in the historical
+`week3-choice-development-v1` run are missing (actual SHA unavailable), so its
+original training-run integrity fails. The directory is preserved; no training-data
+repair or refit occurred. Current demand was prepared afresh from verified,
+byte-preserved frozen model/context artifacts in the valid baseline demand package.
+The [closeout](submission/days/20261012/week3_poc_closeout.md)
+records this lineage and gate checks. For a new workspace, prepare matching
+baseline/target demand under fresh IDs using the handoff procedure above.
+A separate output run freezes verified artifacts, rules, compensation and any prescribed CSV.
+No choice fitting or oracle reads occur. Price already enters the demand rates
+and changes the displayed fare once through the approved tariff.
+
+```powershell
+uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-poc-demand-baseline-20261012-v3 --rules configs/week3_poc.json --requests configs/week3_requests.csv --compensation configs/week3_compensation.json --seed 42 --run-id week3-poc-fixture-v3
+uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-poc-demand-baseline-20261012-v3 --rules configs/week3_poc.json --compensation configs/week3_compensation.json --seed 42 --run-id week3-poc-baseline-v3
+uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-poc-demand-x-plus10-20261012-v3 --rules configs/week3_poc.json --compensation configs/week3_compensation.json --seed 42 --run-id week3-poc-x-plus10-v3
+```
+
+Matching is FIFO among matchable requests, then minimum pickup ETA/vehicle ID.
+Each pending offer reserves a vehicle in `dispatch` state. The declared
+price-independent Bernoulli acceptance probability is 0.8, response delay 3 seconds,
+timeout 10 seconds and maximum 20 attempts per request. Each driver/request pair
+uses one stable seeded draw; refusal cannot trigger a new draw for the same pair.
+The original 300-second pickup deadline is not restarted by offers. Customer
+cancellation or expiry withdraws pending offers; late responses cannot revive them.
+Acceptance, rejection, timeout and withdrawal are recorded separately. SOC stays
+fixed; charging is outside this PoC. Limits remain 10,000 requests, 100,000 work
+units and 60 seconds per trajectory; exhausted budgets fail the stage.
+
+CSV/Parquet exports are `requests`, `request_events`, `vehicle_intervals`,
+`driver_offers` and `offer_events`, plus the financial tables described below.
+`driver_offers` includes new offers and those pending at the window start, with
+immutable context, displayed fare/driver pay, timestamps and final/current state.
+`offer_events` retains transition timestamps. `simulation_result.json` reports
+online drivers/hours, request and state-time balances, trip/wait/idle counts,
+offer outcomes and the 100%-fare earnings summary. `simulation_spec.json` freezes
+the rules/seed/references; `end_snapshot.json` retains continuation state.
+
+Acceptance is `accepted / (accepted + rejected + timed_out)` among responses
+resolved in the current window, including carry-in offers. Withdrawn/pending
+offers are excluded and shown separately; no responses means an unavailable rate.
+Online hours include idle, dispatch reservations, pickup and on-trip time; do not
+multiply hours by acceptance. Wait summaries retain observed/censored populations
+and show missing wait when no pickup occurs. Single-trajectory CI is unavailable.
+
+For continuation, use consecutive windows and a separate run for each. Keep the
+same demand, initial snapshot, rules, compensation and seed; a V3 checkpoint does
+not accept legacy V2 rules. Pending offers/reservations, attempts, original
+deadlines, remaining responses/timeouts and immutable terms survive the boundary.
+Prior completion earnings are not paid again.
+
+```powershell
+uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-poc-demand-baseline-20261012-v3 --rules configs/week3_poc.json --requests configs/week3_requests.csv --compensation configs/week3_compensation.json --seed 42 --window-start 2024-01-26T08:00:00-05:00 --window-end 2024-01-26T08:00:02-05:00 --run-id week3-poc-window-first-v3
+uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-poc-demand-baseline-20261012-v3 --rules configs/week3_poc.json --compensation configs/week3_compensation.json --seed 42 --window-start 2024-01-26T08:00:02-05:00 --window-end 2024-01-26T10:00:00-05:00 --carry-in-run-id week3-poc-window-first-v3 --run-id week3-poc-window-second-v3
+```
+
+### Independent operational assessment
+
+`evaluate-marketplace` freezes two completed supported demand runs with the same
+model/source and roster/horizon, V3 rules, compensation and protocol. Use unchanged
+baseline pricing and a supported target. Pilot seeds 72001–72003 are development;
+assessment seeds 73001–73100 are separate from the pilot and must not be retuned
+after use. Paired arms and workload checks intentionally share seeds; the total
+job count is not a count of mutually independent draws.
+Both protocols cap the evaluator at 600 seconds. See
+[the protocol and gates](BENCHMARK.md#week-3-fixed-online-operational-assessment).
+
+```powershell
+uv run python -m gsm_poc evaluate-marketplace --config configs/week3_demand.toml --baseline-demand-run-id week3-poc-demand-baseline-20261012-v3 --target-demand-run-id week3-poc-demand-x-plus10-20261012-v3 --rules configs/week3_poc.json --compensation configs/week3_compensation.json --protocol configs/week3_poc_pilot.json --run-id week3-poc-pilot-v3
+uv run python -m gsm_poc evaluate-marketplace --config configs/week3_demand.toml --baseline-demand-run-id week3-poc-demand-baseline-20261012-v3 --target-demand-run-id week3-poc-demand-x-plus10-20261012-v3 --rules configs/week3_poc.json --compensation configs/week3_compensation.json --protocol configs/week3_poc_assessment.json --run-id week3-poc-assessment-v3
+```
+
+Exports are `marketplace_evaluation.json`, `marketplace_seed_records.csv`,
+`marketplace_controlled_records.csv` and `marketplace_workload_records.csv`, with
+frozen inputs and source snapshots. They retain attempted/available/failed counts,
+paired baseline/target/delta means and individual Student-t intervals across seeds.
+These intervals measure Monte Carlo mean uncertainty conditional on fixed fitted
+demand and rules; they do not cover causal estimation uncertainty, full-chain
+coverage or unmeasured driver behavior. Execution and gate status are separate.
+The [12 October assessment](submission/days/20261012/week3_poc_closeout.md) completed
+303/303 jobs with all frozen gates passed. The scoped PoC is technically verified
+and ready for Bun's review; GSM/original research acceptance remains separate.
+
+### View completed simulations
+
+```powershell
+uv run streamlit run src/gsm_poc/ui/app.py -- --workspace . --run-id week3-poc-baseline-v3
+```
+
+An explicit simulation `--run-id` opens the simulation dashboard directly, before
+loading choice artifacts; this route has no outer choice tabs. Without that
+explicit ID, choose **Simulation results** and its separate **Simulation run ID**
+selector in a mixed workspace. With no choice fit, the simulation view is still available.
+The reader verifies completed-run checksums, reports invalid artifacts explicitly
+and shows the same online/trip/offer/pay metrics and CSV/JSON exports. It does not
+execute the engine. Choice model selectors and analytic inference defaults remain
+unchanged. Every simulation stays evidence C, `not_calibrated`; GSM causal effects,
+costs/profit/ROI and operational/full-chain CI remain unevaluated.
 
 ## Week 3 fixed-supply simulation
+
+The [current PoC scope](WEEK3_POC_SCOPE.md) assumes a fixed online roster and keeps
+individual acceptance separate. Incentives, online/offline response and behavioral
+scheduling are outside the current increment. This section preserves **legacy
+V1/V2 immediate-acceptance controls** and their historical measurements. Use the
+[V3 fixed-online commands](#week-3-fixed-online-poc) for the current PoC.
 
 `simulate-marketplace` reads a completed demand run with
 `demand_result.usable_for_simulation=true` and verified checksums. Use a separate
@@ -451,7 +568,7 @@ First validate the two-vehicle fixture with three prescribed requests:
 uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-demand-baseline-v1 --rules configs/week3_simulation.json --requests configs/week3_requests.csv --seed 42 --run-id week3-simulation-fixture-v2-verified
 ```
 
-The current version 2 rules use a 300-second pickup deadline. The fixture has two
+The legacy version 2 rules use a 300-second pickup deadline. The fixture has two
 completed trips with 60-second waits, one request expiring at 08:06 local time,
 and exactly four shared-fleet vehicle-hours. Its expected idle time is
 `4 - 1320 / 3600` hours. Setting `max_wait_seconds` to `null` restores the
@@ -520,7 +637,7 @@ CLI reuse with the same run ID reuses verified artifacts; `--carry-in-run-id`
 continues operational time into a new output run.
 
 Every output remains synthetic evidence C and `not_calibrated`; cancellation-rate,
-charging, economics and full-chain intervals are explicitly unavailable. A single
+charging, GSM economics and full-chain intervals are explicitly unavailable. A single
 paired trajectory does not estimate a stable policy effect. Use a new run ID after
 code/environment changes; changing rules/requests within a compatible run invalidates
 stage reuse. Historical demand runs remain valid frozen inputs with their original
@@ -559,6 +676,93 @@ pickup carryover, expiry/cancel timing, malformed checkpoint rejection, budget
 failures and fractional-duration shift boundaries. These remain synthetic evidence
 C checks; energy/charging, operational calibration and full-chain intervals were
 not evaluated.
+
+## Week 3 minimal compensation
+
+Enable the approved minimum pay assumption with `--compensation`: drivers receive
+**100% of the fare displayed on the app for a completed trip**. Without this option,
+the existing fixed-supply simulation remains available without financial outputs.
+GSM's actual compensation policy is still unknown; this development rule is
+synthetic evidence C.
+Use a new run ID when adding or removing `--compensation`, so older financial
+artifacts cannot be mistaken for the current simulation's outputs.
+
+```powershell
+uv run python -m gsm_poc simulate-marketplace --config configs/week3_demand.toml --demand-run-id week3-poc-demand-baseline-20261012-v3 --rules configs/week3_poc.json --requests configs/week3_requests.csv --compensation configs/week3_compensation.json --seed 42 --run-id week3-compensation-fixture-v3
+```
+
+The explicit tariff fixture has `baseline_fares` X=Y=1 `SYNTHETIC_UNIT` and fixed
+`driver_fare_share=1`. Effective displayed fare is
+`baseline_fare * baseline_multiplier * (1 + delta)` using the frozen demand policy.
+For example, baseline multiplier 1 with a +10% X price change gives X fare/pay
+1.1 per completed trip and Y fare/pay 1. These normalized amounts are not VND or
+measured GSM fares. Demand multipliers alone never supply monetary units.
+
+`simulation_inputs/` freezes the compensation specification alongside the demand
+policy. Separate CSV/Parquet `quote_terms` and `driver_pay_terms` preserve the
+pre-simulation fare and pay conditions; `earnings_ledger` records settlement,
+`driver_income` reports all roster drivers and `earnings_result.json` summarizes
+the accounting scope/status. Only completed trips earn the quoted amount.
+Canceled/expired requests earn zero; trips still open at the window end remain
+unsettled. Offering or accepting a trip alone earns no pay under this rule.
+
+Income per presence-hour uses all nonoffline state intervals, including idle and
+unavailable time. Zero-trip drivers remain in the roster summary with zero settled
+earnings. A driver with zero presence hours has unavailable hourly income, rather
+than an invented zero rate. Amounts describe settled gross driver pay; no costs,
+net driver earnings, GSM revenue/profit or ROI are inferred.
+
+For financial continuation, pass the same `--compensation` specification and
+`--carry-in-run-id` as well as the same demand, policy, rules and seed. The parent
+checkpoint's `compensation_context` must match the frozen financial contract and
+terms. Each output ledger settles only completions within its current window,
+including carry-in trips completing there; prior completions are never paid again.
+Changing financial terms or adding/removing compensation across a continuation
+requires a fresh scenario from an initial snapshot.
+
+This adds conditional earnings accounting to the fixed roster. Online hours and
+the declared V3 acceptance rule remain independent of realized pay; the scientific
+incentive-response package stays separate. Realized earnings are not a predecision
+income treatment; an income
+elasticity or automatic fare-to-hours response is not identified by this rule.
+No operational/equilibrium intervals or GSM calibration are supplied.
+
+## Week 3 controlled labor supply
+
+The [supply contract and evaluation protocol](WEEK3_SUPPLY.md) implement the
+driver-response scientific package independently of the fixed-roster simulator.
+No GSM data or bootstrap-choice files are required. The development profile uses
+800 eligible drivers, seven complete eight-hour shift opportunities and offered
+incentive levels 0/20 in `SYNTHETIC_UNIT`; these assumptions do not describe GSM.
+
+```powershell
+uv run gsm-poc generate-supply --config configs/demo.toml --run-id week3-supply-data --supply-spec configs/week3_supply.json
+uv run gsm-poc fit-supply --config configs/demo.toml --run-id week3-supply-fit --supply-run-id week3-supply-data
+uv run gsm-poc scenario-supply --config configs/demo.toml --run-id week3-supply-target --model-run-id week3-supply-fit --incentive-amount 20
+uv run gsm-poc evaluate-supply --config configs/demo.toml --run-id week3-supply-pilot --supply-spec configs/week3_supply.json --protocol configs/week3_supply_pilot.json
+uv run gsm-poc evaluate-supply --config configs/demo.toml --run-id week3-supply-assessment --supply-spec configs/week3_supply.json --protocol configs/week3_supply_assessment.json
+```
+
+Use a separate output run for each stage. Source runs must be complete with valid
+checksums; do not reuse an unrelated choice run. Supply commands use their explicit
+JSON spec/protocol rather than the choice DGP/bootstrap/estimator flags. A synthetic
+project configuration is required. Rerun a matching stage/run to verify and reuse
+its artifacts; code/environment changes require a new run ID.
+
+Generation stores `supply/observed/driver_decisions.parquet` and `contract.json`,
+separate oracle means and generator assumptions. Fit copies only the observed
+inputs, exports `models/supply/model_bundle.json` and `supply_effects.csv` with
+population, unit, evidence, support and individual CI status. Scenario exports
+`supply_scenario.json`; only the baseline and target amount are supported. Hour
+changes cover the same frozen eligible cohort/calendar, not a physical schedule.
+Benchmark exports per-seed `supply_benchmark_records.csv`, `supply_benchmark.json`,
+frozen spec/protocol and source snapshots under the checked run manifest.
+
+Assessment uses 100 fresh RCT seeds and 100 disjoint null seeds. Report unavailable
+intervals and exact binomial uncertainty alongside empirical coverage; a controlled
+gate pass does not certify nominal coverage or complete Week 3. No pipeline reads
+these estimates as a physical driver/vehicle admission plan yet. Supply runs are
+not added to the existing choice-only dashboard selector.
 
 ## Verification
 

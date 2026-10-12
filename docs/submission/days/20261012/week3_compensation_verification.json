@@ -1,0 +1,605 @@
+{
+  "evidence_level": "C",
+  "source_kind": "synthetic",
+  "calibration_status": "not_calibrated",
+  "protocol": "Fixed synthetic driver share 100%, normalized X/Y fares 1; seed 42; existing frozen demand; no fitting/tuning.",
+  "runs": {
+    "week3-pay-fixture-20261012-v2": {
+      "source_demand_run_id": "week3-demand-baseline-v1",
+      "prescribed": true,
+      "manifest_sha256": "1e9d5e3954e7c30c8139a574e076ffaf15b0f8291731060f5df64f7a939d14b7",
+      "artifacts_verified": 26,
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "1b51eac493086989a18061ef6c1109c0e9cd8ae4",
+        "source_code_sha256": "2468ad0c2655f0523cac53e97793f4ac5361f532aa4098f0eebb4d6cf0caea1c",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "scope": {
+        "horizon_start": "2024-01-26T13:00:00+00:00",
+        "horizon_end": "2024-01-26T15:00:00+00:00",
+        "zones": [
+          161,
+          162
+        ],
+        "vehicles": 2
+      },
+      "summary": {
+        "created_requests": 3,
+        "completed_trips": 2,
+        "canceled_requests": 0,
+        "expired_requests": 1,
+        "open_requests_start": 0,
+        "open_requests_end": 0,
+        "queued_requests_end": 0,
+        "pickup_requests_end": 0,
+        "on_trip_requests_end": 0,
+        "serviceable_hours": 4.0,
+        "idle_hours": 3.6333333333333333,
+        "dispatch_hours": 0.0,
+        "pickup_hours": 0.03333333333333333,
+        "on_trip_hours": 0.3333333333333333,
+        "offline_hours": 0.0,
+        "ineligible_hours": 0.0,
+        "total_vehicle_hours": 4.0,
+        "aborted_pickup_hours": 0.0,
+        "mean_wait_seconds": 60.0,
+        "p95_wait_seconds": 60.0,
+        "wait_observed_requests": 2,
+        "wait_censored_requests": 0,
+        "terminated_before_pickup_requests": 1
+      },
+      "earnings": {
+        "schema_version": 1,
+        "source_kind": "synthetic",
+        "evidence_level": "C",
+        "calibration_status": "not_calibrated",
+        "currency": "SYNTHETIC_UNIT",
+        "compensation_version": "ca6b03d6009f9d7f786cc208475a4285284ab1a449c6e68a8914883b839e2292",
+        "terms_version": "a881e25d7c233a37c8acd5ac2cd4a0e478fca984eb77f94dc3528b5bc8a731b7",
+        "window_start": "2024-01-26T13:00:00+00:00",
+        "window_end": "2024-01-26T15:00:00+00:00",
+        "settlement_scope": "completion events in this window; carry-in history is not paid again",
+        "income_denominator": "all roster drivers; nonoffline presence hours including zero-trip idle time",
+        "summary": {
+          "quoted_requests": 3,
+          "assigned_driver_terms": 2,
+          "settled_completed_trips": 2,
+          "simulated_completed_fare_value": 2.0,
+          "total_driver_pay": 2.0,
+          "presence_hours": 4.0,
+          "pay_per_presence_hour": 0.5
+        },
+        "units": {
+          "fare_and_pay": "SYNTHETIC_UNIT",
+          "presence": "hours",
+          "income_rate": "SYNTHETIC_UNIT/presence_hour"
+        },
+        "profit_status": "not_evaluated",
+        "roi_status": "not_evaluated",
+        "income_elasticity_status": "not_identified",
+        "interval_status": "interval_unavailable",
+        "interpretation": "Realized synthetic gross driver pay, before costs; not GSM policy, net income or an income response estimate"
+      }
+    },
+    "week3-pay-fixture-x-plus10-20261012-v2": {
+      "source_demand_run_id": "week3-demand-x-plus10-v1",
+      "prescribed": true,
+      "manifest_sha256": "630188ac7067ac73c6194901d865e11e7d657b9c6784d8e82e70d3135d82c357",
+      "artifacts_verified": 26,
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "1b51eac493086989a18061ef6c1109c0e9cd8ae4",
+        "source_code_sha256": "2468ad0c2655f0523cac53e97793f4ac5361f532aa4098f0eebb4d6cf0caea1c",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "scope": {
+        "horizon_start": "2024-01-26T13:00:00+00:00",
+        "horizon_end": "2024-01-26T15:00:00+00:00",
+        "zones": [
+          161,
+          162
+        ],
+        "vehicles": 2
+      },
+      "summary": {
+        "created_requests": 3,
+        "completed_trips": 2,
+        "canceled_requests": 0,
+        "expired_requests": 1,
+        "open_requests_start": 0,
+        "open_requests_end": 0,
+        "queued_requests_end": 0,
+        "pickup_requests_end": 0,
+        "on_trip_requests_end": 0,
+        "serviceable_hours": 4.0,
+        "idle_hours": 3.6333333333333333,
+        "dispatch_hours": 0.0,
+        "pickup_hours": 0.03333333333333333,
+        "on_trip_hours": 0.3333333333333333,
+        "offline_hours": 0.0,
+        "ineligible_hours": 0.0,
+        "total_vehicle_hours": 4.0,
+        "aborted_pickup_hours": 0.0,
+        "mean_wait_seconds": 60.0,
+        "p95_wait_seconds": 60.0,
+        "wait_observed_requests": 2,
+        "wait_censored_requests": 0,
+        "terminated_before_pickup_requests": 1
+      },
+      "earnings": {
+        "schema_version": 1,
+        "source_kind": "synthetic",
+        "evidence_level": "C",
+        "calibration_status": "not_calibrated",
+        "currency": "SYNTHETIC_UNIT",
+        "compensation_version": "ca6b03d6009f9d7f786cc208475a4285284ab1a449c6e68a8914883b839e2292",
+        "terms_version": "9b3b0ec65195eae882555491fd16ba1d2953e0d00f5c1e804b066a292fb8adeb",
+        "window_start": "2024-01-26T13:00:00+00:00",
+        "window_end": "2024-01-26T15:00:00+00:00",
+        "settlement_scope": "completion events in this window; carry-in history is not paid again",
+        "income_denominator": "all roster drivers; nonoffline presence hours including zero-trip idle time",
+        "summary": {
+          "quoted_requests": 3,
+          "assigned_driver_terms": 2,
+          "settled_completed_trips": 2,
+          "simulated_completed_fare_value": 2.1,
+          "total_driver_pay": 2.1,
+          "presence_hours": 4.0,
+          "pay_per_presence_hour": 0.525
+        },
+        "units": {
+          "fare_and_pay": "SYNTHETIC_UNIT",
+          "presence": "hours",
+          "income_rate": "SYNTHETIC_UNIT/presence_hour"
+        },
+        "profit_status": "not_evaluated",
+        "roi_status": "not_evaluated",
+        "income_elasticity_status": "not_identified",
+        "interval_status": "interval_unavailable",
+        "interpretation": "Realized synthetic gross driver pay, before costs; not GSM policy, net income or an income response estimate"
+      }
+    },
+    "week3-pay-baseline-20261012-v2": {
+      "source_demand_run_id": "week3-demand-baseline-v1",
+      "prescribed": false,
+      "manifest_sha256": "efd204c779525363449bbf7fe2f91efc438d60f8b6c10155d6bf804fc1d028ba",
+      "artifacts_verified": 25,
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "1b51eac493086989a18061ef6c1109c0e9cd8ae4",
+        "source_code_sha256": "2468ad0c2655f0523cac53e97793f4ac5361f532aa4098f0eebb4d6cf0caea1c",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "scope": {
+        "horizon_start": "2024-01-26T13:00:00+00:00",
+        "horizon_end": "2024-01-26T15:00:00+00:00",
+        "zones": [
+          161,
+          162
+        ],
+        "vehicles": 2
+      },
+      "summary": {
+        "created_requests": 479,
+        "completed_trips": 3,
+        "canceled_requests": 0,
+        "expired_requests": 453,
+        "open_requests_start": 0,
+        "open_requests_end": 23,
+        "queued_requests_end": 23,
+        "pickup_requests_end": 0,
+        "on_trip_requests_end": 0,
+        "serviceable_hours": 4.0,
+        "idle_hours": 0.26666666666666666,
+        "dispatch_hours": 0.0,
+        "pickup_hours": 3.15,
+        "on_trip_hours": 0.5833333333333333,
+        "offline_hours": 0.0,
+        "ineligible_hours": 0.0,
+        "total_vehicle_hours": 4.0,
+        "aborted_pickup_hours": 2.6717146806199996,
+        "mean_wait_seconds": 121.534023,
+        "p95_wait_seconds": 226.14186209999997,
+        "wait_observed_requests": 3,
+        "wait_censored_requests": 23,
+        "terminated_before_pickup_requests": 453
+      },
+      "earnings": {
+        "schema_version": 1,
+        "source_kind": "synthetic",
+        "evidence_level": "C",
+        "calibration_status": "not_calibrated",
+        "currency": "SYNTHETIC_UNIT",
+        "compensation_version": "ca6b03d6009f9d7f786cc208475a4285284ab1a449c6e68a8914883b839e2292",
+        "terms_version": "a881e25d7c233a37c8acd5ac2cd4a0e478fca984eb77f94dc3528b5bc8a731b7",
+        "window_start": "2024-01-26T13:00:00+00:00",
+        "window_end": "2024-01-26T15:00:00+00:00",
+        "settlement_scope": "completion events in this window; carry-in history is not paid again",
+        "income_denominator": "all roster drivers; nonoffline presence hours including zero-trip idle time",
+        "summary": {
+          "quoted_requests": 479,
+          "assigned_driver_terms": 97,
+          "settled_completed_trips": 3,
+          "simulated_completed_fare_value": 3.0,
+          "total_driver_pay": 3.0,
+          "presence_hours": 4.0,
+          "pay_per_presence_hour": 0.75
+        },
+        "units": {
+          "fare_and_pay": "SYNTHETIC_UNIT",
+          "presence": "hours",
+          "income_rate": "SYNTHETIC_UNIT/presence_hour"
+        },
+        "profit_status": "not_evaluated",
+        "roi_status": "not_evaluated",
+        "income_elasticity_status": "not_identified",
+        "interval_status": "interval_unavailable",
+        "interpretation": "Realized synthetic gross driver pay, before costs; not GSM policy, net income or an income response estimate"
+      }
+    },
+    "week3-pay-x-plus10-20261012-v2": {
+      "source_demand_run_id": "week3-demand-x-plus10-v1",
+      "prescribed": false,
+      "manifest_sha256": "5b066bbcb1e9ddac06581f67e5f71895ba3ac46393ac7a17416376fcba558466",
+      "artifacts_verified": 25,
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "1b51eac493086989a18061ef6c1109c0e9cd8ae4",
+        "source_code_sha256": "2468ad0c2655f0523cac53e97793f4ac5361f532aa4098f0eebb4d6cf0caea1c",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "scope": {
+        "horizon_start": "2024-01-26T13:00:00+00:00",
+        "horizon_end": "2024-01-26T15:00:00+00:00",
+        "zones": [
+          161,
+          162
+        ],
+        "vehicles": 2
+      },
+      "summary": {
+        "created_requests": 436,
+        "completed_trips": 4,
+        "canceled_requests": 0,
+        "expired_requests": 412,
+        "open_requests_start": 0,
+        "open_requests_end": 20,
+        "queued_requests_end": 20,
+        "pickup_requests_end": 0,
+        "on_trip_requests_end": 0,
+        "serviceable_hours": 4.0,
+        "idle_hours": 0.25,
+        "dispatch_hours": 0.0,
+        "pickup_hours": 3.0,
+        "on_trip_hours": 0.7499999999999999,
+        "offline_hours": 0.0,
+        "ineligible_hours": 0.0,
+        "total_vehicle_hours": 4.0,
+        "aborted_pickup_hours": 2.535373125467778,
+        "mean_wait_seconds": 171.61819425,
+        "p95_wait_seconds": 284.68767785,
+        "wait_observed_requests": 4,
+        "wait_censored_requests": 20,
+        "terminated_before_pickup_requests": 412
+      },
+      "earnings": {
+        "schema_version": 1,
+        "source_kind": "synthetic",
+        "evidence_level": "C",
+        "calibration_status": "not_calibrated",
+        "currency": "SYNTHETIC_UNIT",
+        "compensation_version": "ca6b03d6009f9d7f786cc208475a4285284ab1a449c6e68a8914883b839e2292",
+        "terms_version": "9b3b0ec65195eae882555491fd16ba1d2953e0d00f5c1e804b066a292fb8adeb",
+        "window_start": "2024-01-26T13:00:00+00:00",
+        "window_end": "2024-01-26T15:00:00+00:00",
+        "settlement_scope": "completion events in this window; carry-in history is not paid again",
+        "income_denominator": "all roster drivers; nonoffline presence hours including zero-trip idle time",
+        "summary": {
+          "quoted_requests": 436,
+          "assigned_driver_terms": 94,
+          "settled_completed_trips": 4,
+          "simulated_completed_fare_value": 4.300000000000001,
+          "total_driver_pay": 4.300000000000001,
+          "presence_hours": 3.999999999999999,
+          "pay_per_presence_hour": 1.0750000000000004
+        },
+        "units": {
+          "fare_and_pay": "SYNTHETIC_UNIT",
+          "presence": "hours",
+          "income_rate": "SYNTHETIC_UNIT/presence_hour"
+        },
+        "profit_status": "not_evaluated",
+        "roi_status": "not_evaluated",
+        "income_elasticity_status": "not_identified",
+        "interval_status": "interval_unavailable",
+        "interpretation": "Realized synthetic gross driver pay, before costs; not GSM policy, net income or an income response estimate"
+      }
+    },
+    "week3-pay-window-first-20261012-v2": {
+      "source_demand_run_id": "week3-demand-baseline-v1",
+      "prescribed": true,
+      "manifest_sha256": "f9a67f10de9c33e5a0e4b38bd454229765567c9891e19379d5fef82fc7520532",
+      "artifacts_verified": 26,
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "1b51eac493086989a18061ef6c1109c0e9cd8ae4",
+        "source_code_sha256": "2468ad0c2655f0523cac53e97793f4ac5361f532aa4098f0eebb4d6cf0caea1c",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "scope": {
+        "horizon_start": "2024-01-26T13:00:00+00:00",
+        "horizon_end": "2024-01-26T13:11:00+00:00",
+        "zones": [
+          161,
+          162
+        ],
+        "vehicles": 2
+      },
+      "summary": {
+        "created_requests": 3,
+        "completed_trips": 2,
+        "canceled_requests": 0,
+        "expired_requests": 1,
+        "open_requests_start": 0,
+        "open_requests_end": 0,
+        "queued_requests_end": 0,
+        "pickup_requests_end": 0,
+        "on_trip_requests_end": 0,
+        "serviceable_hours": 0.36666666666666664,
+        "idle_hours": 0.0,
+        "dispatch_hours": 0.0,
+        "pickup_hours": 0.03333333333333333,
+        "on_trip_hours": 0.3333333333333333,
+        "offline_hours": 0.0,
+        "ineligible_hours": 0.0,
+        "total_vehicle_hours": 0.36666666666666664,
+        "aborted_pickup_hours": 0.0,
+        "mean_wait_seconds": 60.0,
+        "p95_wait_seconds": 60.0,
+        "wait_observed_requests": 2,
+        "wait_censored_requests": 0,
+        "terminated_before_pickup_requests": 1
+      },
+      "earnings": {
+        "schema_version": 1,
+        "source_kind": "synthetic",
+        "evidence_level": "C",
+        "calibration_status": "not_calibrated",
+        "currency": "SYNTHETIC_UNIT",
+        "compensation_version": "ca6b03d6009f9d7f786cc208475a4285284ab1a449c6e68a8914883b839e2292",
+        "terms_version": "a881e25d7c233a37c8acd5ac2cd4a0e478fca984eb77f94dc3528b5bc8a731b7",
+        "window_start": "2024-01-26T13:00:00+00:00",
+        "window_end": "2024-01-26T13:11:00+00:00",
+        "settlement_scope": "completion events in this window; carry-in history is not paid again",
+        "income_denominator": "all roster drivers; nonoffline presence hours including zero-trip idle time",
+        "summary": {
+          "quoted_requests": 3,
+          "assigned_driver_terms": 2,
+          "settled_completed_trips": 2,
+          "simulated_completed_fare_value": 2.0,
+          "total_driver_pay": 2.0,
+          "presence_hours": 0.36666666666666664,
+          "pay_per_presence_hour": 5.454545454545455
+        },
+        "units": {
+          "fare_and_pay": "SYNTHETIC_UNIT",
+          "presence": "hours",
+          "income_rate": "SYNTHETIC_UNIT/presence_hour"
+        },
+        "profit_status": "not_evaluated",
+        "roi_status": "not_evaluated",
+        "income_elasticity_status": "not_identified",
+        "interval_status": "interval_unavailable",
+        "interpretation": "Realized synthetic gross driver pay, before costs; not GSM policy, net income or an income response estimate"
+      }
+    },
+    "week3-pay-window-second-20261012-v2": {
+      "source_demand_run_id": "week3-demand-baseline-v1",
+      "prescribed": false,
+      "manifest_sha256": "670dac7188b3fa806128a087a7a40d0acd53c5a8b2a5e5126f7e0ee503fc44b4",
+      "artifacts_verified": 27,
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "1b51eac493086989a18061ef6c1109c0e9cd8ae4",
+        "source_code_sha256": "2468ad0c2655f0523cac53e97793f4ac5361f532aa4098f0eebb4d6cf0caea1c",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "scope": {
+        "horizon_start": "2024-01-26T13:11:00+00:00",
+        "horizon_end": "2024-01-26T15:00:00+00:00",
+        "zones": [
+          161,
+          162
+        ],
+        "vehicles": 2
+      },
+      "summary": {
+        "created_requests": 0,
+        "completed_trips": 0,
+        "canceled_requests": 0,
+        "expired_requests": 0,
+        "open_requests_start": 0,
+        "open_requests_end": 0,
+        "queued_requests_end": 0,
+        "pickup_requests_end": 0,
+        "on_trip_requests_end": 0,
+        "serviceable_hours": 3.6333333333333333,
+        "idle_hours": 3.6333333333333333,
+        "dispatch_hours": 0.0,
+        "pickup_hours": 0.0,
+        "on_trip_hours": 0.0,
+        "offline_hours": 0.0,
+        "ineligible_hours": 0.0,
+        "total_vehicle_hours": 3.6333333333333333,
+        "aborted_pickup_hours": 0.0,
+        "mean_wait_seconds": null,
+        "p95_wait_seconds": null,
+        "wait_observed_requests": 0,
+        "wait_censored_requests": 0,
+        "terminated_before_pickup_requests": 0
+      },
+      "earnings": {
+        "schema_version": 1,
+        "source_kind": "synthetic",
+        "evidence_level": "C",
+        "calibration_status": "not_calibrated",
+        "currency": "SYNTHETIC_UNIT",
+        "compensation_version": "ca6b03d6009f9d7f786cc208475a4285284ab1a449c6e68a8914883b839e2292",
+        "terms_version": "a881e25d7c233a37c8acd5ac2cd4a0e478fca984eb77f94dc3528b5bc8a731b7",
+        "window_start": "2024-01-26T13:11:00+00:00",
+        "window_end": "2024-01-26T15:00:00+00:00",
+        "settlement_scope": "completion events in this window; carry-in history is not paid again",
+        "income_denominator": "all roster drivers; nonoffline presence hours including zero-trip idle time",
+        "summary": {
+          "quoted_requests": 0,
+          "assigned_driver_terms": 0,
+          "settled_completed_trips": 0,
+          "simulated_completed_fare_value": 0.0,
+          "total_driver_pay": 0.0,
+          "presence_hours": 3.6333333333333333,
+          "pay_per_presence_hour": 0.0
+        },
+        "units": {
+          "fare_and_pay": "SYNTHETIC_UNIT",
+          "presence": "hours",
+          "income_rate": "SYNTHETIC_UNIT/presence_hour"
+        },
+        "profit_status": "not_evaluated",
+        "roi_status": "not_evaluated",
+        "income_elasticity_status": "not_identified",
+        "interval_status": "interval_unavailable",
+        "interpretation": "Realized synthetic gross driver pay, before costs; not GSM policy, net income or an income response estimate"
+      }
+    }
+  },
+  "replay": {
+    "run_id": "week3-pay-fixture-replay-20261012-v2",
+    "byte_identical_outputs": 18,
+    "artifacts_verified": 26
+  },
+  "window_checks": {
+    "final_checkpoint_equal": true,
+    "event_trace_equal": true,
+    "ledger_equal": true,
+    "already_completed_settled_again": 0
+  },
+  "protected_manifest_checksums": {
+    "week3-demand-baseline-v1": "86e4c69c2d82792a9ab7e4a130ee264aff5b623e05e88b0c959b577900ce3770",
+    "week3-demand-x-plus10-v1": "0480ab8068932cdfb1a823f2460260b2bb0f31271120e7a8901f4528976fa174",
+    "week2-choice-handoff-20261011-v2": "35849460841ed2a542c3f9ae111508c40204aee0fc5f9f522ac2889c4aeff34f",
+    "week2-hybrid-inference-20261011-v3": "41e3950bc7bc470d0f081c9a23dcc01f080ee98f21883ccefd8d4616c0385a7f",
+    "week3-supply-fit-20261011-v1": "cd322216249ac43b17aed782292063ee610eabdca302958f65e7885a898b33b8",
+    "week3-supply-assessment-20261011-v1": "dd6115a5f649912e861d816ef7d711cc4cacb399de3fac6e50804b528d2d267a"
+  },
+  "source_hashes": {
+    "src/gsm_poc/simulation/compensation.py": "da6bced65022576ba610aa65b74b3344225a89ed766aab7e506f4048b57f5d7f",
+    "src/gsm_poc/simulation/marketplace.py": "7bb4d168923b428dd5615d9399073b4d289c0910ed099d968852a6a4e3b101ae",
+    "src/gsm_poc/pipeline/pipeline.py": "91e4176a04c5e4db051b2db68544c9eb50ef1a0e31d91b2388596ee26de8b24b",
+    "src/gsm_poc/cli.py": "cdc2cd261c4e5d2c248bb3813ebd80f9e7da1f2a4e882ee32213942386ccb72b",
+    "configs/week3_compensation.json": "4a82a78ca040e98a24d95b6241e1d6b2ccb4ce4750036d5d3770238da5aa5e87",
+    "configs/week3_simulation.json": "1479754ff74cfe3350f2cad0654aed95384db6e312436f7f9dc692b00030808b",
+    "configs/week3_requests.csv": "39585faab8b8dd17bb6bef0701aa18bfbb77241a3978208214644541195a2132",
+    "configs/week3_demand.toml": "d23e939a2d8f9397c029cefb3aed0ee111674c65352010d9cbeba6695bb29b2d",
+    "uv.lock": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+  },
+  "limitations": [
+    "No GSM compensation/data",
+    "Fixed attendance and immediate acceptance",
+    "No income elasticity/equilibrium",
+    "No cost/profit/ROI/full-chain CI"
+  ],
+  "validation": {
+    "full_pytest": {
+      "passed": 524,
+      "warnings": 2,
+      "warning_scope": "Existing Week-2 Pandas FutureWarnings",
+      "seconds": 114.58
+    },
+    "focused_pytest": {
+      "passed": 147
+    },
+    "ruff_src_tests": "passed",
+    "format_changed_python_files": "passed",
+    "ty_changed_sources": "passed",
+    "codegraph_sync": "completed"
+  }
+}

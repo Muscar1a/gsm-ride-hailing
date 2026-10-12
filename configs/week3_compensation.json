@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "compensation_id": "week3-full-displayed-fare-v1",
+  "source_kind": "synthetic",
+  "evidence_level": "C",
+  "calibration_status": "not_calibrated",
+  "currency": "SYNTHETIC_UNIT",
+  "driver_fare_share": 1.0,
+  "baseline_fares": {"X": 1.0, "Y": 1.0},
+  "settlement_rule": "completed_only",
+  "cancel_payment": 0.0
+}

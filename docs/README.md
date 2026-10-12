@@ -1,7 +1,7 @@
 # Tài liệu GSM Causal Marketplace PoC
 
 Đọc tài liệu theo thứ tự: tiến độ hiện tại → roadmap → contract → thiết kế hoặc
-hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **11/10/2026**;
+hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **12/10/2026**;
 kết quả reporting tuần 2 chốt lúc **17:13:28 ngày 07/10/2026, Asia/Bangkok**.
 
 Mục tiêu là ước lượng và kiểm chứng nhân quả **độ nhạy giá khách hàng, cung lao động
@@ -10,6 +10,13 @@ bằng thí nghiệm. [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) q
 mục tiêu/phạm vi; [core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard)
 quản lý thuật toán và tiêu chuẩn hỗ trợ. Các đặc tả và trạng thái hiện hành được
 dẫn bên dưới; kết quả thiếu dữ liệu hoặc nhận diện giữ `not_evaluated`.
+
+**Phạm vi PoC hiện tại được Bun chốt ngày 12/10/2026:** giả sử một nhóm tài xế
+online cố định trong khoảng quan sát; tài xế được nhận hoặc từ chối từng đơn,
+và nhận 100% giá cước hiển thị khi hoàn thành chuyến. Không triển khai ưu đãi,
+chia ca, quyết định bật/tắt app theo chính sách hoặc cân bằng thu nhập–giờ làm
+trong PoC này. Xem [WEEK3_POC_SCOPE.md](WEEK3_POC_SCOPE.md). Giả định cung online
+cố định không xác định độ co giãn cung lao động trong mục tiêu nghiên cứu rộng hơn.
 
 ## Tiến độ hiện tại
 
@@ -76,16 +83,73 @@ theo dữ liệu và nhận diện tương ứng.
 
 Week 3 bước 1 đã triển khai: `prepare-demand` đóng gói choice run đã kiểm tra
 checksum, xuất request rates theo zone/block/service và snapshot fleet dùng chung.
-Xem [lệnh chạy development](USAGE.md#week-3-demand-handoff). Supply, calibration
-và equilibrium vẫn là các bước tiếp theo; chưa có block-rate intervals.
+Xem [lệnh chạy development](USAGE.md#week-3-demand-handoff). PoC sử dụng roster
+online cố định và quyết định nhận/từ chối riêng từng offer; block-rate intervals
+và calibration GSM vẫn chưa có.
 
-Week 3 bước 2 đã triển khai: `simulate-marketplace` dùng fleet/ca làm cố định,
+Week 3 bước 2 đã triển khai: `simulate-marketplace` dùng fleet/thời gian hiện diện cố định,
 request Poisson hoặc fixture CSV, xuất trajectories, trips hoàn thành, wait,
 idle hours và end snapshot. Xem [hướng dẫn simulation](USAGE.md#week-3-fixed-supply-simulation).
 Matching/OD/thời gian là giả định synthetic C; SOC giữ cố định. Phần state/carryover
 và cancellation của bước 3 đã triển khai: chạy nối từ checkpoint busy/queued,
-expiry theo pickup deadline và hủy trước pickup. Năng lượng/sạc, supply response
-và equilibrium vẫn còn phía trước.
+expiry theo pickup deadline và hủy trước pickup. Cơ chế trả công tối thiểu đã có
+qua `--compensation`: tài xế nhận 100% giá cước hiển thị cho chuyến hoàn thành,
+theo giả định Bun duyệt khi chưa có chính sách GSM. Giá cước/điều kiện trả công
+được đóng băng riêng với sổ thu nhập; checkpoint giữ cùng contract và tránh trả
+hai lần khi chạy nối. Xem [hướng dẫn trả công](USAGE.md#week-3-minimal-compensation).
+[Bàn giao trả công 12/10](submission/days/20261012/week3_compensation_progress.md)
+ghi 524 tests đạt, replay 18 đầu ra giống từng byte và chạy nối không thanh toán
+trùng; đây là kiểm chứng tiền công theo giả định synthetic, chưa là hiệu ứng GSM.
+Week 3 PoC hiện đã triển khai rules V3 trong `configs/week3_poc.json`: roster online
+cố định, offer giữ xe ở trạng thái dispatch, nhận/từ chối/timeout/withdrawal với
+seed ổn định và số lần thử hữu hạn. Mỗi cặp tài xế–request chỉ rút quyết định một
+lần; từ chối không làm tài xế offline. Xác suất nhận 0,8 và thời gian phản hồi
+3 giây là giả định synthetic độc lập với giá. Checkpoint giữ pending offers,
+deadline gốc và terms trả công; CSV/Parquet có `driver_offers` và `offer_events`.
+[Hướng dẫn PoC](USAGE.md#week-3-fixed-online-poc) thay thế immediate acceptance
+trong đường chạy hiện hành; V1/V2 vẫn là các control lịch sử.
+
+`evaluate-marketplace` đã triển khai so sánh baseline/price với paired seeds,
+controlled truth và workload 2/20/100 tài xế theo
+[protocol độc lập](BENCHMARK.md#week-3-fixed-online-operational-assessment).
+Khoảng t cho trung bình Monte Carlo giữ demand fit và rules cố định; chưa phải
+CI nhân quả hoặc full-chain. UI có màn hình **Simulation results**, selector riêng
+và xuất CSV/JSON từ artifact hoàn thành đã kiểm checksum, không chạy simulator.
+**Week 3 đã triển khai và kiểm chứng trong phạm vi PoC Bun chốt ngày 12/10/2026,
+sẵn sàng để Bun đánh giá; chưa ghi nhận Bun nghiệm thu.**
+[Báo cáo chốt kỹ thuật](submission/days/20261012/week3_poc_closeout.md) và
+[bằng chứng đối soát](submission/days/20261012/week3_poc_verification.json) ghi
+609 tests đạt (hai Pandas FutureWarnings lịch sử), assessment độc lập seeds
+73001–73100 hoàn tất **303/303 jobs**, tất cả gate đạt trong 100,16 giây. Fixture
+và Poisson replay khớp 22 đầu ra từng byte; chạy nối khi hai offers còn pending
+khớp request/offer trace, ledger và checkpoint cuối. Các workload 2/20/100 tài xế
+đã đo với khoảng 450 requests, không phải mức trần 10.000 requests; peak Python
+allocation không phải process RSS. Lịch làm theo chính sách, ưu đãi,
+online/offline động và equilibrium nằm ngoài PoC này.
+
+Nguồn chạy hiện hành là `week3-poc-demand-baseline-20261012-v3` và
+`week3-poc-demand-x-plus10-20261012-v3`. Run gốc
+`week3-choice-development-v1` thiếu sáu file training-data đã đăng ký, nên kiểm
+integrity run cũ không đạt. Đã giữ nguyên thư mục đó và đóng gói lại model/context
+đã đóng băng, kiểm hash và giữ nguyên từng byte từ demand package hợp lệ, rồi chạy
+lại gate `prepare-demand`; không refit hoặc phục hồi dữ liệu training. Không coi
+training run cũ là đã replay nguyên vẹn. Hồ sơ chốt ghi rõ nguồn phục hồi và các
+package đã đối chiếu SHA.
+
+Nhánh khoa học cung lao động Week 3 đã triển khai độc lập với simulator:
+`generate-supply`, `fit-supply`, `scenario-supply`, `evaluate-supply`. Giữ toàn bộ
+nhóm đủ điều kiện, ước lượng hiệu ứng incentive lên participation/tổng giờ/giờ
+phục vụ và CI theo tài xế; conditional hours chỉ mô tả. Oracle tách khỏi fitting,
+support và benchmark RCT/null có protocol riêng. Xem
+[contract và protocol cung](WEEK3_SUPPLY.md) cùng [hướng dẫn chạy](USAGE.md#week-3-controlled-labor-supply).
+[Bàn giao cung 11/10](submission/days/20261011/week3_supply_progress.md) ghi
+200/200 seed jobs RCT/null độc lập, coverage 95%-98%, báo động giả 2%-4% và
+472 tests đạt; đây là kiểm chứng controlled riêng, chưa chứng nhận coverage tuyệt đối.
+Nhánh này được giữ làm bằng chứng khoa học controlled, ngoài đường triển khai
+PoC hiện tại; không dùng hiệu ứng incentive để thay đổi roster online.
+Availability là giả định synthetic C, chưa là hệ số GSM. Nhận đơn khác với
+tham gia/giờ lao động; PoC hiện đã kiểm chứng kỹ thuật và chờ Bun đánh giá,
+chưa hoàn tất ba đáp ứng nhân quả của đề tài hoặc calibration GSM.
 
 ## Tài liệu đang dùng
 
@@ -96,6 +160,8 @@ và equilibrium vẫn còn phía trước.
 | [GSM_DATA_CONTRACT.md](GSM_DATA_CONTRACT.md) | Request dữ liệu gửi GSM: nguồn, phạm vi, định dạng, khóa và đơn vị |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Pipeline, schema và trạng thái mapping/coverage, quy ước artifacts, ranh giới oracle và dashboard |
 | [IDENTIFICATION.md](IDENTIFICATION.md) | Ba câu hỏi nhân quả, estimand/nhận diện, DGP demand/choice và giới hạn bằng chứng |
+| [WEEK3_POC_SCOPE.md](WEEK3_POC_SCOPE.md) | Phạm vi PoC hiện hành: roster online cố định, nhận/từ chối đơn, trả công 100% giá cước, protocol và giới hạn nghiên cứu |
+| [WEEK3_SUPPLY.md](WEEK3_SUPPLY.md) | Contract, phép đo và protocol controlled cung lao động; nhánh khoa học riêng ngoài phạm vi PoC hiện tại |
 | [BENCHMARK.md](BENCHMARK.md) | Kế hoạch đánh giá theo estimand, quyết định kinh doanh còn chờ xác nhận và protocol/ngưỡng hiện có |
 
 ## Thiết kế và hồ sơ
@@ -104,7 +170,7 @@ và equilibrium vẫn còn phía trước.
 |---|---|
 | [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) | Mục tiêu, phạm vi và lộ trình năm tuần |
 | [Core engine design](reference/CORE_ENGINE_DESIGN.md) | Thiết kế thuật toán, supply, simulator và equilibrium; chưa phải trạng thái triển khai |
-| [Submission](submission/README.md) | Báo cáo/PDF theo ngày; báo cáo kỳ gần nhất [11/10](submission/days/20261011/README.md), tổng hợp công việc 10–11/10, nghiệm thu Week 2 và hướng tiếp theo |
+| [Submission](submission/README.md) | Báo cáo/PDF theo ngày; [chốt kỹ thuật Week 3 ngày 12/10](submission/days/20261012/week3_poc_closeout.md), nghiệm thu Week 2 và hồ sơ lịch sử được giữ nguyên |
 | [Validation lịch sử](submission/days/20261003/validation.md) | Bằng chứng TLC/model/browser ngày 03/10 |
 
 ## Quy ước cập nhật
