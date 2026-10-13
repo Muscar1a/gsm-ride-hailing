@@ -53,7 +53,7 @@ Chênh lệch 3 và 4 chuyến ở hai luồng Poisson là kết quả của t�
 với giá/rate khác nhau; không phải kết quả thực nghiệm nhân quả hoặc bằng chứng
 tăng cung. Giờ hiện diện vẫn xấp xỉ 4 giờ tài xế ở cả hai luồng.
 
-[Bằng chứng kiểm chứng](week3_compensation_verification.json) lưu run ID đầy đủ,
+[Bằng chứng kiểm chứng](../../../../artifacts/research/20261012/week3_compensation_verification.json) lưu run ID đầy đủ,
 scope, kết quả, seed/protocol, môi trường, Git revision, hash nguồn/config/lock và
 checksum manifest. Sáu gói nguồn được kiểm tra checksum và giữ nguyên: hai demand
 baseline/target, Week-2 baseline/hybrid và supply fit/assessment.

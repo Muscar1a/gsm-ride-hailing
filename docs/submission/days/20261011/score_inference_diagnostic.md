@@ -129,14 +129,14 @@ Probe DML từng job mất 4,51/2,66 s, dưới guard 30 s đã đóng băng.
 
 ## Bằng chứng và việc còn lại
 
-[Plan](results/score_inference/development_plan.json),
-[summary](results/score_inference/summary.csv),
-[18.240 main output rows](results/score_inference/seed_metrics.csv),
-[paired block/day comparison](results/score_inference/paired_methods.csv),
-[fold sensitivity](results/score_inference/fold_sensitivity.csv),
-[audit](results/score_inference/audit.json),
-[source snapshot](results/score_inference/source_snapshot.zip) và
-[checksums](results/score_inference/evidence_checksums.json) giữ protocol/status,
+[Plan](../../../../artifacts/research/20261011/results/score_inference/development_plan.json),
+[summary](../../../../artifacts/research/20261011/results/score_inference/summary.csv),
+[18.240 main output rows](../../../../artifacts/research/20261011/results/score_inference/seed_metrics.csv),
+[paired block/day comparison](../../../../artifacts/research/20261011/results/score_inference/paired_methods.csv),
+[fold sensitivity](../../../../artifacts/research/20261011/results/score_inference/fold_sensitivity.csv),
+[audit](../../../../artifacts/research/20261011/results/score_inference/audit.json),
+[source snapshot](../../../../artifacts/research/20261011/results/score_inference/source_snapshot.zip) và
+[checksums](../../../../artifacts/research/20261011/results/score_inference/evidence_checksums.json) giữ protocol/status,
 252 job records, covariance, fold maps và source/config/environment identities.
 Raw per-block influence files ở các output roots `.cache/week2-score-*-20261011`,
 được registry của từng stage kiểm tra hashes; không đưa các files lớn này vào Git.
@@ -155,5 +155,5 @@ X/Y vẫn là hai dịch vụ giả định.
 Kiểm tra phần code liên quan đạt **38 tests**; toàn bộ phần không có AppTest đạt
 **399 tests**, với hai Pandas FutureWarnings ở fixtures của controller trước.
 Ruff, ty và diff check đạt. Lượt toàn repo bị dừng khi bài AppTest đầu tiên
-không hoàn tất; [JSON report](score_inference_diagnostic.json) giữ trạng thái
+không hoàn tất; [JSON report](../../../../artifacts/research/20261011/score_inference_diagnostic.json) giữ trạng thái
 kiểm tra. Không coi lượt bị dừng là đạt, chưa xác nhận phần giao diện.

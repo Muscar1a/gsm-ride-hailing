@@ -69,7 +69,7 @@ running the engine. See [USAGE](USAGE.md#week-3-fixed-online-poc) and
 The scoped PoC is implemented, technically verified and accepted by reviewer Bun
 on 12/10/2026 ([week3_poc_acceptance.md](submission/days/20261012/week3_poc_acceptance.md)). The
 [12 October closeout](submission/days/20261012/week3_poc_closeout.md) and
-[verification](submission/days/20261012/week3_poc_verification.json) record 609
+[verification](../artifacts/research/20261012/week3_poc_verification.json) record 609
 passing tests and 303/303 assessment jobs, with all frozen gates
 passed. Replay and pending-offer continuation preserve the applicable request,
 offer, state-time and completion-pay accounting. Workloads measured 2/20/100

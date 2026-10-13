@@ -118,6 +118,12 @@ format. A completed manifest and artifact checksums gate dashboard loading.
 
 ## Storage and execution
 
+Submission folders contain reports only. Archived research evidence lives in
+`artifacts/research/<date>/`: frozen source copies, protocols, validation metadata,
+tables, checksums and replay archives. Active code remains in `src/` and `scripts/`.
+The [research archive index](../artifacts/research/README.md) records the layout
+and the byte-preserving relocation from the former submission paths.
+
 Tables use Parquet; metadata uses strict JSON; exchange outputs use CSV/JSON.
 Every stage writes outputs atomically, records failure context, and reuses a result
 only when input, source-code, configuration, and artifact hashes match. Run manifests

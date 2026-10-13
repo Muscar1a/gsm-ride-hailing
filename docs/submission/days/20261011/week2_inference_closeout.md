@@ -40,7 +40,7 @@ chỉ dùng delta method. Oracle chỉ đi vào evaluator, không vào inference
 
 ## 2. Đánh giá độc lập đã đóng băng
 
-[Frozen plan](results/final_inference/frozen_plan.json) chọn trước **OLS HC3/t**
+[Frozen plan](../../../../artifacts/research/20261011/results/final_inference/frozen_plan.json) chọn trước **OLS HC3/t**
 và **DML orthogonal-score/normal**, seed **45001–45100**, RCT_SYN và NULL_EFFECT.
 Mỗi estimator/DGP có 100 seed; OLS và DML dùng cùng dataset của từng seed.
 **400/400 point fits**, không lỗi fit/inference; **15.200 output rows** đều có CI.
@@ -138,16 +138,16 @@ không trùng ngày, covariance PSD, delta-method SE/endpoints, coverage/FP và 
 binomial bounds. **365 files** trong năm archive trước vẫn khớp hashes; báo cáo
 và các số đo trước giữ mốc lịch sử. Hồ sơ mới:
 
-- [Oracle variance summary](results/oracle_variance/summary.csv),
-  [audit status](results/oracle_variance/status.json),
-  [oracle checksums](results/oracle_variance/evidence_checksums.json).
-- [Final summary](results/final_inference/summary.csv),
-  [raw seed metrics](results/final_inference/seed_metrics.parquet),
-  [168 assessment tests](results/final_inference/assessment_tests.csv).
-- [Final audit](results/final_inference/audit.json),
-  [source snapshot](results/final_inference/source_snapshot.zip),
-  [final checksums](results/final_inference/evidence_checksums.json),
-  [machine-readable report](week2_inference_closeout.json).
+- [Oracle variance summary](../../../../artifacts/research/20261011/results/oracle_variance/summary.csv),
+  [audit status](../../../../artifacts/research/20261011/results/oracle_variance/status.json),
+  [oracle checksums](../../../../artifacts/research/20261011/results/oracle_variance/evidence_checksums.json).
+- [Final summary](../../../../artifacts/research/20261011/results/final_inference/summary.csv),
+  [raw seed metrics](../../../../artifacts/research/20261011/results/final_inference/seed_metrics.parquet),
+  [168 assessment tests](../../../../artifacts/research/20261011/results/final_inference/assessment_tests.csv).
+- [Final audit](../../../../artifacts/research/20261011/results/final_inference/audit.json),
+  [source snapshot](../../../../artifacts/research/20261011/results/final_inference/source_snapshot.zip),
+  [final checksums](../../../../artifacts/research/20261011/results/final_inference/evidence_checksums.json),
+  [machine-readable report](../../../../artifacts/research/20261011/week2_inference_closeout.json).
 
 ## 5. Trạng thái bàn giao
 

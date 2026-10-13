@@ -383,7 +383,7 @@ def main() -> None:
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "docs/submission/days/20261007/results/week2",
+        default=Path(__file__).resolve().parents[1] / "artifacts/research/20261007/results/week2",
     )
     args = parser.parse_args()
     cells, overview, audit = review_results(args.results_dir)

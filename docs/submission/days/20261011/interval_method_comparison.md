@@ -6,7 +6,7 @@ có dữ liệu. Nhánh này chưa chọn phương pháp production hoặc nghi�
 
 ## Thiết kế đã đóng băng
 
-[Study plan](results/interval_comparison/development_plan.json) được ghi trước
+[Study plan](../../../../artifacts/research/20261011/results/interval_comparison/development_plan.json) được ghi trước
 khi generate cohort mới. Seeds 42001–42020 dùng cho RCT_SYN và NULL_EFFECT với
 adjusted OLS; DML có một probe RCT seed 42001. Mỗi job giữ 199 requested draws,
 20 ngày train, context và cấu hình mô hình hiện tại. Không dùng lại hoặc tune
@@ -70,10 +70,10 @@ False positives Y/Y vẫn là 15% trong mẫu, exact binomial 95% interval
 Không gộp với diagnostic seeds 41001–41020 hoặc final seeds cũ để tăng mẫu số.
 
 Số đo từng seed/method, các cohort pairing, bounds và lý do unavailable nằm trong
-[development summary](results/interval_comparison/development/summary.csv),
-[seed metrics](results/interval_comparison/development/seed_metrics.csv),
-[jackknife](results/interval_comparison/development/jackknife.csv) và
-[DML probe](results/interval_comparison/dml_probe/).
+[development summary](../../../../artifacts/research/20261011/results/interval_comparison/development/summary.csv),
+[seed metrics](../../../../artifacts/research/20261011/results/interval_comparison/development/seed_metrics.csv),
+[jackknife](../../../../artifacts/research/20261011/results/interval_comparison/development/jackknife.csv) và
+[DML probe](../../../../artifacts/research/20261011/results/interval_comparison/dml_probe).
 
 ## Kiểm chứng và tái lập
 
@@ -92,8 +92,8 @@ và coverage/false-positive flags giữ nguyên chính xác so với diagnostic 
 - Kiểm lại hashes mọi artifact, 8.159 raw bootstrap draws, 820 jackknife refits,
   basic bounds và BCa bias/acceleration/quantiles đều đạt; bytes nguồn không đổi.
 
-[Đối chiếu JSON](interval_method_comparison.json) ghi identities và assertions;
-[checksums hồ sơ](results/interval_comparison/evidence_checksums.json) bảo vệ
+[Đối chiếu JSON](../../../../artifacts/research/20261011/interval_method_comparison.json) ghi identities và assertions;
+[checksums hồ sơ](../../../../artifacts/research/20261011/results/interval_comparison/evidence_checksums.json) bảo vệ
 study plan, protocol/status/summary, bảng metrics/jackknife và source snapshots.
 Code hash của phương pháp hiện hành vẫn là
 `1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6`;

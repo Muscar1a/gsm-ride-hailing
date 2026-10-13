@@ -80,7 +80,7 @@ lineage thay đổi theo package mới. UI kiểm cả mặc định analytic v�
 - Kiểm hash độc lập **784 file** trong 7 archive nghiên cứu trước đây: tất cả
   giữ nguyên. Không rerun/tune benchmark 100 seeds hoặc thay raw measurements.
 
-[Machine-readable verification](week2_hybrid_verification.json) ghi source/lock
+[Machine-readable verification](../../../../artifacts/research/20261011/week2_hybrid_verification.json) ghi source/lock
 hashes, môi trường, scope, file sizes và cả 5 timings mỗi method. CLI smoke run
 `week2-hybrid-scenario-20261011-v3` mặc định analytic, chỉ deserialize point model;
 interval status `ok`, full-context support vẫn không đủ.

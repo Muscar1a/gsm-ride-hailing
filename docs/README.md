@@ -118,7 +118,7 @@ và xuất CSV/JSON từ artifact hoàn thành đã kiểm checksum, không ch�
 **Week 3 đã triển khai và kiểm chứng trong phạm vi PoC Bun chốt ngày 12/10/2026,
 sẵn sàng để Bun đánh giá; chưa ghi nhận Bun nghiệm thu.**
 [Báo cáo chốt kỹ thuật](submission/days/20261012/week3_poc_closeout.md) và
-[bằng chứng đối soát](submission/days/20261012/week3_poc_verification.json) ghi
+[bằng chứng đối soát](../artifacts/research/20261012/week3_poc_verification.json) ghi
 609 tests đạt (hai Pandas FutureWarnings lịch sử), assessment độc lập seeds
 73001–73100 hoàn tất **303/303 jobs**, tất cả gate đạt trong 100,16 giây. Fixture
 và Poisson replay khớp 22 đầu ra từng byte; chạy nối khi hai offers còn pending

@@ -366,7 +366,7 @@ The oracle variance controller checks the existing OLS development cohort with
 no model fits. Freeze first, then use a fresh output directory:
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.diagnose_week2_oracle_variance --plan .cache/new-oracle-plan.json --freeze-source docs/submission/days/20261011/results/score_inference
+.venv/Scripts/python.exe -m scripts.diagnose_week2_oracle_variance --plan .cache/new-oracle-plan.json --freeze-source artifacts/research/20261011/results/score_inference
 .venv/Scripts/python.exe -m scripts.diagnose_week2_oracle_variance --plan .cache/new-oracle-plan.json --output-root .cache/new-oracle-review
 ```
 
@@ -374,7 +374,7 @@ The independent assessment freezes block methods and its diagnostic family
 before generating the reserved 45001–45100 cohort:
 
 ```powershell
-.venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --freeze-source docs/submission/days/20261011/results/score_inference
+.venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --freeze-source artifacts/research/20261011/results/score_inference
 .venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --output-root .cache/new-independent-rct --dgp RCT_SYN
 .venv/Scripts/python.exe -m scripts.validate_week2_inference --plan .cache/new-independent-plan.json --output-root .cache/new-independent-null --dgp NULL_EFFECT
 ```

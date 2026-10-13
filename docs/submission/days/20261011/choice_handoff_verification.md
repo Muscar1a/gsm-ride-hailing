@@ -71,7 +71,7 @@ inference từ bundle, không xác nhận tái huấn luyện toàn bộ bằng 
 | Code hiện hành dùng để đóng gói/replay | `1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6` |
 | Lock hiện hành | `ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154` |
 
-[Bản đối chiếu JSON](choice_handoff_verification.json) lưu môi trường nguồn và
+[Bản đối chiếu JSON](../../../../artifacts/research/20261011/choice_handoff_verification.json) lưu môi trường nguồn và
 đóng gói, 20 artifact checksums, scope, lý do support và kết quả assertions.
 Source training revision là `c2d24a277424e4523668eed8dd35e7135ae2e1a2`, code hash
 `8af06450fdbbc7269ad493bc92743e830f5270516e1273ef26f182f1040a4e2e`.

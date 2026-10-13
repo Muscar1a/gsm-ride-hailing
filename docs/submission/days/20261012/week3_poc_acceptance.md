@@ -26,7 +26,7 @@ Week 3 được nghiệm thu trong phạm vi PoC thu hẹp theo đặc tả [WEE
 
 ## Bằng chứng kỹ thuật được xác nhận
 
-Căn cứ trên [Báo cáo bàn giao Week 3](week3_poc_closeout.md) và [Hồ sơ kiểm chứng](week3_poc_verification.json):
+Căn cứ trên [Báo cáo bàn giao Week 3](week3_poc_closeout.md) và [Hồ sơ kiểm chứng](../../../../artifacts/research/20261012/week3_poc_verification.json):
 
 | Hạng mục kiểm tra | Kết quả ghi nhận | Trạng thái |
 |---|---|---|

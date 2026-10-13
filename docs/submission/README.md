@@ -1,5 +1,15 @@
 # Hồ sơ báo cáo PoC GSM
 
+Thư mục này chỉ chứa báo cáo Markdown/PDF, slide PowerPoint và danh mục hồ sơ. Mã chạy được
+duy trì trong `src/` và `scripts/`; snapshot mã đã thực thi, JSON/CSV kiểm chứng,
+bảng kết quả, checksum và archive tái lập nằm trong
+[`artifacts/research/<ngày>/`](../../artifacts/research/README.md).
+Báo cáo dẫn tới bằng chứng tại đó, không sao chép code vào submission.
+
+Ngày 12/10/2026, toàn bộ bằng chứng kỹ thuật trước đó được chuyển nguyên byte
+ra khỏi submission. [Hồ sơ chuyển vị trí](../../artifacts/research/relocation.json)
+ghi đường dẫn cũ/mới và SHA-256; không thay đổi kết quả, protocol hoặc mã đóng băng.
+
 Mỗi kỳ báo cáo lưu theo ngày tại `docs/submission/days/YYYYMMDD/`, dùng ngày
 chốt theo Asia/Bangkok. Hồ sơ mới gồm **hai tài liệu cần nộp**:
 
@@ -16,6 +26,7 @@ phương pháp, kết quả kiểm chứng và nguồn tham chiếu.
 
 | Ngày / kỳ | Báo cáo PoC | Báo cáo tiến độ | Hồ sơ |
 |---|---|---|---|
+| 12/10/2026 — sync-up tuần 1–3 | [Slides sync-up](days/20261012/GSM_Syncup_Week1-3_20261012_v1.pptx) | [Week-3 closeout](days/20261012/week3_poc_closeout.md) | [README](days/20261012/README.md) |
 | 11/10/2026 — tổng hợp công việc 10–11/10 | [weekly_report.md](days/20261011/weekly_report.md) | [progress_update.md](days/20261011/progress_update.md) | [README](days/20261011/README.md) |
 | 07/10/2026 — Week 2 cập nhật | [weekly_report.md](days/20261007/weekly_report.md) | [progress_update.md](days/20261007/progress_update.md) | [README](days/20261007/README.md) |
 | 04/10/2026 — bản đã nộp | [POC_Technical_Report.md](days/20261004/POC_Technical_Report.md) | [Progress_Update.md](days/20261004/Progress_Update.md) | [README và phân công cá nhân](days/20261004/README.md) |

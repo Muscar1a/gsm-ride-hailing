@@ -18,14 +18,14 @@ Kết luận các gate và phần còn lại nằm trong
 |---|---|
 | [acceptance_review.md](acceptance_review.md) | Kết luận sáu gate, run IDs/checksums và checklist closeout |
 | [statistical_review.md](statistical_review.md) | Rà soát đủ 500 jobs/60 ô: point accuracy, coverage/null, draws và stress cases |
-| [results/week2](results/week2/README.md) | Metrics, metadata, checkpoint archive và SHA-256 của gói kết quả cuối |
+| [results/week2](../../../../artifacts/research/20261007/results/week2/README.md) | Metrics, metadata, checkpoint archive và SHA-256 của gói kết quả cuối |
 | [Hồ sơ 04/10](../20261004/README.md) | Bản đã nộp trước đó, giữ nguyên mốc kết quả và PDF lịch sử |
 
 Các báo cáo giữ đúng nguồn và phiên bản thực nghiệm. Kết quả số, frozen source,
 checkpoint archive, audit thống kê và PDF lịch sử giữ nguyên. Ngày **08/10/2026**,
 README của gói results được cập nhật link trực tiếp và kết luận sau rà soát;
-[manifest](results/week2/manifest.json) ghi hash gốc cùng phạm vi cập nhật,
-[checksum hiện hành](results/week2/checksums.sha256) đối chiếu gói đang lưu.
+[manifest](../../../../artifacts/research/20261007/results/week2/manifest.json) ghi hash gốc cùng phạm vi cập nhật,
+[checksum hiện hành](../../../../artifacts/research/20261007/results/week2/checksums.sha256) đối chiếu gói đang lưu.
 Các hash trong audit ngày 07/10 vẫn mô tả bản gốc được rà soát ngày đó.
 
 [Danh mục hồ sơ](../../README.md) · [Danh mục docs](../../../README.md) ·

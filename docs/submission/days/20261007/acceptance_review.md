@@ -49,8 +49,8 @@ NULL_EFFECT false positives **5–8/100 theo ô**; các khoảng exact binomial 
 đều chứa mức 5%, chưa chứng minh tương đương 5%. Hidden confounding giữ bias
 và coverage thấp, không nhận dạng nhân quả; collinear từ chối đúng kiểm tra
 giới hạn. Đầy đủ 60 ô và diễn giải tại [rà soát thống kê](statistical_review.md),
-[audit JSON](results/week2/statistical_review/audit.json) và
-[kết quả cuối](results/week2/README.md). Scenario RMSE tổng hợp là RMS của các
+[audit JSON](../../../../artifacts/research/20261007/results/week2/statistical_review/audit.json) và
+[kết quả cuối](../../../../artifacts/research/20261007/results/week2/README.md). Scenario RMSE tổng hợp là RMS của các
 per-seed RMSE, không phải trung bình số học; các ô không được xem là độc lập.
 
 ## Policy-value và tái lập

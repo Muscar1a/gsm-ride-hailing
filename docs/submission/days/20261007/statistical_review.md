@@ -2,7 +2,7 @@
 
 **Mốc dữ liệu: 07/10/2026 17:13:28, Asia/Bangkok (UTC+07).**
 Rà soát ngày 07/10; thời điểm và phiên bản mã rà soát lưu trong
-[audit.json](results/week2/statistical_review/audit.json).
+[audit.json](../../../../artifacts/research/20261007/results/week2/statistical_review/audit.json).
 
 **Kết luận:** đủ giao thức và dữ liệu nhất quán; point accuracy RCT đạt hai ngưỡng
 đã định. Calibration của khoảng 95% còn hạn chế: adjusted OLS và DML ở ô RCT
@@ -95,7 +95,7 @@ Hai ô RCT Y/Y trên có p thô **0,0004633**, p Holm **0,0148247**. Bốn ô na
 OLS ở observed cũng có p Holm <0,05, phù hợp baseline bị confounding.
 Observed Y/Y của adjusted OLS/DML có coverage 89% và khoảng [81,17%; 94,38%];
 p thô 0,01147 nhưng p Holm 0,34417: cần ghi nhận, không kết luận thêm từ riêng
-ô được chọn. Chi tiết đầy đủ trong [cell_metrics.csv](results/week2/statistical_review/cell_metrics.csv).
+ô được chọn. Chi tiết đầy đủ trong [cell_metrics.csv](../../../../artifacts/research/20261007/results/week2/statistical_review/cell_metrics.csv).
 
 Family kiểm định và mức chẩn đoán 0,05 được chọn ở bước rà soát, **không phải
 acceptance rule đăng ký trước**. Holm xử lý việc nhìn nhiều ô ở lần rà soát
@@ -163,14 +163,14 @@ seeds 20001–20100. Chưa thực hiện thêm compute trong đợt rà soát n�
 
 ## 6. Bằng chứng và tái lập rà soát
 
-- [Kết quả và manifest](results/week2/README.md) giữ nguyên kết quả số, frozen
+- [Kết quả và manifest](../../../../artifacts/research/20261007/results/week2/README.md) giữ nguyên kết quả số, frozen
   source và archive tái lập. README/manifest/checksum được cập nhật tài liệu
   ngày 08/10/2026; manifest ghi hash gốc. Các hash trong audit ngày 07/10 và
   metadata `pending review` vẫn phản ánh mốc xuất/rà soát ban đầu.
-- [Audit JSON](results/week2/statistical_review/audit.json),
-  [60 ô metrics](results/week2/statistical_review/cell_metrics.csv),
-  [bảng tổng hợp](results/week2/statistical_review/dgp_estimator_summary.csv) và
-  [SHA-256 audit](results/week2/statistical_review/checksums.sha256) là bằng chứng bổ sung.
+- [Audit JSON](../../../../artifacts/research/20261007/results/week2/statistical_review/audit.json),
+  [60 ô metrics](../../../../artifacts/research/20261007/results/week2/statistical_review/cell_metrics.csv),
+  [bảng tổng hợp](../../../../artifacts/research/20261007/results/week2/statistical_review/dgp_estimator_summary.csv) và
+  [SHA-256 audit](../../../../artifacts/research/20261007/results/week2/statistical_review/checksums.sha256) là bằng chứng bổ sung.
 - [Script rà soát](../../../../scripts/review_week2_statistics.py) chỉ đọc outputs;
   không fit model, không sửa frozen source/config hoặc bảng kết quả gốc.
 - Tham chiếu phương pháp: [SciPy binomtest/exact proportion CI](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binomtest.html),

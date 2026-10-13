@@ -218,7 +218,7 @@ The standalone `scripts.compare_week2_intervals` compares the existing individua
 configuration, support gates and interval selection remain unchanged. Candidate
 definitions are frozen before the comparison; the development study was frozen
 before generation in its
-[study plan](submission/days/20261011/results/interval_comparison/development_plan.json).
+[study plan](../artifacts/research/20261011/results/interval_comparison/development_plan.json).
 
 The fresh adjusted-OLS cohort uses seeds 42001–42020 for RCT_SYN and NULL_EFFECT,
 199 original-day bootstrap draws and the same fixed TLC-derived context. A
@@ -254,7 +254,7 @@ recorded separately in the
 The standalone `scripts.compare_week2_variance` reuses the completed comparison
 points and original-day jackknife fits to compare `day_jackknife_t` with
 percentile/basic/BCa. Its
-[frozen plan](submission/days/20261011/results/interval_variance/development_plan.json)
+[frozen plan](../artifacts/research/20261011/results/interval_variance/development_plan.json)
 defines the jackknife variance, original-point centering and Student-t reference
 with 19 degrees of freedom before postprocessing. There are no new fits or
 bootstrap draws, and no new independent seeds: the cohort remains 40 adjusted-OLS
@@ -280,7 +280,7 @@ then freeze any selected method and criteria before independent final evaluation
 The separate `scripts.pilot_week2_dml_variance` pilot evaluates the frozen
 `day_jackknife_t` candidate on fresh development seeds 43001–43005 for RCT_SYN
 and NULL_EFFECT. The
-[outer plan](submission/days/20261011/results/dml_variance_pilot/development_plan.json)
+[outer plan](../artifacts/research/20261011/results/dml_variance_pilot/development_plan.json)
 preserves the existing context/model settings and caps compute at 20 estimator
 jobs / 420 fits, of which 210 are DML. Each shared seed is fitted with DML and
 adjusted OLS, including the original fit and 20 original-day omissions per
@@ -302,7 +302,7 @@ final-calibration gate. Reproduction is in
 
 ### Development score inference diagnosis
 
-The [frozen plan](submission/days/20261011/results/score_inference/development_plan.json)
+The [frozen plan](../artifacts/research/20261011/results/score_inference/development_plan.json)
 uses unused development seeds 44001–44100 for adjusted OLS and 44001–44020 for
 DML, each under RCT_SYN and NULL_EFFECT. It caps compute at 252 point fits:
 200 OLS, 40 DML, and 12 additional DML fits with 4/10 folds on three shared seeds.
@@ -342,7 +342,7 @@ The joint linear covariance is exact for this DGP; elasticity transforms remain
 delta-method approximations. The audit preserves old evidence and uses no new
 independent seeds.
 
-The [independent frozen plan](submission/days/20261011/results/final_inference/frozen_plan.json)
+The [independent frozen plan](../artifacts/research/20261011/results/final_inference/frozen_plan.json)
 fixes 100 previously unused seeds per RCT/null DGP, paired OLS/DML datasets,
 OLS block HC3/t and DML block orthogonal-score/normal intervals. The cap is
 400 point fits, no bootstrap/jackknife refits, retries or cohort expansion,
@@ -597,7 +597,7 @@ Rules, gates and profiles are frozen before assessment. These seeds cannot becom
 tuning data for the same assessment claim. Both profiles bound the full evaluator
 at 600 seconds, keeping failed attempts and their reasons in exported records.
 The [12 October closeout](submission/days/20261012/week3_poc_closeout.md) and
-[verification](submission/days/20261012/week3_poc_verification.json) record
+[verification](../artifacts/research/20261012/week3_poc_verification.json) record
 `week3-poc-assessment-20261012-v3`: 200 paired Poisson trajectories, 100 controlled
 trajectories and three workload checks, **303/303 succeeded**, zero failed jobs,
 all frozen gates passed, 100.158 seconds total. Controlled mean completions/pay were
@@ -738,7 +738,7 @@ than rewriting the original evidence.
 Outputs reside under `<snapshot>/week2_reporting/`: frozen spec, status,
 execution metadata, pooled metrics and logs. Checkpoints reside under
 `<snapshot>/runs/<batch_id>/evaluation/`. The local snapshot/cache is ignored by
-Git. The [submitted result bundle](submission/days/20261007/results/week2/README.md)
+Git. The [submitted result bundle](../artifacts/research/20261007/results/week2/README.md)
 preserves the frozen source/config/lock/context, scripts, logs and checkpoints in
 `reproducibility.zip`, alongside metrics and checksums.
 

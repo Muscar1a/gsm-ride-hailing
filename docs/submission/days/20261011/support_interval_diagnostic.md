@@ -46,7 +46,7 @@ mới; không chuyển trạng thái all-context thành đạt.
 Run cuối là `week2-support-diagnostic-20261011-v3`. Sáu artifacts được đăng ký
 checksum; 20 artifacts của gói nguồn và manifest được kiểm trước load model,
 kiểm lại sau replay và giữ nguyên byte. Bằng chứng nhỏ được lưu trong
-[support](results/support_interval/support/); contexts/model bundles ở run
+[support](../../../../artifacts/research/20261011/results/support_interval/support); contexts/model bundles ở run
 cục bộ theo manifest.
 
 ## 2. Chẩn đoán khoảng lịch sử
@@ -69,7 +69,7 @@ Reporting cũ không lưu raw draws. Bias nhỏ và misses ở hai phía gợi �
 quá hẹp; chưa xác định cơ chế chỉ từ bảng này. Exact binomial 95% interval cho
 coverage 86/100 vẫn là **[77,63%; 92,13%]**.
 
-[Hồ sơ lịch sử mới](results/support_interval/historical/) giữ source chẩn đoán,
+[Hồ sơ lịch sử mới](../../../../artifacts/research/20261011/results/support_interval/historical) giữ source chẩn đoán,
 CSV, JSON và audit/checksums. Source chạy được vào thư mục kết quả mới; từ chối
 ghi đè bằng chứng đã xuất bản. Cấu hình model/source/simulation/evaluation
 lịch sử và hiện tại giống nhau: 50 cây, năm folds, 20 ngày train,
@@ -107,9 +107,9 @@ coi 18/20 là cải thiện phương pháp: phương pháp chưa đổi.
 NULL có false positives **1/20, 1/20, 2/20, 2/20** theo X/X, X/Y, Y/X, Y/Y;
 uncertainty còn rộng. DML probe có 199 draws thành công nhưng một seed không
 đo được SD giữa seeds hay coverage quần thể. Kết quả từng ô và mẫu số đầy đủ
-nằm trong CSV của [development](results/support_interval/development/),
-[endpoints](results/support_interval/endpoints/) và
-[DML probe](results/support_interval/dml_probe/).
+nằm trong CSV của [development](../../../../artifacts/research/20261011/results/support_interval/development),
+[endpoints](../../../../artifacts/research/20261011/results/support_interval/endpoints) và
+[DML probe](../../../../artifacts/research/20261011/results/support_interval/dml_probe).
 
 So sánh 199/999 dùng **cùng 199 requested draws đầu**, kiểm cả hệ số và nhóm
 ngày; không chọn 199 draws thành công sau khi bỏ failures. Trong ba seeds,
@@ -130,7 +130,7 @@ không đưa vào Git; hồ sơ này lưu summaries, protocols, statuses và che
 giữ, nhưng tỷ số SD unavailable khi cohort seeds có estimate và cohort có SD
 bootstrap không khớp. Có trạng thái riêng cho thiếu replicates và zero variance.
 Snapshot controller thực thi được giữ trong
-[executed_interval_runner.py](results/support_interval/executed_interval_runner.py).
+[executed_interval_runner.py](../../../../artifacts/research/20261011/results/support_interval/executed_interval_runner.py).
 Sau sửa validation/type, summary không có failures được đối chiếu giữ nguyên;
 lượt 199-draw cuối kiểm lại point estimates, bounds và raw coefficients đúng
 với baseline. Phiên bản controller tách khỏi source hash của phương pháp.
@@ -142,8 +142,8 @@ với baseline. Phiên bản controller tách khỏi source hash của phương 
 - Kiểm checksum mọi run hoàn tất, SD từ raw draws, coverage flags, prefix 199,
   nguồn choice bất biến và cohort comparison sau sửa đều đạt.
 
-[Đối chiếu JSON](support_interval_diagnostic.json) ghi run/protocol/code/lock
-identities và kết quả assertions; [checksums hồ sơ](results/support_interval/evidence_checksums.json)
+[Đối chiếu JSON](../../../../artifacts/research/20261011/support_interval_diagnostic.json) ghi run/protocol/code/lock
+identities và kết quả assertions; [checksums hồ sơ](../../../../artifacts/research/20261011/results/support_interval/evidence_checksums.json)
 giữ hashes của bằng chứng đã xuất bản. Lệnh chạy nằm trong
 [USAGE](../../../USAGE.md#week-2-support-and-interval-diagnostics).
 

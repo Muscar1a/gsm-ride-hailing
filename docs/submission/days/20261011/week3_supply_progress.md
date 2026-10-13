@@ -79,8 +79,8 @@ synthetic cho mức 0→20 đã khai báo, không phải kết luận chính sá
 - Kiểm checksum toàn bộ 20 artifact của baseline Week 2 và 23 artifact hybrid
   thành công. Không thay bundle cũ, contract `prepare-demand` hoặc kết quả nghiên cứu cũ.
 
-Bằng chứng: [verification JSON](week3_supply_verification.json),
-[600 dòng assessment](week3_supply_records.csv). Source/spec/protocol/environment,
+Bằng chứng: [verification JSON](../../../../artifacts/research/20261011/week3_supply_verification.json),
+[600 dòng assessment](../../../../artifacts/research/20261011/week3_supply_records.csv). Source/spec/protocol/environment,
 hash dữ liệu và danh sách run được ghi trong JSON. Dữ liệu tài xế, model và source
 snapshots chi tiết nằm trong `runs/`, không đưa dữ liệu lớn vào version control.
 

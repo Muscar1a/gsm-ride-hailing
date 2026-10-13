@@ -12,7 +12,7 @@ thêm. OLS RCT Y/Y tăng coverage từ **17/20 lên 19/20**, với mean paired w
 
 ## Phạm vi và phương pháp đã đóng băng
 
-[Development plan](results/interval_variance/development_plan.json) được ghi trước
+[Development plan](../../../../artifacts/research/20261011/results/interval_variance/development_plan.json) được ghi trước
 khi tính candidate. Cả bốn phương pháp dùng cùng point estimate, không điều chỉnh
 multiplier theo oracle và không thay support hoặc nominal 95%.
 
@@ -89,8 +89,8 @@ RMS jackknife SE so với empirical point SD, dùng đúng cùng 20 valid seeds/
 
 Các ratios vẫn lệch theo cell; không dùng chúng làm hệ số bù được tối ưu trên
 development. Full summaries giữ bias, RMSE, exact bounds, width và denominators:
-[OLS summary](results/interval_variance/development/summary.csv),
-[per-seed metrics](results/interval_variance/development/seed_metrics.csv).
+[OLS summary](../../../../artifacts/research/20261011/results/interval_variance/development/summary.csv),
+[per-seed metrics](../../../../artifacts/research/20261011/results/interval_variance/development/seed_metrics.csv).
 
 ## DML probe
 
@@ -100,8 +100,8 @@ candidate đều bao phủ truth ở seed này.
 
 Đây là một execution probe; 20 omitted days không phải 20 Monte Carlo seeds.
 Empirical point SD và RMS-SE/SD ratio được giữ unavailable vì chỉ có một seed.
-Xem [DML summary](results/interval_variance/dml_probe/summary.csv) và
-[per-seed metrics](results/interval_variance/dml_probe/seed_metrics.csv).
+Xem [DML summary](../../../../artifacts/research/20261011/results/interval_variance/dml_probe/summary.csv) và
+[per-seed metrics](../../../../artifacts/research/20261011/results/interval_variance/dml_probe/seed_metrics.csv).
 
 ## Kiểm chứng và truy vết
 
@@ -115,9 +115,9 @@ Xem [DML summary](results/interval_variance/dml_probe/summary.csv) và
 - Source code hash: `1654258a72a6098d12fca3cb96314d67d43526c5d4ac548ff52d14234a2919f6`.
   Postprocessor hash: `bdb5632011f35c791ba5b3bfba1b281046c6a724a154726f76d30b5428fe3437`.
   Plan hash: `13a9e35fa24e1cda5ff870a8fdd446ea43ad146d0b9bada96e10d99e38f6919b`.
-- [JSON report](interval_variance_comparison.json),
-  [executed source](results/interval_variance/executed_variance_runner.py),
-  [evidence checksums](results/interval_variance/evidence_checksums.json) và mỗi
+- [JSON report](../../../../artifacts/research/20261011/interval_variance_comparison.json),
+  [executed source](../../../../artifacts/research/20261011/results/interval_variance/executed_variance_runner.py),
+  [evidence checksums](../../../../artifacts/research/20261011/results/interval_variance/evidence_checksums.json) và mỗi
   cohort's protocol/status giữ source identities, environment và execution duration.
 
 Hai Pandas FutureWarnings chỉ xuất hiện ở fixture toàn bộ candidate unavailable

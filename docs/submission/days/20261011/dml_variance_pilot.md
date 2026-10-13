@@ -15,7 +15,7 @@ thay vì chỉ tập trung vào Y/Y ở nghiên cứu trước.
 
 ## Kế hoạch, giới hạn và thực thi
 
-[Plan](results/dml_variance_pilot/development_plan.json) được đóng băng trước khi
+[Plan](../../../../artifacts/research/20261011/results/dml_variance_pilot/development_plan.json) được đóng băng trước khi
 generate cohort mới. Seeds **43001–43005**, DGPs **RCT_SYN và NULL_EFFECT**, cùng
 TLC-derived frozen context, source config, weights, split dates và nominal 95%.
 Không gộp với các cohort 41001/42001 hoặc final lịch sử 20001–20100.
@@ -91,9 +91,9 @@ DML RCT Y/X: RMS SE **0,010033**, empirical SD **0,018955**, ratio **0,529326**.
 Các ratios không ổn định theo cell; empirical SD chỉ có 5 seeds nên cũng rất
 thiếu chính xác. Không lấy ratio làm multiplier được tối ưu trên pilot.
 Full bias/RMSE, exact bounds, widths và failure denominators có ở
-[summary](results/dml_variance_pilot/summary.csv),
-[per-seed metrics](results/dml_variance_pilot/seed_metrics.csv) và
-[paired estimator comparison](results/dml_variance_pilot/paired_estimators.csv).
+[summary](../../../../artifacts/research/20261011/results/dml_variance_pilot/summary.csv),
+[per-seed metrics](../../../../artifacts/research/20261011/results/dml_variance_pilot/seed_metrics.csv) và
+[paired estimator comparison](../../../../artifacts/research/20261011/results/dml_variance_pilot/paired_estimators.csv).
 
 ## Kiểm chứng và truy vết
 
@@ -109,10 +109,10 @@ Full bias/RMSE, exact bounds, widths và failure denominators có ở
 - Full DML fold records được đối chiếu với point diagnostics. Mỗi omission có
   đủ configured folds, đúng 19 remaining days và không có day leakage. Omission
   fold records mô tả deterministic assignment plan; trạng thái refit ghi execution.
-- [JSON report](dml_variance_pilot.json),
-  [400 day-refit records](results/dml_variance_pilot/jackknife.csv),
-  [executed source](results/dml_variance_pilot/executed_pilot_runner.py) và
-  [evidence checksums](results/dml_variance_pilot/evidence_checksums.json) giữ
+- [JSON report](../../../../artifacts/research/20261011/dml_variance_pilot.json),
+  [400 day-refit records](../../../../artifacts/research/20261011/results/dml_variance_pilot/jackknife.csv),
+  [executed source](../../../../artifacts/research/20261011/results/dml_variance_pilot/executed_pilot_runner.py) và
+  [evidence checksums](../../../../artifacts/research/20261011/results/dml_variance_pilot/evidence_checksums.json) giữ
   protocol/status/fold metadata của từng stage và job.
 
 Plan hash: `cf8ab5dc793085fe9cecb1d9eaa02c61180af96bd09dacc02613c578ef7ecef2`.

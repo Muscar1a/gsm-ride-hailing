@@ -48,7 +48,7 @@ Checkpoint lưu đề nghị đang chờ, giữ xe, thời điểm phản hồi/
 
 Hai cảnh báo hiện có đến từ `scripts/compare_week2_variance.py:324` và `scripts/compare_week2_intervals.py:349`, về hành vi pandas khi nối bảng rỗng/all-NA. Không có test thất bại. UI được kiểm tra bằng Streamlit AppTest và bộ đọc artifact; chưa kiểm tra bố cục bằng trình duyệt trực quan.
 
-Bằng chứng máy đọc: [week3_poc_verification.json](week3_poc_verification.json). Bảng từng lượt đánh giá: [paired seeds](week3_marketplace_seed_records.csv), [controlled mechanism](week3_marketplace_controlled_records.csv), [workloads](week3_marketplace_workload_records.csv).
+Bằng chứng máy đọc: [week3_poc_verification.json](../../../../artifacts/research/20261012/week3_poc_verification.json). Bảng từng lượt đánh giá: [paired seeds](../../../../artifacts/research/20261012/week3_marketplace_seed_records.csv), [controlled mechanism](../../../../artifacts/research/20261012/week3_marketplace_controlled_records.csv), [workloads](../../../../artifacts/research/20261012/week3_marketplace_workload_records.csv).
 
 ## Đánh giá trên 100 seed
 
@@ -115,7 +115,7 @@ Mỗi run ghi Git revision `1b51eac493086989a18061ef6c1109c0e9cd8ae4` cùng hash
 
 ## Cách đọc và chạy
 
-Đọc báo cáo này trước, sau đó [proof](week3_poc_verification.json) và [USAGE](../../../USAGE.md#week-3-fixed-online-poc) nếu cần chi tiết interface. Artifact hiện có nằm trong `runs/<run_id>/`:
+Đọc báo cáo này trước, sau đó [proof](../../../../artifacts/research/20261012/week3_poc_verification.json) và [USAGE](../../../USAGE.md#week-3-fixed-online-poc) nếu cần chi tiết interface. Artifact hiện có nằm trong `runs/<run_id>/`:
 
 | Mục đích | Run đã kiểm chứng |
 |---|---|

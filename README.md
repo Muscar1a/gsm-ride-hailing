@@ -61,5 +61,6 @@ gsm-ride-hailing/
 ├── scripts/                  # Coverage runners, compute benchmarks, and probes
 ├── tests/                    # Deterministic unit, integration, and coverage tests
 ├── docs/                     # Architecture, technical contracts, and roadmap
+├── artifacts/research/       # Frozen research evidence, results, and source snapshots
 └── data/                     # Raw, processed, and synthetic artifacts (.gitignored)
 ```
