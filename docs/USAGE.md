@@ -815,6 +815,36 @@ verified frozen inputs; the dashboard's **Policies and experiments** view reads
 their completed results. Real GSM economics and experiment execution remain
 unevaluated. No external data or new dependency is needed for the controlled path.
 
+## Controlled demand contrast extension
+
+Use `configs/demand_contrast.toml` to opt into `contrast_ols`; existing profiles
+retain their estimators and rejection rules. The new estimator fits adjusted OLS
+in the SVD-retained price subspace, allows qualified joint contrasts and keeps
+unidentified individual effects/intervals null. Analytic HC3/t is the primary
+controlled inference path; bootstrap tracks lost identification and suppresses
+intervals when any refit loses qualification. This does not certify GSM calibration.
+
+```powershell
+uv run gsm-poc generate --config configs/demand_contrast.toml --run-id contrast-development
+uv run gsm-poc fit --config configs/demand_contrast.toml --run-id contrast-development
+uv run gsm-poc scenario --config configs/demand_contrast.toml --run-id contrast-scenario --model-run-id contrast-development --inference-method analytic
+```
+
+Frozen assessment uses a separate bounded runner and disjoint development/final
+seeds. Use a new output directory; the existing evidence must not be overwritten.
+
+```powershell
+uv run python scripts/assess_demand_contrasts.py --phase development --output .cache/contrast-assessment-replay
+uv run python scripts/assess_demand_contrasts.py --phase freeze --output .cache/contrast-assessment-replay
+uv run python scripts/assess_demand_contrasts.py --phase assessment --output .cache/contrast-assessment-replay
+```
+
+Source/configuration hashes and environment must match the freeze. Records retain
+every attempted forecast and raw-data checksums; generated observed tables remain
+in ignored `.cache/demand_contrast/`. Replaying published assessment seeds checks
+reproducibility, not a new independent evaluation or permission to tune on them.
+See the [protocol](BENCHMARK.md#demand-contrast-assessment--frozen-protocol-20-october-2026).
+
 ## Verification
 
 ```powershell

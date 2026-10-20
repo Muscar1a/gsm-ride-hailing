@@ -9,10 +9,10 @@ and starting values are design choices, not measurements or implementation statu
 
 **Demand contribution alignment, 20 October 2026:** the
 [unified proposal](GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution)
-owns the research contribution. Contrast-specific demand identification below is
-proposed, not implemented or accepted; its algorithm, numerical thresholds and
-inference rules must be frozen before independent assessment. Existing PoC
-behavior and acceptance evidence remain unchanged.
+owns the research contribution. Contrast-specific demand identification is
+implemented as opt-in `contrast_ols`, with a frozen controlled assessment protocol.
+This does not record Bun's acceptance of the new estimator or GSM validation.
+Default estimator behavior and previous acceptance evidence remain unchanged.
 
 **Current PoC scope (Bun, 12 October 2026):** use a fixed online driver roster,
 individual trip acceptance and the 100%-displayed-fare pay assumption. Incentives,
@@ -65,7 +65,7 @@ Offer dispatch and trip acceptance affect matching and operational outcomes.
 |---|---|---|
 | Customer price sensitivity | Request effects and valid elasticities; quote conversion separately; point/interval estimates and identification/support | DemandResponse |
 | Driver labor supply | Participation/hours effects of predecision offered terms; serviceable-hour response and extra hours versus relocation | DriverParticipation |
-| Cross-service response | Supported own/cross 2x2 matrix or identified columns; proposed estimable joint contrasts when columns are unavailable; X/Y/total request effects and nonbooking where observed | ChoiceResponse |
+| Cross-service response | Supported own/cross 2x2 matrix or identified columns; estimable joint contrasts through contrast_ols when columns are unavailable; X/Y/total request effects and nonbooking where observed | ChoiceResponse |
 | Policy assessment | Finite supported policy comparisons, agreed business metric/guardrails, uncertainty and pilot disposition with reasons | ScenarioRunner, EconomicEvaluator |
 | Experimental validation | Assignment and A/A protocol, power/carryover design, frozen forecasts, live guardrail monitoring and causal reconciliation | ExperimentInterface |
 | Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output; statistical, simulator and sensitivity sources separately | UncertaintyEngine, EvidenceRegistry |
@@ -397,7 +397,7 @@ Near-zero baselines require absolute effects and denominators instead of unstabl
 elasticities. Zero/negative prices need monetary or categorical treatments;
 adding an arbitrary epsilon does not make log prices valid.
 
-For the proposed contrast-specific extension in section 6.6, this matrix form is
+For `contrast_ols` in section 6.6, this matrix form is
 a response representation, not a requirement to identify every matrix entry.
 An estimable matrix-vector product does not identify its separate coefficients.
 
@@ -429,7 +429,7 @@ train/folds; oracle and test outcomes cannot enter fitting.
 counts, and domain validity. Separate min/max ranges are insufficient. Derive
 support from data and approved policy bounds; do not apply 0.90-1.10 universally.
 
-In the proposed extension, identification diagnostics and empirical support are
+For `contrast_ols`, identification diagnostics and empirical support are
 reported separately, even if stored together. Check both baseline and target in
 the requested context; an estimable direction alone does not support their absolute
 price levels. Interpolation needs a declared model assumption and supporting data.
@@ -461,11 +461,11 @@ the full scenario; passing a price-support gate alone is insufficient. Holding
 the existing request response fixed under an unvalidated driver mechanism is an
 explicit C sensitivity assumption, not an identified total marketplace effect.
 
-### 6.6 Proposed contrast-specific demand identification
+### 6.6 Contrast-specific demand identification
 
-**Not implemented:** evaluate the requested baseline-to-target contrast for each
+**Implemented for `contrast_ols`:** evaluate the baseline-to-target contrast for each
 demand outcome, rather than requiring every price coefficient to be identified.
-The current PoC still rejects jointly varying prices with rank-deficient residual
+Existing adjusted OLS/DML still reject jointly varying prices with rank-deficient residual
 covariance; the single-varying-price case is already supported under current rules.
 
 For example, under a compatible local linear model and causal assumptions, data
@@ -473,10 +473,16 @@ where X/Y prices move together may identify a common price-change effect while
 leaving an X-only change and separate matrix columns unidentified. Collinearity
 alone neither guarantees this combined forecast nor invalidates every contrast.
 
-Before implementation, specify how the requested log-price change is checked
-against residual price variation after pretreatment adjustment. A residual-subspace
-check is a candidate, not a selected algorithm or a novelty claim. Freeze numerical
-tolerances, weak-variation handling and sensitivity checks before assessment.
+SVD of session-weighted price residuals after linear pretreatment adjustment
+defines the retained subspace. Squared singular values must exceed `1e-10`;
+log-price span residual tolerance is `1e-8`, with the configured retained-covariance
+condition limit. Fit adjusted OLS on retained coordinates, then map coefficient
+scores back for qualified contrasts; minimum-norm individual entries are internal
+representation, not identified scientific estimates. Rank-one support requires a
+single observed affine joint-price line with qualifying bracketing points in every
+selected context group. More general context-dependent price supports are withheld.
+These are frozen v1 choices, not a novelty claim; see the
+[assessment protocol](../BENCHMARK.md#demand-contrast-assessment--frozen-protocol-20-october-2026).
 Assignment/observational identification assumptions remain necessary independently
 of any numerical check. Do not condition away post-price supply/wait mediators when
 the estimand is the total policy effect.
@@ -935,14 +941,16 @@ This choice-only conditional approximation does not supply operational/equilibri
 CI. Bun accepted its technical exception on 11/10/2026; see
 [the decision](../submission/days/20261011/week2_hybrid_acceptance.md).
 
-For **proposed contrast-specific inference**, target uncertainty of the estimable
-contrast, not confidence intervals for unidentified individual coefficients. The
-current full-coefficient covariance path does not establish validity for a deficient
-price design. Freeze the analytic/resampling method and CI publication rules before
-assessment. Original training data defines support during refits; each refit still
+For **`contrast_ols` inference**, HC3/t scores on the reduced design target the
+estimable contrast; transformed covariance retains X/Y and baseline dependence.
+Unidentified individual coefficients receive no intervals. The existing DML
+full-coefficient covariance is not reused for a deficient design. Rules are frozen
+before assessment. Original training data defines support during refits; each refit still
 needs its own identification/probability checks. Preserve attempted, successful and
 failed counts with reasons, including lost identification. Do not silently condition
 the reported interval on favorable refits or treat a missing interval as zero error.
+V1 suppresses a contrast's bootstrap CI if any refit fails identification or
+probability validity; individual coefficient intervals also require every refit.
 
 For the proposed integrated marketplace uncertainty path, refit responses,
 baselines, and learned calibration components relevant to the
@@ -1039,7 +1047,7 @@ Stage execution: `pending/running/succeeded/failed`. Module/metric behavior:
 | `sensitivity_only` | Assumption-based results separate from supported forecasts |
 
 If separate matrix columns are required but unavailable, never fill them with
-zero. Under the proposed extension, an independently qualified combined contrast
+zero. With `contrast_ols`, an independently qualified combined contrast
 may still be reported without those columns. Failures do not turn missing metrics
 into zero. Display flags alongside results and preserve them in CSV/JSON.
 
@@ -1086,8 +1094,9 @@ A DML file alone is insufficient.
 
 For the proposed demand extension, the representation retained by a bundle must
 support qualified contrasts without presenting arbitrary individual coefficients
-as identified. Its exact serialization and diagnostic interface remain to be chosen;
-existing `.joblib` bundles and implemented APIs are unchanged. Result/artifact
+as identified. V1 adds optional subspace and price/context-anchor fields to its
+`.joblib` bundle and an identification report to scenario JSON; old bundles load
+with the original behavior. Remaining logical metadata extensions need version mapping. Result/artifact
 requirements are maintained in [architecture conventions](../ARCHITECTURE.md#artifact-conventions).
 
 Tables/draws/trajectories use Parquet; specs/manifests/diagnostics JSON; models
@@ -1203,7 +1212,7 @@ protocols in the same document retain simple baselines, independent evaluators
 and frozen holdouts. Declare truths/assumptions and retain all rejected/failed
 attempts in their applicable denominators.
 
-The **proposed contrast-specific demand extension** requires an independent
+The **contrast-specific demand extension** requires an independent
 controlled assessment after algorithm, tolerances, estimands, support and interval
 rules are frozen. Compare current OLS/DML and a simple baseline on the same data,
 population, horizon and requested contrasts; retain unavailable results and their

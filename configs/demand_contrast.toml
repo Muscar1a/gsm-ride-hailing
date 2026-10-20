@@ -1,0 +1,27 @@
+[project]
+name = "demand-contrast-development"
+context_mode = "synthetic"
+
+[source]
+zones = [161]
+
+[simulation]
+seed = 88001
+slot_minutes = 60
+sessions_per_block = 1000
+dgp = "COLLINEAR_PRICE"
+
+[model]
+estimators = ["adjusted_ols", "dml", "contrast_ols"]
+scenario_estimator = "contrast_ols"
+min_price_cell_count = 5
+max_condition_number = 100000000.0
+n_trees = 5
+
+[evaluation]
+bootstrap_draws = 0
+
+[scenario]
+delta_price_x = 0.10
+delta_price_y = 0.10
+n_sessions = 10000

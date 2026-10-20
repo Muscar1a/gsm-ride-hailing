@@ -1,0 +1,43 @@
+{
+  "source_and_archive_hashes_match": true,
+  "frozen_source_files": 52,
+  "development_observed_files_verified": 40,
+  "assessment_observed_files_verified": 320,
+  "local_document_links_checked": 254,
+  "new_document_targets_missing": [],
+  "preexisting_document_targets_missing": [
+    [
+      "docs/submission/README.md",
+      "days/20261012/GSM_Syncup_Week1-3_20261012_v1.pptx"
+    ]
+  ],
+  "assessment_gates": {
+    "recovery_and_availability": true,
+    "no_holm_undercoverage_rejection": true,
+    "no_variation_rejection": true,
+    "collinear_x_only_rejection": true
+  },
+  "pytest": {
+    "passed": 653,
+    "warnings": 2,
+    "seconds": 188.63
+  },
+  "pipeline_smoke": "generate/fit/method_evaluation/analytic scenario passed; unidentified exported coefficients null",
+  "ruff_changed_python_and_src": "passed",
+  "ruff_format": "87 files passed",
+  "ty_src": "passed",
+  "preexisting_ruff_import_order_failures": [
+    "tests/test_estimation.py",
+    "tests/test_pipeline_dependencies.py"
+  ],
+  "limitations": [
+    "controlled evidence C only",
+    "observed coverage 90-100%; nominal coverage not certified",
+    "no visual UI verification or real GSM experiment"
+  ],
+  "supplemental_numerical_guards": {
+    "near_rank_threshold_both_sides": "passed",
+    "retained_condition_above_frozen_limit_withholds_forecast": "passed",
+    "scope": "post-assessment deterministic guard checks; no model or threshold changes"
+  }
+}

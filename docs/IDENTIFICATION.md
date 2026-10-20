@@ -354,10 +354,18 @@ the probability complement. Expected bookings equal assumed sessions times the
 sum of X and Y probabilities. Separate columns are withheld when price residuals
 have insufficient rank; only a varying, identifiable price may be reported alone.
 
-The research contribution and proposed next scope are defined in the
+The research contribution and scope are defined in the
 [unified proposal](reference/GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution).
-This technical specification describes the current implementation; its
-collinear-price rejection is unchanged.
+Default adjusted OLS/DML retain their collinear-price rejection. The opt-in
+`contrast_ols` uses SVD-reduced adjusted OLS with HC3/t inference for estimable
+contrasts; unavailable individual columns and their intervals remain null.
+Rank-one support checks both baseline and target against observed joint points
+on one affine price line, with context-specific counts, rather than requiring
+unobserved rectangular corners. Both absolute levels must also be compatible
+with the price/context anchor; no unsupported projection or probability repair.
+The default rectangular support path remains unchanged. See the
+[frozen contrast protocol](BENCHMARK.md#demand-contrast-assessment--frozen-protocol-20-october-2026)
+and [implementation design](reference/CORE_ENGINE_DESIGN.md#66-contrast-specific-demand-identification).
 
 ### Limits and extension gates
 

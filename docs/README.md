@@ -8,7 +8,8 @@ kết quả reporting tuần 2 chốt lúc **17:13:28 ngày 07/10/2026, Asia/Ban
 quản lý bài toán, contribution, phạm vi và yêu cầu kiểm chứng của đề tài. Lõi là
 **dự báo phản thực nhu cầu khi đổi giá X/Y**; nhánh cung lao động, mô phỏng và
 thử nghiệm phục vụ phạm vi nghiên cứu và đánh giá chính sách tương ứng. Bản mô tả
-phân biệt PoC hiện có với cơ chế nhận dạng theo từng phép đổi giá còn là đề xuất.
+phân biệt estimator mặc định với phần mở rộng controlled `contrast_ols`; cơ chế
+này đã triển khai, chưa phải tác động GSM hoặc nghiệm thu của Bun cho bản mới.
 [Core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard)
 quản lý thiết kế thuật toán và tiêu chuẩn hỗ trợ; trạng thái và bằng chứng có ngày
 chốt được dẫn bên dưới. Kết quả thiếu dữ liệu hoặc nhận diện giữ `not_evaluated`.
@@ -21,6 +22,12 @@ trong PoC này. Xem [WEEK3_POC_SCOPE.md](WEEK3_POC_SCOPE.md). Giả định cung
 cố định không xác định độ co giãn cung lao động trong mục tiêu nghiên cứu rộng hơn.
 
 ## Tiến độ hiện tại
+
+**20/10/2026 — lõi dự báo theo phép đổi giá:** đã đóng băng protocol, triển khai
+`contrast_ols` và hoàn tất assessment độc lập 320 bộ dữ liệu/3.840 dòng kết quả;
+bốn gate controlled đạt, toàn bộ 653 tests đạt. Coverage quan sát 90%–100%, chưa
+chứng nhận mọi CI đạt 95% hoặc hiệu ứng GSM. Xem
+[báo cáo kiểm chứng và giới hạn](submission/days/20261020/demand_contrast_assessment.md).
 
 **Đặc tả Week 1 được Bun duyệt ngày 11/10/2026.** Phạm vi duyệt gồm
 câu hỏi/estimand trong [IDENTIFICATION.md](IDENTIFICATION.md), đặc tả trạng thái

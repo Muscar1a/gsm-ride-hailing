@@ -83,7 +83,7 @@ class PriceRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, strict=True)
 
     run_id: str
-    estimator: Literal["naive_ols", "adjusted_ols", "dml"] = "adjusted_ols"
+    estimator: Literal["naive_ols", "adjusted_ols", "dml", "contrast_ols"] = "adjusted_ols"
     inference_method: Literal["analytic", "bootstrap"] = "analytic"
     delta_x: float = Field(default=0.1, ge=-0.9, le=1)
     delta_y: float = Field(default=0, ge=-0.9, le=1)

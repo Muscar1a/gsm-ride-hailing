@@ -11,6 +11,7 @@ import pandas as pd
 
 from gsm_poc.causal.estimate import ModelBundle, fit_estimator
 from gsm_poc.causal.features import TREATMENT_COLUMNS
+from gsm_poc.causal.identification import identifies
 from gsm_poc.core.config import Config
 
 
@@ -71,7 +72,9 @@ def bootstrap(
                 )
             for j, outcome in enumerate(("x", "y")):
                 for k, index in enumerate(bundle.active_treatments):
-                    record[f"theta_{outcome}{('x', 'y')[index]}"] = float(bundle.theta[j, k])
+                    record[f"theta_{outcome}{('x', 'y')[index]}"] = (
+                        float(bundle.theta[j, k]) if identifies(bundle, np.eye(2)[index]) else None
+                    )
             record["baseline_coefficients"] = bundle.base_rate_model.coef_.tolist()
             record["baseline_intercepts"] = np.asarray(bundle.base_rate_model.intercept_).tolist()
             record.update(status="succeeded", original_days=int(sampled.original_day_id.nunique()))

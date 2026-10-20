@@ -2,7 +2,6 @@ import dataclasses
 
 import numpy as np
 import pytest
-
 from gsm_poc.estimate import fit_all, fit_estimator
 from gsm_poc.evaluate import effect_rows
 from gsm_poc.features import date_splits, require_observed

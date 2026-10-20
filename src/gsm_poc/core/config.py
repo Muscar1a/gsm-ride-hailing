@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 DGPS = ("RCT_SYN", "OBSERVED_CONFOUNDING", "HIDDEN_CONFOUNDING", "NULL_EFFECT", "COLLINEAR_PRICE")
-ESTIMATORS = ("naive_ols", "adjusted_ols", "dml")
+ESTIMATORS = ("naive_ols", "adjusted_ols", "dml", "contrast_ols")
 TLC_SOURCE_VERSION = "NYC_TLC_HVFHV_2024-01"
 TLC_SOURCE_START = "2024-01-01"
 TLC_SOURCE_END = "2024-02-01"
@@ -68,7 +68,7 @@ class SimulationConfig:
 
 @dataclasses.dataclass(frozen=True)
 class ModelConfig:
-    estimators: tuple[str, ...] = ESTIMATORS
+    estimators: tuple[str, ...] = ESTIMATORS[:3]
     scenario_estimator: str = "dml"
     folds: int = 5
     n_trees: int = 50

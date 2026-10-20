@@ -12,6 +12,7 @@ from scipy.stats import binomtest
 
 from gsm_poc.causal.estimate import FitResult, ModelBundle, fit_all
 from gsm_poc.causal.features import date_splits
+from gsm_poc.causal.identification import identifies, price_levels_identified
 from gsm_poc.causal.uncertainty import (
     BootstrapResult,
     bootstrap,
@@ -40,7 +41,7 @@ def effect_rows(
 ) -> list[dict]:
     bundle = result.bundle
     baseline = None
-    if bundle is not None:
+    if bundle is not None and price_levels_identified(bundle, contexts, np.zeros(2)):
         probabilities = bundle.probabilities(contexts, np.zeros(2))
         if valid_probabilities(probabilities):
             baseline = np.average(probabilities[:, :2], axis=0, weights=contexts.n_sessions)
@@ -80,7 +81,7 @@ def effect_rows(
                 "train_blocks": result.diagnostics["train_blocks"],
                 "train_days": result.diagnostics["train_days"],
             }
-            if bundle is None or treatment not in bundle.active_treatments:
+            if bundle is None or not identifies(bundle, np.eye(2)[treatment]):
                 row["status"] = "not_identified"
                 rows.append(row)
                 continue
@@ -88,7 +89,22 @@ def effect_rows(
             row["theta"] = float(bundle.theta[j, k])
             if baseline is not None and baseline[j] >= config.model.elasticity_min_probability:
                 row["elasticity"] = float(bundle.theta[j, k] / baseline[j])
-            successful = [b for b in draws.bundles if b is not None] if draws else []
+            successful = (
+                [b for b in draws.bundles if b is not None and identifies(b, np.eye(2)[treatment])]
+                if draws
+                else []
+            )
+            if (
+                draws
+                and getattr(bundle, "contrast_basis", None) is not None
+                and len(successful) != draws.requested_draws
+            ):
+                row.update(
+                    interval_status="interval_unstable",
+                    interval_reason="A refit failed or lost coefficient identification",
+                )
+                rows.append(row)
+                continue
             if len(successful) >= 2:
                 theta_values = np.array([b.theta[j, k] for b in successful])
                 low, high = percentile_interval(theta_values, config.evaluation.interval_level)
@@ -98,6 +114,9 @@ def effect_rows(
                     row["interval_status"] = "interval_unstable"
                 elasticities, invalid = [], 0
                 for draw in successful:
+                    if not price_levels_identified(draw, contexts, np.zeros(2)):
+                        invalid += 1
+                        continue
                     p = draw.probabilities(contexts, np.zeros(2))
                     if not valid_probabilities(p):
                         invalid += 1
@@ -152,7 +171,7 @@ def method_metrics(
     probability_valid = None
     if bundle is not None and bundle.diagnostics.get("validation_probability_valid") is not False:
         target_log_price = resolve_target_log_price(bundle, config)
-        if target_log_price is not None:
+        if target_log_price is not None and price_levels_identified(bundle, test, target_log_price):
             truth = test[["block_id"]].merge(data.oracle, on="block_id", validate="one_to_one")
             true_xy = truth[["b_x", "b_y"]].to_numpy() + target_log_price @ theta.T
             prediction = bundle.probabilities(test, target_log_price)

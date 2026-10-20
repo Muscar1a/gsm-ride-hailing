@@ -199,13 +199,18 @@ the full simulator is complete. Simulation supplies the operational translation
 when the policy forecast requires it; its technical gates remain mandatory for
 those outputs. Initial target scope is one cluster and two services.
 
-**Demand forecast extension, 20 October 2026 — proposed, not implemented:** the
+**Demand forecast extension, 20 October 2026 — controlled implementation:** the
 target flow below adds separate identification and support checks for the requested
 baseline-to-target price contrast, following the
 [contribution specification](reference/GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution).
 A joint price contrast may be estimable without every separate price coefficient;
 this requires its own model assumptions and validation. It does not change the
-current PoC's collinear-price rejection, support rules or artifact schemas.
+default OLS/DML collinear-price rejection or previous acceptance evidence.
+Opt in to `contrast_ols` using `configs/demand_contrast.toml`; the original
+estimator list remains the default. The extension uses SVD-reduced adjusted OLS,
+HC3/t covariance and rank-one observed-line support; numerical rules and assessment
+scope are frozen in the [demand protocol](BENCHMARK.md#demand-contrast-assessment--frozen-protocol-20-october-2026).
+General context-dependent price manifolds and rank-deficient DML remain outside v1.
 
 | Package | Target responsibility |
 |---|---|
@@ -269,7 +274,7 @@ version links the demand/choice, participation and acceptance bundles, calibrati
 compensation rules, units, support and evidence. Scenario trials use those inputs;
 they do not fit responses from their own simulated outcomes.
 
-The proposed demand checks retain separate per-output identification and support
+The opt-in demand checks retain separate identification and support
 reports. Neither support nor residual price variation establishes a causal basis
 without assignment or defensible observational assumptions. Passing one gate
 cannot override failure of the other; unsupported or unidentified outputs remain
@@ -445,7 +450,7 @@ demand/participation/acceptance/calibration model version remains a target
 interface. New logical schemas require explicit versioning and implementation
 mapping; current manifests provide run/source/configuration references and checksums.
 
-For the **proposed contrast-specific extension**, `scenario_result` must preserve
+For the **contrast-specific extension**, the result contract must preserve
 the actual baseline/target price contrast, estimand/population/context/horizon,
 separate identification and support decisions with diagnostics, and per-output
 X/Y/total estimates, units, interval status and unavailable reasons. Separate price
@@ -455,7 +460,10 @@ refit results retain attempted/successful/failed counts and failure reasons.
 `demand_plan` may consume only qualified absolute request rates, with compatible
 baseline/exposure, never an unidentified coefficient or an unsupported rate inferred
 from a contrast alone. These are logical requirements pending schema/version mapping,
-not changes to existing bundles, CSV/JSON columns or manifests.
+not a claim that all proposed metadata fields have been added to existing exports.
+V1 adds an `identification` report to scenario JSON, stores the price subspace and
+context anchor in its model bundle, masks unavailable coefficients/intervals in
+existing exports, and counts lost-identification bootstrap draws separately.
 
 Research durations, distances and energy use seconds, km and kWh, with SOC in
 `[0,1]`. Preserve original TLC miles/USD alongside normalized distance; currency

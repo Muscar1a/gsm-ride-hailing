@@ -9,6 +9,7 @@ import pandas as pd
 from scipy.stats import norm, t
 
 from gsm_poc.causal.features import OUTCOME_COLUMNS, TREATMENT_COLUMNS, require_observed
+from gsm_poc.causal.identification import identifies
 from gsm_poc.core.artifacts import fingerprint
 
 if TYPE_CHECKING:
@@ -16,6 +17,17 @@ if TYPE_CHECKING:
 
 
 def model_identity(bundle: ModelBundle) -> str:
+    extra = {}
+    basis = getattr(bundle, "contrast_basis", None)
+    if basis is not None:
+        price_model = bundle.price_context_model
+        if price_model is None:
+            raise ValueError("Contrast model lacks its price/context anchor")
+        extra = {
+            "contrast_basis": basis.tolist(),
+            "price_context_coefficients": price_model.coef_.tolist(),
+            "price_context_intercepts": np.asarray(price_model.intercept_).tolist(),
+        }
     return fingerprint(
         {
             "estimator": bundle.estimator,
@@ -28,6 +40,7 @@ def model_identity(bundle: ModelBundle) -> str:
             "theta": bundle.theta.tolist(),
             "coefficients": bundle.base_rate_model.coef_.tolist(),
             "intercepts": np.asarray(bundle.base_rate_model.intercept_).tolist(),
+            **extra,
         }
     )
 
@@ -41,17 +54,21 @@ def coefficient_covariance(
     require_observed(train)
     weights = train.n_sessions.to_numpy(float)
     treatment = train[list(TREATMENT_COLUMNS)].to_numpy(float)[:, bundle.active_treatments]
+    basis = getattr(bundle, "contrast_basis", None)
+    if basis is not None:
+        treatment = treatment @ basis
     outcome = train[list(OUTCOME_COLUMNS)].to_numpy(float)
     controls = np.column_stack([np.ones(len(train)), bundle.encoder.transform(train)])
     design = np.column_stack([treatment, controls])
     rank = int(np.linalg.matrix_rank(design * np.sqrt(weights[:, None])))
     if len(train) <= rank:
         raise ValueError("Analytic inference has no residual degrees of freedom")
-    active_count = len(bundle.active_treatments)
-    if bundle.estimator == "adjusted_ols":
+    active_count = treatment.shape[1]
+    if bundle.estimator in ("adjusted_ols", "contrast_ols"):
         inverse = np.linalg.pinv(design.T @ (weights[:, None] * design), hermitian=True)
         fitted = (inverse @ design.T @ (weights[:, None] * outcome)).T
-        if not np.allclose(fitted[:, :active_count], bundle.theta, atol=1e-10, rtol=1e-9):
+        expected_theta = bundle.theta if basis is None else bundle.theta @ basis
+        if not np.allclose(fitted[:, :active_count], expected_theta, atol=1e-10, rtol=1e-9):
             raise ValueError("OLS score reconstruction differs from fitted effects")
         residual = outcome - design @ fitted.T
         loadings = (weights[:, None] * design) @ inverse
@@ -95,6 +112,12 @@ def coefficient_covariance(
         method, degrees = "block_score_normal", None
     else:
         raise ValueError("Analytic inference is qualified only for adjusted_ols and dml")
+    if basis is not None:
+        expanded_size = len(bundle.active_treatments) + controls.shape[1]
+        transform = np.zeros((expanded_size, design.shape[1]))
+        transform[: len(bundle.active_treatments), :active_count] = basis
+        transform[len(bundle.active_treatments) :, active_count:] = np.eye(controls.shape[1])
+        scores = (scores.reshape(len(train), 2, -1) @ transform.T).reshape(len(train), -1)
     if not np.isfinite(scores).all():
         raise ValueError("Nonfinite analytic coefficient scores")
     return {
@@ -113,7 +136,11 @@ def coefficient_covariance(
 def validate_covariance(bundle: ModelBundle, record: dict) -> np.ndarray:
     if not isinstance(record, dict):
         raise ValueError("Analytic covariance must be an object")
-    method = {"adjusted_ols": "block_hc3_t", "dml": "block_score_normal"}.get(bundle.estimator)
+    method = {
+        "adjusted_ols": "block_hc3_t",
+        "contrast_ols": "block_hc3_t",
+        "dml": "block_score_normal",
+    }.get(bundle.estimator)
     size = 2 * (len(bundle.active_treatments) + len(bundle.encoder.names) + 1)
     covariance = np.asarray(record.get("covariance"), dtype=float)
     degrees = record.get("degrees_of_freedom")
@@ -203,6 +230,8 @@ def analytic_intervals(
     for j, label in enumerate(("X", "Y")):
         p0 = output["probabilities"][label]["before_probability"]
         for k, active in enumerate(bundle.active_treatments):
+            if not identifies(bundle, np.eye(2)[active]):
+                continue
             gradient = np.zeros(2 * size)
             gradient[j * size + k] = 1
             theta_intervals[j][active] = bounds(float(bundle.theta[j, k]), gradient)

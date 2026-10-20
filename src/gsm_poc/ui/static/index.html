@@ -84,7 +84,7 @@
             <label>Action<select name="action" id="job-action"><option value="train">Generate data and fit a model</option><option value="prepare_demand">Prepare demand from a model</option><option value="simulate">Run marketplace simulation</option></select></label>
             <label id="source-field" hidden>Completed source run<select name="source_run_id" id="job-source"></select></label>
             <div id="train-fields" class="fields">
-              <label>Estimator<select name="estimator"><option>adjusted_ols</option><option>naive_ols</option><option>dml</option></select></label>
+              <label>Estimator<select name="estimator"><option>adjusted_ols</option><option>naive_ols</option><option>dml</option><option>contrast_ols</option></select></label>
               <label>Bootstrap draws<input name="bootstrap_draws" type="number" min="0" max="39" value="10" required></label>
             </div>
             <div id="demand-fields" class="fields" hidden>

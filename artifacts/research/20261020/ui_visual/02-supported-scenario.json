@@ -1,0 +1,195 @@
+{
+  "run_id": "ui-contrast-visual-20261020",
+  "scenario_id": "interactive-price-scenario",
+  "target_context_set": "all",
+  "scope": {
+    "target_context_set": "all",
+    "zones": [
+      161
+    ],
+    "selected_zone": 161,
+    "context_blocks": 144,
+    "context_weight_sessions": 7200
+  },
+  "source_kind": "synthetic",
+  "evidence_level": "C",
+  "request": {
+    "scenario_id": "interactive-price-scenario",
+    "baseline_multiplier_x": 1,
+    "baseline_multiplier_y": 1,
+    "delta_price_x": 0.1,
+    "delta_price_y": 0.1,
+    "n_sessions": 1000,
+    "interval_level": 0.95,
+    "target_context_set": "all"
+  },
+  "units": {
+    "probability": "fraction",
+    "delta_probability": "percentage_points",
+    "bookings": "expected quote-session choices",
+    "theta": "probability / log-price"
+  },
+  "assumption": "Quote session population held fixed; X/Y are hypothetical services",
+  "inference_method": "analytic",
+  "interval_kind": "analytic score/delta method; individual intervals",
+  "interval_scope": "individual",
+  "interval_validation_scope": "technical_checks_only",
+  "interval_calibration_status": "not_evaluated_for_this_run",
+  "coverage_warning": "Independent controlled evaluation retained 88–89% coverage in some cross-effect and scenario outputs; technical stability does not certify nominal 95% coverage",
+  "interval": {
+    "X_before_probability": {
+      "lower": 0.2942124547108342,
+      "upper": 0.30760750709758816
+    },
+    "Y_before_probability": {
+      "lower": 0.24724721939674396,
+      "upper": 0.25980975182283317
+    },
+    "NONE_before_probability": {
+      "lower": 0.4390146092816167,
+      "upper": 0.4521084576903838
+    },
+    "X_after_probability": {
+      "lower": 0.24953295050370647,
+      "upper": 0.26873367575852586
+    },
+    "Y_after_probability": {
+      "lower": 0.2111084646703775,
+      "upper": 0.2283169884305344
+    },
+    "NONE_after_probability": {
+      "lower": 0.5115173631385704,
+      "upper": 0.5307905574982855
+    },
+    "X_delta_percentage_points": {
+      "lower": -4.890374003707526,
+      "upper": -3.4649595509114786
+    },
+    "Y_delta_percentage_points": {
+      "lower": -4.071746932175876,
+      "upper": -2.6914048796906487
+    },
+    "NONE_delta_percentage_points": {
+      "lower": 6.842319406743137,
+      "upper": 8.276165959742409
+    },
+    "delta_expected_bookings": {
+      "lower": -82.761659597424,
+      "upper": -68.42319406743127
+    }
+  },
+  "identification": {
+    "status": "ok",
+    "contrast_identified": true,
+    "absolute_levels_identified": true,
+    "residual_rank": 1,
+    "rule_version": "contrast_subspace_v1",
+    "delta_log_price": [
+      0.09531017980432493,
+      0.09531017980432493
+    ],
+    "causal_assumption": "Sufficient pretreatment adjustment or valid randomized assignment"
+  },
+  "status": "ok",
+  "support_status": "ok",
+  "reasons": [],
+  "estimator": "contrast_ols",
+  "dataset_id": "ds-e2e46e3818d799080afc",
+  "outcome_order": [
+    "X",
+    "Y"
+  ],
+  "treatment_order": [
+    "X",
+    "Y"
+  ],
+  "theta": [
+    [
+      null,
+      null
+    ],
+    [
+      null,
+      null
+    ]
+  ],
+  "elasticity_at_baseline": [
+    [
+      null,
+      null
+    ],
+    [
+      null,
+      null
+    ]
+  ],
+  "context_blocks": 144,
+  "context_weight_sessions": 7200,
+  "probabilities": {
+    "X": {
+      "before_probability": 0.30090998090421117,
+      "after_probability": 0.25913331313111615,
+      "delta_percentage_points": -4.177666777309502,
+      "before_expected_choices": 300.9099809042112,
+      "after_expected_choices": 259.13331313111615
+    },
+    "Y": {
+      "before_probability": 0.2535284856097886,
+      "after_probability": 0.21971272655045596,
+      "delta_percentage_points": -3.3815759059332624,
+      "before_expected_choices": 253.5284856097886,
+      "after_expected_choices": 219.71272655045595
+    },
+    "NONE": {
+      "before_probability": 0.44556153348600025,
+      "after_probability": 0.521153960318428,
+      "delta_percentage_points": 7.559242683242773,
+      "before_expected_choices": 445.56153348600026,
+      "after_expected_choices": 521.153960318428
+    }
+  },
+  "baseline_multiplier": [
+    1,
+    1
+  ],
+  "target_multiplier": [
+    1.1,
+    1.1
+  ],
+  "delta_log_price": [
+    0.09531017980432493,
+    0.09531017980432493
+  ],
+  "before_expected_bookings": 554.4384665139997,
+  "after_expected_bookings": 478.8460396815721,
+  "delta_expected_bookings": -75.59242683242763,
+  "analytic": {
+    "interval_status": "ok",
+    "method": "block_hc3_t",
+    "degrees_of_freedom": 468,
+    "train_blocks": 480,
+    "assumption": "Independent choice-block scores; conditional on fixed contexts/nuisances"
+  },
+  "interval_level": 0.95,
+  "theta_interval": [
+    [
+      null,
+      null
+    ],
+    [
+      null,
+      null
+    ]
+  ],
+  "elasticity_interval": [
+    [
+      null,
+      null
+    ],
+    [
+      null,
+      null
+    ]
+  ],
+  "interval_status": "ok"
+}

@@ -20,6 +20,7 @@ from gsm_poc.causal.features import (
     day_folds,
     require_observed,
 )
+from gsm_poc.causal.identification import price_basis, price_levels_identified
 from gsm_poc.core.config import Config
 from gsm_poc.core.validators import valid_probabilities
 
@@ -40,12 +41,16 @@ class ModelBundle:
     outcome_order: tuple[str, ...] = ("X", "Y")
     treatment_order: tuple[str, ...] = ("X", "Y")
     analytic_inference: dict | None = None
+    contrast_basis: np.ndarray | None = None
+    price_context_model: LinearRegression | None = None
 
     def baseline(self, context: pd.DataFrame) -> np.ndarray:
         return self.base_rate_model.predict(self.encoder.transform(context))
 
     def probabilities(self, context: pd.DataFrame, treatment: np.ndarray) -> np.ndarray:
         treatment = np.broadcast_to(np.asarray(treatment, dtype=float), (len(context), 2))
+        if not price_levels_identified(self, context, treatment):
+            raise ValueError("Absolute price levels are not identified for these contexts")
         xy = self.baseline(context) + treatment[:, self.active_treatments] @ self.theta.T
         return np.column_stack([xy, 1 - xy.sum(axis=1)])
 
@@ -118,17 +123,31 @@ def fit_estimator(
     adjusted_residual = t - adjusted_t.predict(w)
     rank, condition = _rank(adjusted_residual, weights)
     diagnostic.update(residual_rank=rank, condition_number=condition)
-    if rank < len(active):
+    basis = None
+    if estimator == "contrast_ols":
+        basis, condition = price_basis(adjusted_residual, weights)
+        rank = basis.shape[1]
+        diagnostic.update(
+            residual_rank=rank,
+            condition_number=condition,
+            identification_mode="contrast_subspace_v1",
+            contrast_basis=basis.tolist(),
+            causal_assumption="Sufficient pretreatment adjustment or valid randomized assignment",
+        )
+    if rank == 0 or (rank < len(active) and estimator != "contrast_ols"):
         diagnostic.update(status="not_identified", reason="Residual price covariance lacks rank")
         return FitResult(None, diagnostic)
     if condition is None or condition > config.model.max_condition_number:
         diagnostic["warnings"].append("Residual price covariance is poorly conditioned")
     actual_seed = config.simulation.seed if seed is None else seed
     crossfit_residuals = None
-    if estimator in ("naive_ols", "adjusted_ols"):
-        design = t if estimator == "naive_ols" else np.column_stack([t, w])
+    if estimator in ("naive_ols", "adjusted_ols", "contrast_ols"):
+        fitted_t = t if basis is None else t @ basis
+        design = fitted_t if estimator == "naive_ols" else np.column_stack([fitted_t, w])
         model = LinearRegression().fit(design, outcome, sample_weight=weights)
-        theta = model.coef_[:, : len(active)]
+        theta = model.coef_[:, : fitted_t.shape[1]]
+        if basis is not None:
+            theta = theta @ basis.T
     elif estimator == "dml":
         # Lazy import keeps non-DML commands lightweight; EconML's default CI is disabled.
         from econml.dml import LinearDML
@@ -206,6 +225,8 @@ def fit_estimator(
         str(train.dataset_id.iloc[0]),
         str(train.dgp_id.iloc[0]),
         int(train.seed.iloc[0]),
+        contrast_basis=basis,
+        price_context_model=adjusted_t if basis is not None else None,
     )
     if prepare_analytic:
         try:

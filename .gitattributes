@@ -1,0 +1,2 @@
+# Preserve exact bytes of frozen assessment and UI evidence for checksum checks.
+artifacts/research/20261020/** -text

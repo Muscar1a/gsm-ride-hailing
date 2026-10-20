@@ -1,0 +1,103 @@
+{
+  "review_date": "2026-10-20",
+  "issue_url": "https://github.com/Muscar1a/gsm-ride-hailing/issues/1",
+  "head": "7ebae15be9c4dcb0a1b28474a74531236de72658",
+  "working_tree": "Includes uncommitted demand-contrast and documentation changes; not assumed published on main.",
+  "fixture": {
+    "run_id": "ui-contrast-visual-20261020",
+    "data": "synthetic COLLINEAR_PRICE",
+    "seed": 88001,
+    "zone": 161,
+    "sessions_per_block": 50,
+    "min_price_cell_count": 1,
+    "purpose": "UI checks only, not the scientific assessment protocol"
+  },
+  "supplementary_support_check": {
+    "min_price_cell_count": 5,
+    "status": "ok",
+    "minimum_training_blocks_in_point_context_groups": 9,
+    "recorded_from": "Local scenario cross-check during visual review"
+  },
+  "observed_supported_case": {
+    "estimator": "contrast_ols",
+    "inference": "analytic",
+    "quote_sessions": 1000,
+    "price_x_change": 0.1,
+    "price_y_change": 0.1,
+    "status": "ok",
+    "support_status": "ok",
+    "interval_status": "ok",
+    "baseline_total": 554.4384665139997,
+    "target_total": 478.8460396815721,
+    "delta_total": -75.59242683242763,
+    "delta_total_interval": [
+      -82.761659597424,
+      -68.42319406743127
+    ]
+  },
+  "manual_checks": {
+    "x_only_change": "not_identified, no forecast KPI",
+    "joint_change_20_percent": "out_of_support, no forecast KPI; support metadata bug",
+    "double_quote_sessions": "Unchanged probabilities, doubled expected counts",
+    "bootstrap_zero_draws": "Point retained, CI withheld; nominal NaN% bug",
+    "separate_coefficients": "null in JSON, unavailable in CSV, dash in UI",
+    "export_json_and_csv": "Downloaded through UI and checked",
+    "console_errors_observed": [],
+    "desktop_document_width": 1265,
+    "desktop_viewport_width": 1265
+  },
+  "frozen_snapshot": {
+    "path": "artifacts/research/20261020/demand_contrast_v1_final/freeze.json",
+    "checked_files": 52,
+    "mismatches": []
+  },
+  "files": {
+    "01-unidentified-x-only.jpg": {
+      "sha256": "e949e0ba4f2f74c702be280a328c6fbaf212f14f62da2c0adbecf3e03a4688e3",
+      "bytes": 70910
+    },
+    "02-supported-joint-forecast.jpg": {
+      "sha256": "c27ef4f2229b71830d2ba4f8c76ec886e30d0bda55f428ef1f0ae03e52ea86e1",
+      "bytes": 153712
+    },
+    "02-supported-scenario.json": {
+      "sha256": "ba9d1928a9ec0064d48d37ace93bb461bfcf6d71d6231377f5695b5cf854e5d8",
+      "bytes": 4920
+    },
+    "03-out-of-support.jpg": {
+      "sha256": "a4ec228a05391e5a9e1adf6ad8cc67ad1c5f9f1f508f3044ea403cc7a90f9c1e",
+      "bytes": 68816
+    },
+    "04-bootstrap-unavailable.jpg": {
+      "sha256": "e87c0ce57e55418134d46e98d0b19a94942bfd2287161ae034ef298071edd296",
+      "bytes": 157505
+    },
+    "05-effects-unavailable.jpg": {
+      "sha256": "67e08830fba8908a1b2d1a6b072d9d092cce8cbd747c90e92f7741fe944f4ed6",
+      "bytes": 64643
+    },
+    "05-exported-effects.csv": {
+      "sha256": "77b6bd54ace8535cbbc293423b59f5a3936ba8f0c72a72ea5c44cbd551a0d3a9",
+      "bytes": 1726
+    },
+    "06-legacy-insufficient-support.jpg": {
+      "sha256": "bd773bab5550acc19513c58f747b3ad078e24e3561fb650233b5fa5ed8b4dab9",
+      "bytes": 448359
+    },
+    "07-legacy-out-of-support.jpg": {
+      "sha256": "bb903393cb30dc035f3e6adad11c5f55b9de26301ac49eb649bfb3c3b09c3a31",
+      "bytes": 68537
+    },
+    "08-final-supported.jpg": {
+      "sha256": "30b0ff022996661bd4a436a48d2e2f0161f4159fb3020540bc66fbe877e4ff04",
+      "bytes": 68748
+    }
+  },
+  "not_checked": [
+    "mobile",
+    "all operational tabs",
+    "GSM field calibration",
+    "download performance"
+  ],
+  "bugs_fixed_in_this_review": false
+}

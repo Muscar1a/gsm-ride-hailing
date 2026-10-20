@@ -1,0 +1,16 @@
+{
+  "protocol_id": "demand-contrast-v1-20261020",
+  "population": "fixed quote opportunities; zone 161 weekday off-peak test contexts",
+  "development_seeds": [88001, 88002, 88003, 88004, 88005],
+  "assessment_seeds": {"start": 89001, "stop_exclusive": 89041},
+  "regimes": ["independent", "single_price", "collinear", "no_variation"],
+  "effects": ["RCT_SYN", "NULL_EFFECT"],
+  "estimators": ["unchanged", "adjusted_ols", "dml", "contrast_ols"],
+  "numerics": {"covariance_rank_atol": 1e-10, "span_atol": 1e-8, "max_condition_number": 100000000.0},
+  "support": {"min_training_blocks_per_context_point": 5, "multiplier_bounds": [0.9, 1.1]},
+  "simulation": {"zones": [161], "slot_minutes": 60, "sessions_per_block": 1000, "n_trees": 5},
+  "inference": {"method": "adjusted OLS HC3/t on reduced design", "level": 0.95, "unit": "independent controlled choice block"},
+  "gates": {"max_effect_probability_rmse": 0.01, "max_effect_probability_abs_bias": 0.005, "required_valid_fraction": 1.0, "required_rejection_fraction": 1.0, "family_undercoverage_alpha": 0.05},
+  "limits": {"wall_seconds": 600, "max_data_sets": 320},
+  "scope": "Controlled evidence C only; no claim of nominal calibration for every output or GSM effects. No tuning on assessment seeds."
+}

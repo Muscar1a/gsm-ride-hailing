@@ -6,6 +6,7 @@ code đang sử dụng nằm trong `src/` và `scripts/`.
 
 | Ngày | Bằng chứng | Báo cáo |
 |---|---|---|
+| 20/10/2026 | [Demand contrast assessment](20261020/demand_contrast_v1_final/assessment/summary.json), [source freeze](20261020/demand_contrast_v1_final/freeze.json) | [Báo cáo controlled](../../docs/submission/days/20261020/demand_contrast_assessment.md) |
 | 16/10/2026 | [Week-4/5 verification](20261016/week45_verification.json), [kiểm chứng ZIP và thư mục sạch](20261016/week45_delivery_verification.json) | [Week-4/5 closeout](../../docs/submission/days/20261016/week45_closeout.md) |
 | 07/10/2026 | [Week-2 reporting và thống kê](20261007/results/week2/) | [Hồ sơ 07/10](../../docs/submission/days/20261007/README.md) |
 | 11/10/2026 | [Chẩn đoán và assessment](20261011/results/), [inference closeout](20261011/week2_inference_closeout.json), [cung lao động](20261011/week3_supply_verification.json) | [Hồ sơ 11/10](../../docs/submission/days/20261011/README.md) |

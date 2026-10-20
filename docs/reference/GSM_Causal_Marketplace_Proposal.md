@@ -10,8 +10,8 @@ dịch vụ**, với khả năng nhận dạng, miền hỗ trợ và bất đ�
 phép so sánh. Mô phỏng vận hành, kế toán, dashboard và exports phục vụ đánh giá,
 kiểm chứng và sử dụng kết quả dự báo.
 
-Phần nhận dạng theo từng phép đổi giá trong tài liệu này là **đề xuất nghiên cứu,
-chưa triển khai và chưa nghiệm thu**. Nó không thay đổi phạm vi PoC đã được Bun
+Nhận dạng theo từng phép đổi giá đã có **bản triển khai controlled `contrast_ols`**,
+chưa ghi nhận nghiệm thu bản mới hoặc xác nhận GSM. Nó không thay đổi phạm vi PoC đã được Bun
 nghiệm thu ngày 12/10/2026 hoặc các kết quả lịch sử. Trạng thái triển khai và bằng
 chứng có ngày chốt được quản lý tại [danh mục tài liệu](../README.md).
 
@@ -42,6 +42,13 @@ dịch vụ. Giá trị kỳ vọng là giúp lựa chọn chính sách đáng t
 mục tiêu, chưa phải lợi ích kinh doanh đã đo được.
 
 ## 2. Đại lượng dự báo và giới hạn diễn giải
+
+**Câu hỏi dự báo và baseline đã được Bun chốt ngày 20/10/2026.** Kịch bản cơ sở
+giữ nguyên giá hiện tại, cùng quần thể phiên báo giá, khu vực và khung thời gian;
+tác động là nhu cầu kỳ vọng khi đổi giá trừ nhu cầu kỳ vọng khi giữ nguyên giá.
+Baseline nhu cầu được ước lượng đúng bối cảnh, không lấy trực tiếp số chuyến hoàn
+thành lịch sử. Mô hình đối chứng là adjusted OLS hiện tại, dự báo tác động bằng 0
+và DML; kịch bản cơ sở và mô hình đối chứng là hai khái niệm riêng.
 
 Mỗi kết quả phải khai báo can thiệp/phép so sánh, outcome, đơn vị, quần thể,
 zone/dịch vụ, bối cảnh, chân trời hành vi, biến thiên chính sách và giả định nhận
@@ -76,7 +83,7 @@ Cần theo dõi vùng lân cận để phân biệt cung tăng thêm với tái 
 
 <a id="demand-forecasting-contribution"></a>
 
-## 3. Contribution lõi và cơ chế dự báo đề xuất
+## 3. Contribution lõi và cơ chế dự báo
 
 ### 3.1. Phát biểu contribution
 
@@ -96,7 +103,7 @@ Mô phỏng, paired seeds, checkpoint và kế toán hỗ trợ kiểm chứng t
 chúng không thay thế bằng chứng cho mô hình nhu cầu. DML, ma trận tác động 2×2,
 bootstrap, support và switchback riêng lẻ không được coi là điểm mới của đề xuất.
 
-### 3.2. Hành vi cần đặc tả trước triển khai
+### 3.2. Quy tắc dự báo phiên bản 1
 
 1. Xác định giá cơ sở/ứng viên, quần thể, bối cảnh, chân trời dự báo và cơ sở nhận
    dạng. Biến kiểm soát phải có trước can thiệp. Không điều chỉnh tùy tiện biến
@@ -104,10 +111,11 @@ bootstrap, support và switchback riêng lẻ không được coi là điểm m�
 2. Kiểm tra riêng khả năng nhận dạng và miền hỗ trợ. Có support hoặc biến thiên
    giá chưa đủ cho kết luận nhân quả; phải nêu assignment hoặc giả định quan sát,
    gồm các nguy cơ gây nhiễu và phụ thuộc không được xử lý.
-3. Đánh giá đúng phép đổi giá được hỏi. Trong mô hình tuyến tính, một phương án
-   cần nghiên cứu là kiểm tra vector thay đổi log-giá thuộc không gian biến thiên
-   giá còn lại sau điều chỉnh bối cảnh. Thuật toán, sai số số học và ngưỡng phải
-   chốt trước đánh giá; đây chưa phải thuật toán đã chọn hoặc xác nhận là mới.
+3. Đánh giá đúng phép đổi giá được hỏi. `contrast_ols` dùng SVD để kiểm tra vector
+   thay đổi log-giá thuộc không gian biến thiên giá còn lại sau điều chỉnh bối cảnh,
+   rồi fit hồi quy điều chỉnh trên các tọa độ được giữ. Ngưỡng số học, support và
+   HC3/t đã đóng băng trong [protocol](../BENCHMARK.md#demand-contrast-assessment--frozen-protocol-20-october-2026).
+   Đây là lựa chọn triển khai phiên bản 1, chưa phải xác nhận tính mới.
 4. Kiểm tra cả giá cơ sở và giá ứng viên trong bối cảnh được chọn. Một hướng thay
    đổi có thể ước lượng không bảo đảm hai mức giá tuyệt đối được hỗ trợ. Nội suy
    cần giả định riêng và dữ liệu hai phía; không nới ngưỡng theo kết quả.
@@ -118,15 +126,15 @@ bootstrap, support và switchback riêng lẻ không được coi là điểm m�
    mất thông tin nhận dạng, toàn bộ mẫu số và trạng thái thất bại. Không chỉ tính
    trên các lần thuận lợi; quy tắc giữ/không xuất CI phải được đặc tả trước.
 
-### 3.3. PoC hiện hành và phần đề xuất
+### 3.3. Estimator hiện tại và phần mở rộng controlled
 
-| Thành phần | PoC hiện hành | Phần đề xuất |
+| Thành phần | OLS/DML hiện tại | `contrast_ols` phiên bản 1 |
 |---|---|---|
 | Lựa chọn dịch vụ | X/Y/NONE trên tập phiên báo giá cố định; mô hình cộng tính với hệ số giá chung | Giữ quần thể và chân trời dự báo tường minh cho từng phép hỏi |
 | Tác động giá | OLS/DML; các cột trực tiếp/chéo khi nhận dạng được | Dự báo theo phép so sánh được nhận dạng, kể cả một số tác động kết hợp |
-| Hai giá đồng biến | Khi cả hai giá thay đổi nhưng residual covariance thiếu hạng, trả `not_identified`, không giữ model bundle | Xem xét dự báo một số đổi giá kết hợp khi chưa xác định được từng cột riêng |
-| Miền hỗ trợ | Kiểm tra giá cơ sở/ứng viên, ô giá kết hợp và bối cảnh từ dữ liệu huấn luyện | Đặc tả support phù hợp cho từng phép so sánh; vẫn chặn ngoại suy không được hỗ trợ |
-| Bất định | Analytic và bootstrap theo ngày, có trạng thái lỗi và giới hạn calibration | Suy luận cho phép so sánh nhận dạng được; không tạo CI cho hệ số chưa xác định |
+| Hai giá đồng biến | Khi cả hai giá thay đổi nhưng residual covariance thiếu hạng, trả `not_identified`, không giữ model bundle | Giữ biểu diễn trên không gian nhận dạng được; hệ số riêng chưa xác định vẫn để null |
+| Miền hỗ trợ | Kiểm tra giá cơ sở/ứng viên, ô giá kết hợp và bối cảnh từ dữ liệu huấn luyện | Khi thiếu hạng, kiểm tra hai mức trên một đường giá affine quan sát được; vẫn chặn ngoại suy và bối cảnh mỏng |
+| Bất định | Analytic và bootstrap theo ngày, có trạng thái lỗi và giới hạn calibration | HC3/t trên thiết kế giảm hạng; không xuất CI cho hệ số chưa xác định; bootstrap giữ đủ mẫu số lỗi |
 | Nhu cầu thiếu quan sát | Chưa khôi phục tổng nhu cầu tiềm ẩn từ số chuyến hoàn thành | Chỉ mở rộng khi có dữ liệu và cơ sở nhận dạng phù hợp |
 
 Trường hợp chỉ một giá biến thiên, giá kia cố định đã có thể cung cấp một cột
@@ -233,10 +241,11 @@ Dữ liệu kiểm soát chỉ xác nhận điều kiện đã thử; chưa ch�
 [Kết quả inference hiện có](../submission/days/20261011/week2_inference_closeout.md)
 giữ nguyên giới hạn coverage, support và calibration.
 
-Trước khi viết mã cơ chế mới cần chốt: estimand/quần thể; một cơ chế khác biệt
-chính; dữ liệu nhận dạng; quy tắc support và nhận dạng; cấu trúc kết quả một phần;
-suy luận bất định; baseline và tiêu chí assessment. Ngưỡng phải được đóng băng
-trước đánh giá cuối. Chỉ thêm phi tuyến/heterogeneity khi có nhu cầu và bằng chứng.
+Estimand/quần thể, cơ chế phiên bản 1, quy tắc nhận dạng/support, baseline, suy luận
+và tiêu chí assessment được đóng băng trong protocol trước assessment độc lập.
+Giả định nhận dạng GSM và dữ liệu thực vẫn cần kiểm chứng riêng. Chỉ thêm phi
+tuyến/heterogeneity khi có nhu cầu và bằng chứng; không điều chỉnh ngưỡng theo
+kết quả assessment để đạt gate.
 
 Với dự báo tích hợp, giữ riêng bất định thống kê, nhiễu Monte Carlo và sensitivity
 với giả định vận hành. CI Monte Carlo khi giữ demand fit/rules cố định không trở

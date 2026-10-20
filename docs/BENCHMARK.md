@@ -172,6 +172,70 @@ include substitution between them. Missing financial inputs leave the respective
 economic outcome unavailable; operational improvements or booking value do not
 establish a financial success claim.
 
+## Demand contrast assessment — frozen protocol, 20 October 2026
+
+The [unified proposal](reference/GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution)
+defines the question. Protocol `demand-contrast-v1-20261020` is fixed in
+[the machine-readable protocol](../configs/demand_contrast_protocol.json) before
+implementation and assessment. Existing executed protocols remain unchanged.
+
+Compare `contrast_ols` with unchanged-demand (zero effect), current adjusted OLS
+and current DML. The extension uses adjusted OLS on an SVD-reduced residual price
+design, keeping unidentified individual coefficients unavailable. Covariance rank
+uses absolute eigenvalue threshold `1e-10`, span membership uses log-price absolute
+residual tolerance `1e-8`, and retained covariance condition must not exceed `1e8`.
+Weak directions below the numerical rank threshold are unavailable; near-threshold
+and poorly conditioned cases are explicit rejection/sensitivity tests, not evidence
+of strong identification. These numerical choices do not remove hidden confounding.
+
+Population: fixed quote opportunities, zone 161, weekday off-peak test contexts.
+Use the existing additive controlled generator, one-hour blocks and 1,000 sessions
+per block; training dates precede validation and test dates. Treatment regimes are
+independent prices, one varying price, equal X/Y price movements and no variation;
+run both nonzero and null effects. The evaluator may access oracle truth, fitting
+and scenario code may not. DML keeps its existing rank rejection and is a comparator.
+
+Baseline prices are `(1, 1)`; the joint target is `(1.1, 1.1)` for independent
+and collinear regimes, `(1.1, 1)` for single-price, and no-variation data must reject
+a nonzero change. Also test an unsupported X-only contrast under collinearity.
+Support requires five original training blocks at each required point/context;
+rank-one prices use bracketing observed joint points in their affine price line,
+not unobserved rectangular corners. Both absolute endpoints, context compatibility
+and per-context probability validity must qualify. Preserve full-rank rectangular
+support checks. Never widen bounds, pool thin contexts or project the question.
+
+Individual nominal 95% HC3/t intervals target the fixed-population expected effect,
+preserving X/Y and baseline covariance. Independence is a controlled-block design
+assumption, not a GSM dependence claim. Bootstrap is a separate compatibility path:
+keep original training support, track lost identification and withhold contrast
+intervals if any requested refit fails qualification; do not condition on survivors.
+
+Development seeds are 88001–88005; assessment seeds 89001–89040 are disjoint and
+cannot tune this version. Freeze source/configuration hashes and environment after
+development and verify them before/after assessment. The bounded assessment has
+320 datasets (40 seeds × four regimes × nonzero/null effects), a 600-second limit
+and five-tree DML nuisances. Record runtime, all attempts, failures and denominators.
+
+For X, Y and X+Y effect probabilities, require RMSE ≤0.01 and absolute bias ≤0.005.
+Every eligible extension forecast must be valid; every intentionally unidentified,
+unsupported, weak/invalid-probability regression case must reject. Assess coverage
+with exact binomial intervals and one-sided tests against 0.95, Holm-adjusted over
+the prespecified 18 output families (three identifiable regimes × two effect
+settings × three outputs), family alpha 0.05. Retain interval availability and raw
+coverage even when tests do not reject; a pass does not certify exact 95% coverage.
+Report sign errors for nonzero effects and null CI exclusion separately.
+
+Report all-model availability and paired error comparisons on common valid cases;
+unavailable baseline forecasts are not zero. Zero-effect predictions have no
+statistical CI. The claimed utility is additional qualified collinear contrasts,
+not a guarantee of better accuracy than OLS on already identified cases. Independent
+truth and rejection fixtures isolate identification from support. A failing final
+gate remains a failure; any revision needs a new protocol and fresh assessment.
+
+Executed assessment: [20 October results and limits](submission/days/20261020/demand_contrast_assessment.md).
+All frozen gates passed for the controlled scope; observed coverage still ranges
+from 90% to 100% across the 18 families and does not certify universal 95% coverage.
+
 ## 1. Method benchmark
 
 Keep the existing naive OLS, adjusted OLS and LinearDML comparison. Use identical

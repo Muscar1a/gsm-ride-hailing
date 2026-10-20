@@ -3,7 +3,6 @@ import dataclasses
 import joblib
 import pandas as pd
 import pytest
-
 from gsm_poc.artifacts import (
     completed_run,
     read_json,
@@ -13,6 +12,7 @@ from gsm_poc.artifacts import (
     write_model,
 )
 from gsm_poc.generate import generate, save_generated
+
 from gsm_poc.pipeline import Pipeline
 
 

@@ -12,6 +12,7 @@ import pandas as pd
 from gsm_poc.causal.analytic import analytic_intervals
 from gsm_poc.causal.estimate import ModelBundle
 from gsm_poc.causal.features import PRICE_LEVELS
+from gsm_poc.causal.identification import identifies, line_support, price_levels_identified
 from gsm_poc.causal.uncertainty import BootstrapResult, percentile_interval
 from gsm_poc.core.config import Config
 from gsm_poc.core.validators import valid_probabilities
@@ -71,6 +72,14 @@ def joint_support(
         or (multipliers > 1.1 + 1e-10).any()
     ):
         return "out_of_support", ["Price is outside the designed multiplier range 0.90–1.10"]
+    basis = getattr(bundle, "contrast_basis", None)
+    if basis is not None and basis.shape[1] < len(bundle.active_treatments):
+        if (
+            bundle.diagnostics.get("condition_number") is None
+            or bundle.diagnostics["condition_number"] > config.model.max_condition_number
+        ):
+            return "insufficient_support", ["Retained treatment covariance is poorly conditioned"]
+        return line_support(bundle, contexts, multipliers, config)
     reasons = []
     group_columns = ["zone_id", "is_weekend", "is_peak"]
     groups = contexts[group_columns].drop_duplicates()
@@ -184,6 +193,24 @@ def scenario(
         1 + np.array([request.delta_price_x, request.delta_price_y])
     )
     t0, t1 = np.log(baseline_multiplier), np.log(target_multiplier)
+    if getattr(bundle, "contrast_basis", None) is not None:
+        identified = identifies(bundle, t1 - t0)
+        levels = all(price_levels_identified(bundle, contexts, point) for point in (t0, t1))
+        output["identification"] = {
+            "status": "ok" if identified and levels else "not_identified",
+            "contrast_identified": identified,
+            "absolute_levels_identified": levels,
+            "residual_rank": bundle.diagnostics["residual_rank"],
+            "rule_version": "contrast_subspace_v1",
+            "delta_log_price": (t1 - t0).tolist(),
+            "causal_assumption": bundle.diagnostics["causal_assumption"],
+        }
+        if not identified or not levels:
+            output.update(
+                status="not_identified",
+                reasons=["Requested contrast or absolute price levels lack identification"],
+            )
+            return output
     inactive = set(range(2)) - set(bundle.active_treatments)
     for k in inactive:
         observed = bundle.diagnostics["constant_log_prices"][("X", "Y")[k]]
@@ -202,6 +229,9 @@ def scenario(
         if status == "insufficient_support":
             support_status = status
             reasons.extend(point_reasons)
+    if getattr(bundle, "contrast_basis", None) is not None and support_status != "ok":
+        output.update(status=support_status, support_status=support_status, reasons=reasons)
+        return output
     before, after = bundle.probabilities(contexts, t0), bundle.probabilities(contexts, t1)
     if not valid_probabilities(before) or not valid_probabilities(after):
         output.update(
@@ -232,6 +262,8 @@ def scenario(
     elasticity = [[None, None], [None, None]]
     for j in range(2):
         for k, active in enumerate(bundle.active_treatments):
+            if not identifies(bundle, np.eye(2)[active]):
+                continue
             theta[j][active] = float(bundle.theta[j, k])
             if p0[j] >= config.model.elasticity_min_probability:
                 elasticity[j][active] = float(bundle.theta[j, k] / p0[j])
@@ -275,12 +307,18 @@ def scenario(
                 output["status"] = "interval_unstable"
         return output
     requested = draws.requested_draws if draws else 0
-    failed, invalid, values = 0, 0, []
+    failed, invalid, lost_identification, values = 0, 0, 0, []
     theta_values, elasticity_values = [], []
     if draws:
         for draw in draws.bundles:
             if draw is None:
                 failed += 1
+                continue
+            if getattr(bundle, "contrast_basis", None) is not None and (
+                not identifies(draw, t1 - t0)
+                or not all(price_levels_identified(draw, contexts, point) for point in (t0, t1))
+            ):
+                lost_identification += 1
                 continue
             b, a = draw.probabilities(contexts, t0), draw.probabilities(contexts, t1)
             if not valid_probabilities(b) or not valid_probabilities(a):
@@ -310,13 +348,15 @@ def scenario(
                     ]
                 )
             )
-    failure_fraction = (failed + invalid) / requested if requested else 1.0
+    failure_fraction = (failed + invalid + lost_identification) / requested if requested else 1.0
     stable = (
         draws is not None
         and draws.interval_status == "ok"
         and len(values) >= config.evaluation.reporting_min_draws
         and failure_fraction <= config.evaluation.max_failure_fraction
     )
+    if getattr(bundle, "contrast_basis", None) is not None and (failed or lost_identification):
+        stable = False
     output["bootstrap"] = {
         "requested_draws": requested,
         "fit_failed_draws": failed,
@@ -324,8 +364,14 @@ def scenario(
         "valid_draws": len(values),
         "failure_fraction": failure_fraction,
         "interval_status": "ok" if stable else "interval_unstable",
+        **(
+            {"lost_identification_draws": lost_identification}
+            if getattr(bundle, "contrast_basis", None) is not None
+            else {}
+        ),
     }
     if stable:
+        assert draws is not None
         # Do not condition intervals on dropping invalid draws: any invalid probability
         # suppresses an interval, even if the failure rate is below the warning limit.
         if invalid:
@@ -351,6 +397,12 @@ def scenario(
             elasticities = np.array(elasticity_values)
             for j in range(2):
                 for k, active in enumerate(bundle.active_treatments):
+                    if not identifies(bundle, np.eye(2)[active]) or any(
+                        not identifies(draw, np.eye(2)[active])
+                        for draw in draws.bundles
+                        if draw is not None
+                    ):
+                        continue
                     output["theta_interval"][j][active] = {
                         "lower": float(theta_low[j, k]),
                         "upper": float(theta_high[j, k]),
