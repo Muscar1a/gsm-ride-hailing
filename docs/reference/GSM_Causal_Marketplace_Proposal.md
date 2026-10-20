@@ -1,335 +1,347 @@
-# GSM Causal Marketplace Proposal
+# GSM Causal Marketplace — Mô tả thống nhất
 
 Problem 06 | Nguyễn Thành An
 
-**Current PoC scope (Bun, 12 October 2026):** assume a fixed online driver roster,
-model acceptance of individual requests separately, and retain 100% displayed-fare
-driver pay. Incentives, driver online/offline response, scheduled hours and
-income-supply equilibrium are outside this increment. The original research
-questions below remain broader targets. See [current PoC scope](../WEEK3_POC_SCOPE.md).
-The current V3 PoC implements bounded per-offer decisions, checkpointed operations,
-100%-fare completion settlement and read-only exports, with a frozen operational
-evaluator. Independent assessment and technical checks passed for this scope;
-the package is ready for Bun's review, not recorded as accepted. See the
-[12 October closeout](../submission/days/20261012/week3_poc_closeout.md). The active path and
-its limits are in [USAGE](../USAGE.md#week-3-fixed-online-poc); completing this
-restricted PoC does not close the original three-response research objective.
+Cập nhật: **20/10/2026, Asia/Bangkok**.
 
-GSM source requirements, export formats, keys and units follow
-[GSM_DATA_CONTRACT.md](../GSM_DATA_CONTRACT.md). Algorithms follow
-[CORE_ENGINE_DESIGN.md](CORE_ENGINE_DESIGN.md). This document defines the target
-system; current progress and executed evidence are indexed in [docs README](../README.md).
+Đây là nguồn mô tả chính về bài toán, contribution, phạm vi và yêu cầu kiểm chứng
+của đề tài. **Contribution lõi là dự báo phản thực nhu cầu khi thay đổi giá các
+dịch vụ**, với khả năng nhận dạng, miền hỗ trợ và bất định được công bố cho từng
+phép so sánh. Mô phỏng vận hành, kế toán, dashboard và exports phục vụ đánh giá,
+kiểm chứng và sử dụng kết quả dự báo.
 
-## Problem and scope
+Phần nhận dạng theo từng phép đổi giá trong tài liệu này là **đề xuất nghiên cứu,
+chưa triển khai và chưa nghiệm thu**. Nó không thay đổi phạm vi PoC đã được Bun
+nghiệm thu ngày 12/10/2026 hoặc các kết quả lịch sử. Trạng thái triển khai và bằng
+chứng có ngày chốt được quản lý tại [danh mục tài liệu](../README.md).
 
-Prices, driver incentives, and subscriptions affect both customer demand and
-driver labor supply. Historical dashboards describe outcomes after intervention;
-correlation alone does not identify the three responses needed for policy decisions.
+## 1. Bài toán và mục tiêu
 
-| Response | Question | Main source of bias |
+Giá cước, ưu đãi tài xế và quyền lợi thuê bao tác động tới hai phía của thị trường:
+nhu cầu khách hàng và cung lao động tài xế. Dashboard lịch sử cho biết điều đã xảy
+ra; tương quan chưa đủ để tách tác động của chính sách khỏi thời tiết, giờ cao điểm,
+thiếu xe và các cú sốc thị trường. Giá và số chuyến có thể cùng tăng dù tác động
+riêng của tăng giá lên nhu cầu là âm.
+
+Câu hỏi trung tâm là: **trong quần thể, bối cảnh và chân trời dự báo xác định, nếu
+đổi giá X/Y từ mức cơ sở sang mức ứng viên, số yêu cầu của từng dịch vụ và tổng
+số yêu cầu thay đổi bao nhiêu, với bất định nào?** Ví dụ tham chiếu là tăng giá X
+10% trong một cụm địa lý và cửa sổ thời gian, chỉ dự báo khi phép đổi giá có đủ cơ
+sở nhận dạng và nằm trong miền hỗ trợ.
+
+| Đáp ứng nghiên cứu | Câu hỏi | Vai trò |
 |---|---|---|
-| Customer price sensitivity | How do requests change when service price rises 1%? | Prices often rise during rain or peak demand, creating positive price-trip correlation despite negative price effects |
-| Driver supply response | How do participation and serviceable hours change with predecision offered compensation or incentives? | Incentives target shortages; relocation and shifted charging can resemble extra supply |
-| Cross-service substitution | How do X/Y requests and nonbooking probability change when one price changes? | Services share demand shocks; net changes do not identify individual customer switches |
+| Độ nhạy giá khách hàng | Yêu cầu X/Y thay đổi thế nào khi giá thay đổi? | Thành phần trực tiếp của lõi dự báo nhu cầu |
+| Thay thế giữa dịch vụ | Giá một dịch vụ làm yêu cầu dịch vụ kia và không đặt thay đổi thế nào? | Thành phần tác động chéo và tổng của lõi dự báo |
+| Cung lao động tài xế | Điều kiện trả công/ưu đãi được biết trước quyết định làm việc thay đổi tham gia, giờ làm và giờ phục vụ thế nào? | Nhánh nhân quả riêng, cần khi mở rộng dự báo vận hành có cung phản ứng |
 
-The main objective is to estimate these three causal responses, use identified
-responses to predict policy effects and select policies worth testing, and validate
-the frozen counterfactuals through experiments. The decision path is identification
--> estimation -> supported policy forecasts -> policy evaluation -> experimental
-validation. Its first scope is one cluster and two services.
+Lộ trình quyết định là **nhận dạng → ước lượng → dự báo có hỗ trợ → đánh giá chính
+sách → đối chiếu thử nghiệm**. Phạm vi nghiên cứu ban đầu gồm một cụm địa lý và hai
+dịch vụ. Giá trị kỳ vọng là giúp lựa chọn chính sách đáng thử và giải thích tác
+động tới khách hàng, tài xế và chất lượng dịch vụ cho GSM/cơ quan quản lý. Đây là
+mục tiêu, chưa phải lợi ích kinh doanh đã đo được.
 
-The reference business question is: **If service X price rises 10% in one zone/time
-window, how do demand, serviceable supply, service choice, completed trips, and idle
-supply change, and is this policy worth testing under agreed business and service
-criteria?** This example is forecast only within supported action bounds. Supply
-response depends on offered compensation, expectations formed before the labor
-decision, and the decisions drivers can adjust; participation/hours and acceptance
-of individual dispatch offers remain separate outcomes.
+## 2. Đại lượng dự báo và giới hạn diễn giải
 
-Deliver three causal result packages, supported counterfactual comparisons,
-decision evidence, and an executable switchback design with a frozen forecast
-ledger. A reusable core engine, marketplace simulator, dashboard, and exports
-support these outputs. Their state/accounting, explicit failures, reproducibility
-and workload limits follow the
-[engine standard](CORE_ENGINE_DESIGN.md#11-engine-delivery-standard). Passing
-technical gates does not establish causal identification or real GSM policy impact.
-Real GSM profit and ROI require confirmed cost and financial policies from GSM and
-remain conditional.
+Mỗi kết quả phải khai báo can thiệp/phép so sánh, outcome, đơn vị, quần thể,
+zone/dịch vụ, bối cảnh, chân trời hành vi, biến thiên chính sách và giả định nhận
+dạng. Báo tác động tuyệt đối; chỉ báo elasticity khi định nghĩa và các mẫu số
+giá/outcome dương cho phép diễn giải hợp lệ.
 
-| Forecast | Interpretation | Dependency |
-|---|---|---|
-| Demand | Change in requests | Customer price sensitivity |
-| Service choice | Net X/Y/nonbooking changes within the observation window | Cross-service response |
-| Supply | Change in serviceable vehicle-hours under offered terms | Driver supply and attendance |
-| Trip acceptance | Acceptance probability conditional on an actual dispatch offer | Offer terms and driver acceptance response |
-| Completed trips & operations | Fulfilled trips, wait times, cancellations, and idle vehicle-hours | Marketplace simulation combining demand, supply, and matching |
-| Simulated gross booking value | Completed trips multiplied by effective policy fares | Operations and scenario tariff |
-| GSM incremental profit & ROI (conditional) | Policy difference after complete costs; unavailable without confirmed GSM financial policy | GSM-recognized revenue and finance-approved cost ledgers |
-
-Validate forecasts through switchback experiments alternating policies by
-geographic cluster and time block, with frozen forecasts compared to outcomes.
-
-| Item | Five-week scope | Later work |
-|---|---|---|
-| Policy | Prices and driver incentives; subscription benefits as effective price changes for observed subscribers | Automatic production pricing |
-| Estimation | Three responses by supported zone/time/service resolution, intervals, evidence A/B/C | Individual customer pricing |
-| Marketplace | Supported demand/supply forecasts; one-cluster simulation for operational effects and equilibrium when justified | Citywide competition model |
-| Decision | Finite supported price/incentive candidates, agreed business criterion, uncertainty and operational guardrails | Automatic policy optimization |
-| Validation | Executable switchback design, A/A protocol and frozen forecast reconciliation ledger; cluster pilot subject to GSM approval | Broad rollout |
-| Delivery | Causal result packages, decision evidence and experiment package, presented through a validated core engine, dashboard and CSV/JSON | Production trip-level dispatch optimization |
-
-Expected use: evaluate pricing and incentive policies by their operational and
-commercial marketplace impact, with traceable accounting and uncertainty, and explain
-customer, driver and service quality outcomes to GSM leadership and regulators.
-These are objectives, not measured benefits.
-
-## System and data
-
-Pricing and driver operations teams define a service, zone, horizon, and finite
-set of supported price/incentive candidates. Before selection and final evaluation,
-agree the primary business metric, minimum worthwhile effect, wait/cancel/driver
-income/budget guardrails and action bounds with GSM. No default objective maximizes
-gross booking value or profit. Compare each candidate with the current policy,
-report operational/economic outcomes and uncertainty, and give a reasoned decision:
-worth testing, more evidence needed, or outside approved limits. Policy selection
-uses development data; final evaluation uses independent held-out data or valid
-experimental outcomes. Do not use the selecting model as its own proof of policy
-value. These outputs support approved experimentation; they do not execute or
-deploy pricing policies automatically.
-
-| Recipient | Output | Handoff |
-|---|---|---|
-| Pricing and driver operations | Candidate comparisons, uncertainty, guardrail status and policies worth testing | Decision report and interactive demo |
-| Group 4 - Mobility Assistant | Price sensitivity and identified full/partial 2x2 response matrix | CSV/JSON |
-| Group 1 | Labor participation/hours response with battery/charging constraints and separate acceptance response | CSV/JSON |
-| GSM leadership and regulators | Traceable customer/driver/economic impact explanation and evidence limits | Report |
-
-Request **eight raw source groups over the latest 12 months**, including
-neighboring/control zones. GSM exports existing Parquet, UTF-8 CSV, or native
-sources with original schema/rate, keys, and metadata. Researchers construct
-research tables; field/grain requirements follow the data contract.
-
-| Source group | Use |
+| Đầu ra lõi | Diễn giải |
 |---|---|
-| Booking & Demand | Funnel, requests, completed trips |
-| Pricing & Promotion | Prices/benefits displayed before choice |
-| Driver Supply & Status | Vehicle-hours, shifts, relocation, charging |
-| Driver Earnings & Incentive | Offered terms, compensation, realized earnings |
-| Matching & Operations | Dispatch, pickup/service/cancel, charging calibration |
-| Customer Choice / Cross-service | Choice sets, nonbookers, own/cross effects |
-| Policy & Context | Assignment, identification, support, context |
-| Finance & Cost | Recognized revenue, direct/fixed/shared costs, approved allocation, incremental profit, contribution margin and ROI |
+| Tác động trực tiếp | Thay đổi yêu cầu X khi đổi giá X, hoặc yêu cầu Y khi đổi giá Y |
+| Tác động chéo | Thay đổi yêu cầu của một dịch vụ khi đổi giá dịch vụ còn lại |
+| Tác động kết hợp | Thay đổi yêu cầu X/Y khi đồng thời đổi hai giá theo phép so sánh xác định |
+| Tác động tổng | Thay đổi tổng yêu cầu X+Y trong cùng quần thể và cửa sổ quan sát |
+| Thay đổi không đặt | Thay đổi xác suất không đặt trong cửa sổ lựa chọn được quan sát đầy đủ |
 
-| Block/contract stage | Input | Output |
+Phải phân biệt **phiên báo giá → yêu cầu đặt xe → kết quả điều phối → chuyến hoàn
+thành**. Số chuyến hoàn thành không tự xác định nhu cầu khi thiếu xe. Với tập phiên
+báo giá cố định, đầu ra là nhu cầu có điều kiện trên quần thể đó; dự báo tổng nhu
+cầu thị trường cần thêm dữ liệu và cơ chế nhận dạng thay đổi số cơ hội phát sinh
+nhu cầu. Chưa chọn thuật toán khôi phục nhu cầu tiềm ẩn từ số chuyến hoàn thành.
+
+Biến động ròng X/Y không xác định từng khách đã chuyển dịch vụ. `NONE` chỉ là không
+đặt trong cửa sổ quan sát đầy đủ, không tự có nghĩa rời GSM hoặc chọn đối thủ.
+Ưu tiên giá báo trước lựa chọn hoặc hệ số giá đã điều chỉnh đặc điểm chuyến; giá
+cước thực thu trung bình bị ảnh hưởng bởi chọn mẫu và cơ cấu quãng đường. Quyền
+lợi thuê bao được phản ánh vào giá hiệu dụng của nhóm thuê bao được quan sát.
+
+Nhận/từ chối một đơn khác với quyết định tham gia thị trường hoặc số giờ lao động.
+Giá khách hàng chỉ có thể tác động tới cung qua cơ chế trả công/kỳ vọng thu nhập
+được khai báo và đáp ứng tài xế có cơ sở nhận dạng riêng. Thu nhập thực nhận sau
+ca là outcome/mediator, không được thay cho treatment biết trước quyết định.
+Cần theo dõi vùng lân cận để phân biệt cung tăng thêm với tái phân bổ xe.
+
+<a id="demand-forecasting-contribution"></a>
+
+## 3. Contribution lõi và cơ chế dự báo đề xuất
+
+### 3.1. Phát biểu contribution
+
+Phương pháp dự báo phản thực nhu cầu đa dịch vụ liên kết **phép thay đổi giá được
+hỏi → thông tin nhận dạng có trong dữ liệu → phạm vi kết quả được phép xuất**.
+Phương pháp kiểm tra riêng miền hỗ trợ giá/bối cảnh và khả năng nhận dạng của từng
+phép so sánh, rồi xuất các tác động trực tiếp, chéo hoặc kết hợp mà dữ liệu cho
+phép, cùng bất định và phần chưa xác định.
+
+Trọng tâm cần phát triển là dự báo một số thay đổi giá kết hợp khi dữ liệu chưa
+đủ để tách tất cả hệ số giá riêng. Ví dụ, nếu X/Y chỉ cùng tăng theo một tỷ lệ,
+một phép tăng chung trong miền hỗ trợ có thể ước lượng được dưới giả định mô hình
+phù hợp, trong khi phép chỉ tăng X chưa được nhận dạng. Không suy từ ví dụ này
+rằng mọi dữ liệu có giá đồng biến đều đủ cho dự báo tăng chung.
+
+Mô phỏng, paired seeds, checkpoint và kế toán hỗ trợ kiểm chứng tác động vận hành;
+chúng không thay thế bằng chứng cho mô hình nhu cầu. DML, ma trận tác động 2×2,
+bootstrap, support và switchback riêng lẻ không được coi là điểm mới của đề xuất.
+
+### 3.2. Hành vi cần đặc tả trước triển khai
+
+1. Xác định giá cơ sở/ứng viên, quần thể, bối cảnh, chân trời dự báo và cơ sở nhận
+   dạng. Biến kiểm soát phải có trước can thiệp. Không điều chỉnh tùy tiện biến
+   cung/chờ phát sinh sau đổi giá khi mục tiêu là tổng tác động chính sách.
+2. Kiểm tra riêng khả năng nhận dạng và miền hỗ trợ. Có support hoặc biến thiên
+   giá chưa đủ cho kết luận nhân quả; phải nêu assignment hoặc giả định quan sát,
+   gồm các nguy cơ gây nhiễu và phụ thuộc không được xử lý.
+3. Đánh giá đúng phép đổi giá được hỏi. Trong mô hình tuyến tính, một phương án
+   cần nghiên cứu là kiểm tra vector thay đổi log-giá thuộc không gian biến thiên
+   giá còn lại sau điều chỉnh bối cảnh. Thuật toán, sai số số học và ngưỡng phải
+   chốt trước đánh giá; đây chưa phải thuật toán đã chọn hoặc xác nhận là mới.
+4. Kiểm tra cả giá cơ sở và giá ứng viên trong bối cảnh được chọn. Một hướng thay
+   đổi có thể ước lượng không bảo đảm hai mức giá tuyệt đối được hỗ trợ. Nội suy
+   cần giả định riêng và dữ liệu hai phía; không nới ngưỡng theo kết quả.
+5. Xuất phép so sánh được xác định và các hệ số riêng có căn cứ. Thành phần chưa
+   xác định để unavailable/null với lý do, không điền 0 hoặc phân bổ tùy ý. Không
+   tự thay phép hỏi thiếu nhận dạng bằng một phép hỏi gần nhất.
+6. Khi lấy mẫu lại, giữ dữ liệu huấn luyện gốc làm căn cứ support; ghi nhận refit
+   mất thông tin nhận dạng, toàn bộ mẫu số và trạng thái thất bại. Không chỉ tính
+   trên các lần thuận lợi; quy tắc giữ/không xuất CI phải được đặc tả trước.
+
+### 3.3. PoC hiện hành và phần đề xuất
+
+| Thành phần | PoC hiện hành | Phần đề xuất |
 |---|---|---|
-| `prepare_data` | Labeled raw/public/synthetic sources, metadata, mapping | Parquet research tables, quality report, JSON manifest |
-| `fit_demand_choice`, `fit_supply`, `validate_benchmarks` | Choice/assignment or offer/state tables, estimands, splits | Three causal result packages, model bundles, baselines, full/partial effect matrix, supply response, diagnostics and independent benchmarks |
-| `calibrate_baseline`, `simulate_marketplace`, `solve_equilibrium` | Request rates, admission plan, snapshot/rules/calibration, seed/budget | Trajectories, operational metrics, equilibrium or nonconvergence status |
-| `compare_scenarios` | Finite supported candidates, agreed business metric/guardrails; common baseline/target scope, snapshot, paired seeds; accounting/uncertainty where available | Candidate CSV/JSON with demand/supply/choice/operations, supported economics, evidence, intervals and decision reasons; real profit/ROI conditional on GSM cost policies |
-| `design_switchback`, `reconcile_experiment`, `handoff` | Supported actions, assignment/power/analysis spec, A/A protocol, frozen forecast; actual logs where available | Executable experiment package, schedule/ledger, valid experimental reconciliation, dashboard and reproducible package |
+| Lựa chọn dịch vụ | X/Y/NONE trên tập phiên báo giá cố định; mô hình cộng tính với hệ số giá chung | Giữ quần thể và chân trời dự báo tường minh cho từng phép hỏi |
+| Tác động giá | OLS/DML; các cột trực tiếp/chéo khi nhận dạng được | Dự báo theo phép so sánh được nhận dạng, kể cả một số tác động kết hợp |
+| Hai giá đồng biến | Khi cả hai giá thay đổi nhưng residual covariance thiếu hạng, trả `not_identified`, không giữ model bundle | Xem xét dự báo một số đổi giá kết hợp khi chưa xác định được từng cột riêng |
+| Miền hỗ trợ | Kiểm tra giá cơ sở/ứng viên, ô giá kết hợp và bối cảnh từ dữ liệu huấn luyện | Đặc tả support phù hợp cho từng phép so sánh; vẫn chặn ngoại suy không được hỗ trợ |
+| Bất định | Analytic và bootstrap theo ngày, có trạng thái lỗi và giới hạn calibration | Suy luận cho phép so sánh nhận dạng được; không tạo CI cho hệ số chưa xác định |
+| Nhu cầu thiếu quan sát | Chưa khôi phục tổng nhu cầu tiềm ẩn từ số chuyến hoàn thành | Chỉ mở rộng khi có dữ liệu và cơ sở nhận dạng phù hợp |
 
-Request input is requests/hour. Supply is serviceable vehicle-hours; idle hours
-are a subset. Tables/draws/trajectories use Parquet, specs/manifests JSON, models
-implementation-specific bundles, and handoffs CSV/JSON. Stage execution and
-metric/interval statuses are distinct.
+Trường hợp chỉ một giá biến thiên, giá kia cố định đã có thể cung cấp một cột
+tác động theo điều kiện hiện hành. Đề xuất không coi đó là khả năng mới. Hai cột
+riêng cần biến thiên giá còn lại đủ độc lập; nhận dạng một tác động kết hợp không
+cho phép suy ngược hai cột chưa xác định.
 
-The feedback cycle is schedule -> GSM policy execution and logs -> measured
-impact versus frozen forecast -> updated model version. Evidence A applies only
-to components supported by executed valid experiments.
+## 4. Dữ liệu và cơ sở nhận dạng
 
-Confounder features must precede intervention; post-treatment variables are
-outcomes or mediators. Check duplicates, missingness, timezones, and joins.
-Use Python/SQL, EconML or DoWhy for causal analysis, SimPy for discrete events,
-and a browser dashboard backed by FastAPI for the demo. Store data/config/model versions for reproducibility.
-GSM approves operational policy execution.
+Yêu cầu tám nhóm nguồn thô trong 12 tháng gần nhất, gồm vùng lân cận/đối chứng.
+GSM xuất Parquet, UTF-8 CSV hoặc nguồn gốc với schema, độ phân giải, khóa và
+metadata hiện có; nhóm nghiên cứu xây bảng phân tích. Trường, grain, khóa và đơn
+vị theo [GSM data contract](../GSM_DATA_CONTRACT.md), không định nghĩa lại tại đây.
 
-## Estimating the three responses
-
-Each causal result specifies treatment and contrast, outcome and unit, population,
-zone/service, behavioral horizon, policy variation, and identification assumptions.
-Report an absolute effect; report elasticity only when its definition and positive
-price/outcome denominators make it valid. Each package includes a point estimate,
-confidence interval/status, simple comparison baseline, supported action range,
-diagnostics, evidence A/B/C, and any unidentified component with its reason and
-collection/experiment plan. These results can be handed off independently of a
-completed simulator. Estimate only at resolutions supported by data. Prefer quoted
-prices or tariff multipliers adjusted for trip characteristics; average realized
-fares are distorted by selection and distance mix. Subscription benefits affect
-the effective price shown to subscribers.
-
-| Response | Outcome | Preferred identification | Interpretation |
-|---|---|---|---|
-| Customer price sensitivity | Total request effect; request elasticity when identifiable; quote conversion reported separately with complete quote exposure logs | Randomized prices -> historical tariff change/DiD -> DML | Conversion among observed quote opportunities alone does not identify total request demand |
-| Supply | Labor participation, worked hours and serviceable hours under predecision offered compensation/incentives | Randomized incentives -> shift incentive changes/DiD | Use amount effects for incentives starting at zero; distinguish extra total supply from relocation |
-| Cross-service | Each service's request response to both prices; full/partial 2x2 matrix and total X/Y effect | Separately identifiable price variation; optional nested logit with choice logs | Changing only X identifies one column; nonbooking requires complete opportunity windows |
-
-| Method | Conditions | Assumptions/gate | Evidence |
-|---|---|---|---|
-| Randomized switchback/incentives | Executed assignments and validated logs/outcomes | Valid assignment/exposure/interference/carryover; A/A before pilot | A |
-| DiD | Policy change with treated/control groups | Parallel trends and no unaccounted concurrent changes | B |
-| DML | Historical data with sufficient observed context | No remaining unobserved confounding and adequate overlap | B |
-| Known-parameter simulation | Controlled recovery tests without real data | Establishes behavior under declared simulated conditions | C |
-
-DML residualizes observed context; it does not remove endogeneity from missing
-shocks. Compare with correlation and adjusted regression baselines. Differences
-show sensitivity, not which estimate is correct. Before DiD, inspect allocation,
-anticipated demand, and concurrent changes.
-
-Customer prices affect supply only through offered compensation, expected income
-and adjustable driver decisions. Offered terms and expectations used for labor
-response must be available before participation/hours decisions; realized post-shift
-income is an outcome/mediator and cannot be substituted as a predecision treatment.
-An expected-income causal channel requires its own identification basis. Fixed
-shifts/salaries may imply zero additional hours; extra shifts, acceptance, and
-charging timing need separate outcomes. Track neighbors to distinguish extra total
-supply from relocation.
-
-The approved minimum development compensation assumption gives drivers **100%
-of the fare displayed on the app on completed trips**, while GSM's actual policy
-is unavailable. An explicit synthetic tariff defines the amounts; cancellations
-and expiry pay zero. Freeze displayed fares and driver terms before simulation,
-retain individual earnings and zero-trip presence hours, and settle completions
-once across compatible windows. This conditional accounting rule does not by
-itself identify an income elasticity or a price-induced labor response. See the
-[compensation design](CORE_ENGINE_DESIGN.md#72-compensationmodel).
-
-Two matrix columns require independent residual price variation. Report request
-X/Y/total and conversion separately. `NONE` means no booking in a complete
-observation window; it does not establish departure from GSM or competitor choice.
-
-## Marketplace simulation and switchback validation
-
-Identified causal responses produce demand and supply forecasts. The simulator
-translates these forecasts into conditional operational and economic outcomes by
-combining request flows, eligible drivers/vehicles, compensation, and matching
-rules. It includes pickup/service time, waiting cancellation, return to availability,
-and charging. Preserve states across analysis windows. Simulator convergence and
-accounting validity are technical conditions; behavioral validity requires separate
-identification and empirical checks.
-
-The income-supply loop is expected earnings -> serviceable hours -> simulated
-utilization and earnings -> updated expectations. Convergence requires consistent
-income and supply summaries; preserve assumptions about shifts and unmodeled
-behavior. The core design defines damping, finite budgets, and nonconvergence
-handling. Fixed supply needs one pass.
-
-Calibrate and assess on separate baseline data before comparing policies.
-Match completed trips, wait, cancellations, and idle hours, including zone/time
-errors. Without GSM logs, validation is against synthetic truth only.
-
-| Metric | Definition | Requirement |
-|---|---|---|
-| Completed trips | Simulator outcome from requests, supply, and acceptance | Apply elasticity to requests once, never again to completion |
-| Idle supply | Idle vehicle-hours or eligible idle vehicles at a point in time | State-time accounting; charging/ineligible separate; request-capacity gap is only a proxy |
-| Wait/cancellation | Matching trajectories | Validate against separate baseline data |
-| Simulated gross booking value | Completed trips multiplied by scenario fares | Illustrative/declared price units; does not imply realized GSM profit |
-| Incremental GSM profit & ROI (conditional) | Target minus baseline recognized revenue less in-scope costs | Finance-approved scope and complete cost coverage; unavailable without confirmed GSM policy |
-| Incremental contribution margin (conditional) | Policy difference after applicable variable costs | Confirm variable-cost classification and ledger with GSM; never label it total profit |
-
-Resample appropriate clusters/time blocks, refit models, and rerun paired
-baseline/target simulations. Separate statistical uncertainty, simulation
-variability, and sensitivity to operational assumptions. Unsupported actions
-retain explicit flags and cannot become supported forecasts through extrapolation.
-
-Switchback randomizes policies by geographic cluster/time block. Design choices:
-
-| Element | Basis | Risk addressed |
-|---|---|---|
-| Cluster and block length | Trip duration, driver movement, carryover | Neighbor contamination |
-| Washout | Exclude designated transition observations | Residual effects from prior blocks |
-| Price x incentive factorial | Separate supported action combinations | Confounded policy levers |
-| Separate X/Y price schedules | Identifiable variation for each service | Missing matrix columns |
-| Sample size | Worthwhile detectable effect and actual variability | Insufficient power |
-
-The behavioral horizon must match the estimand. Short price switchbacks can test
-request responses without identifying drivers' shift participation or added hours;
-labor responses need assignments, exposure and horizons compatible with those
-decisions. The experiment package contains:
-
-1. Assignment, exposure, cluster/block/washout, power and analysis specifications,
-   with agreed primary metric, guardrails and stopping rules.
-2. An A/A protocol checking assignment/exposure logs, metric reconstruction and
-   inference under no policy effect; executed results only when logs are available.
-3. A frozen ledger of model/data/policy versions, forecast point estimates and
-   intervals/statuses, population/horizon, support and assumptions.
-4. A live monitor for agreed wait/cancel/driver-income/budget guardrails, separate
-   from efficacy inference on the planned analysis schedule.
-5. A reconciliation plan comparing identified measured effects with frozen
-   forecasts for the same population and horizon, diagnosing deviations and then
-   recording the next model version.
-
-Before execution, freeze this package, run A/A and validate inference by repeated
-simulation. Afterwards, inspect spatial/time dependence and reconcile forecasts.
-Without valid actual logs, hand over the executable design and mark experimental
-impact/reconciliation unevaluated. Real-time monitoring does not authorize repeated
-unplanned efficacy tests. GSM approval remains required for live policy execution.
-
-## Five-week roadmap
-
-One cluster and two services; synthetic data allows progress without GSM.
-Source data requests follow the [GSM data request](../GSM_DATA_CONTRACT.md).
-
-| Week | Input | Review output |
-|---|---|---|
-| 1 | Eight-group/12-month raw request; public/synthetic sources; market/rules | Causal questions/estimands, mapping/quality/manifest, identification and split/acceptance specs, agreed business metric/guardrails and evaluation plan |
-| 2 | Prepared choice/assignment or controlled blocks; separate Swissmetro | Demand/choice causal packages, full/partial matrix, baselines, diagnostics, support/intervals and independent method/choice reports |
-| 3 | Predecision offered compensation/states; operations or synthetic truth; roster/rules | Labor participation/hours package; supported integrated forecasts, calibration/snapshot, trajectories, equilibrium status and baseline-error report |
-| 4 | Finite supported candidates, independent policy-value evaluation, accounting/uncertainty, movement/carryover/power | Decision comparison with reasons/guardrails and separate uncertainty sources; experiment specification, A/A protocol and frozen forecast ledger; supporting dashboard/export |
-| 5 | Completed scientific/technical artifacts; actual experiment logs if available | Reproducible evidence package, limits and gate status; executable pilot plan and conditional A/A/reconciliation results with next steps |
-
-Without GSM, real calibration, causal effects, profit and ROI stay `not_evaluated`.
-Synthetic recovery/coverage establishes only performance under tested conditions,
-with evidence C. Approval alone is not A. GSM data/pricing/driver-operations
-contacts confirm business definitions. A week-5 pilot prioritizes process checks;
-power requirements may extend impact evaluation beyond five weeks.
-
-| Deliverable | Content | Needs GSM data? |
-|---|---|---|
-| Three causal result packages | Estimands, absolute effects/valid elasticities, baselines, confidence intervals/statuses, support, assumptions, diagnostics and unidentified parts | Real GSM estimates require GSM data; controlled recovery/coverage and method packages can be delivered with evidence C |
-| Policy decision evidence | Finite candidate comparisons, independent evaluation, agreed business criterion/guardrails, supported outcomes, uncertainty and reasoned testing decisions | Real GSM impact/economics require applicable GSM sources; synthetic comparisons remain conditional |
-| Experiment package | Identification, executable switchback/A/A protocols, frozen forecasts, monitoring and reconciliation plan | Design can be prepared without GSM data; actual assignment, power calibration and reconciliation require appropriate GSM inputs/logs |
-| Supporting system | Reusable core engine, versioned models, one-cluster simulator, headless scenarios, benchmark evidence, dashboard and CSV/JSON | No; controlled sources support technical development and validation within their declared conditions |
-| Documentation | Code/configuration, rerun instructions, assumptions, evidence limits and missing-data/experiment plans | No |
-| GSM results | Causal effects, real calibration, profit, ROI, experimental impact | Yes |
-
-Outputs declare zone/service/horizon, uncertainty, support, evidence, and missing
-sources. Unsupported components include a collection/experiment plan.
-
-| Acceptance criterion | Requirement | Verification |
-|---|---|---|
-| Identification | Defined treatment/outcome/population/horizon, adequate variation/overlap and assumptions for each published causal result | Assignment/history review and identification/support diagnostics; unresolved parts stay unidentified |
-| Estimation | Simple baseline, no leakage, parameter recovery, coverage and null/placebo behavior under declared conditions | Independent/repeated controlled benchmarks and valid historical/experimental diagnostics where available |
-| Policy prediction and decision | Finite supported comparisons use an agreed business criterion and guardrails, independent evaluation and explicit uncertainty/decision reasons | Held-out evaluation with frozen selection/analysis rules; retain rejected candidates and conditional economics |
-| Experimental validation | Executable design, frozen forecasts and reconciliation of identified effects on the same scope/horizon | A/A and inference checks; actual counterfactual accuracy remains unevaluated until valid experiment or historical identification is available |
-| Simulator | Operational/economic forecasts require baseline trip/wait/cancel/idle errors within frozen thresholds | Separate holdout baseline; synthetic accuracy is evidence C only |
-| Engine robustness | State/accounting invariants, explicit failures, validated carryover and bounded workloads | [Core engine validation protocol](../BENCHMARK.md#core-engine-validation-protocol) and recorded [release gates](CORE_ENGINE_DESIGN.md#173-acceptance-gates) |
-| Reproducibility | Trace every metric to data/model/config/assumptions | Rerun saved versions and seeds |
-| Completeness and transparency | Causal packages and supported scenarios report scope, units, intervals/statuses, evidence and missing parts | Independent seeds/contexts, package review; unidentified results include a collection/experiment plan |
-| PoC integration | Dashboard and exports expose the same supported results, scope, units, evidence and statuses | Verified scenario walkthrough and artifact comparison |
-
-Agree minimum worthwhile effects, business/guardrail criteria, coverage and
-prediction/baseline error tolerances after week-1 inspection and before policy
-selection/final evaluation; freeze runtime thresholds before final holdout. Do not
-require complex models to win or policies to produce positive uplift. An explicit
-unidentified result is transparent delivery, but the corresponding GSM measurement
-remains open. Unavailable evidence remains unevaluated. GSM confirms eight groups/12 months,
-compensation/finance definitions, variation, action bounds, assignments, and
-guardrails. Missing sources leave dependent outputs unavailable; C development
-continues.
-
-| End-of-week-5 decision | Condition |
+| Nhóm nguồn | Mục đích |
 |---|---|
-| Expand pilot | Causal scope/support and worthwhile candidate rationale are documented; required technical gates pass, data/design are adequate and A/A/logging checks pass; live execution remains subject to GSM approval |
-| Collect more data | Insufficient power or identification; specify missing sources and next review |
-| Pause rollout | Process checks fail or data/approved experiment bounds are unavailable |
+| Booking & Demand | Funnel, phiên/yêu cầu, chuyến hoàn thành |
+| Pricing & Promotion | Giá/quyền lợi hiển thị trước lựa chọn |
+| Driver Supply & Status | Giờ xe, ca làm, di chuyển, sạc |
+| Driver Earnings & Incentive | Điều kiện được chào trước quyết định, tiền công, thu nhập thực nhận |
+| Matching & Operations | Offer, pickup/service/cancel và calibration vận hành |
+| Customer Choice / Cross-service | Tập lựa chọn, người không đặt, tác động trực tiếp/chéo |
+| Policy & Context | Assignment, nhận dạng, support và bối cảnh |
+| Finance & Cost | Doanh thu ghi nhận, chi phí trực tiếp/cố định/chung, phân bổ được duyệt và định nghĩa lợi nhuận/ROI |
 
-### Method references
+| Phương pháp | Điều kiện và giả định | Bằng chứng |
+|---|---|---|
+| Randomized switchback/ưu đãi | Assignment được thực thi; log exposure/outcome hợp lệ; xử lý interference/carryover, A/A trước pilot | A cho thành phần thực sự được kiểm chứng |
+| DiD | Có nhóm can thiệp/đối chứng, xu hướng song song và không bỏ sót thay đổi đồng thời | B |
+| DML | Bối cảnh quan sát đủ, không còn gây nhiễu chưa quan sát và overlap phù hợp | B khi các giả định có căn cứ |
+| Mô phỏng biết tham số | Khôi phục tác động dưới điều kiện kiểm soát; không chuyển kết luận sang GSM | C |
 
-Chernozhukov et al. (2018), *Double/debiased machine learning for treatment and
-structural parameters*. [Implementation documentation](https://www.pywhy.org/EconML/spec/estimation/dml.html).
+DML residualize bối cảnh quan sát, không loại bỏ nội sinh do cú sốc thiếu dữ liệu.
+So sánh tương quan và hồi quy điều chỉnh cho biết độ nhạy, không tự chứng minh
+ước lượng nào đúng. Trước DiD cần xem phân bổ chính sách, nhu cầu dự kiến và can
+thiệp đồng thời. Cung lao động ưu tiên biến thiên ưu đãi ngẫu nhiên hoặc thay đổi
+chính sách có nhận dạng; ưu đãi bắt đầu từ 0 báo tác động theo lượng khi elasticity
+không hợp lệ. Kiểm tra duplicate, missingness, timezone và cardinality khi nối.
 
-Callaway and Sant'Anna (2021), *Difference-in-Differences with multiple time
-periods*. [Method documentation](https://bcallaway11.github.io/did/).
+Dữ liệu công khai, synthetic và GSM phải được gắn nguồn riêng. TLC là chuyến hoàn
+thành, không khôi phục người xem báo giá hoặc nhu cầu không được phục vụ. Giữ
+train/development/assessment tách biệt theo thời gian/đơn vị phù hợp; preprocessing
+chỉ fit trên train. Lưu phiên bản dữ liệu, mô hình, cấu hình, môi trường và seed.
 
-Bojinov, Simchi-Levi, and Zhao, *Design and Analysis of Switchback Experiments*.
-[Manuscript](https://arxiv.org/abs/2009.00148).
+## 5. Phạm vi hệ thống và PoC
+
+**PoC được Bun chốt và nghiệm thu ngày 12/10/2026:** roster tài xế online cố định,
+quyết định nhận/từ chối từng offer và trả 100% giá cước hiển thị cho chuyến hoàn
+thành. V3 đã có số lần offer hữu hạn, timeout/withdrawal, terms đóng băng,
+checkpoint, sổ thu nhập và exports chỉ đọc. Xác suất nhận là giả định synthetic
+độc lập với giá. Không triển khai ưu đãi, chia ca theo chính sách, online/offline
+nội sinh hoặc cân bằng thu nhập–cung trong phạm vi này. Xem
+[phạm vi PoC](../WEEK3_POC_SCOPE.md),
+[nghiệm thu](../submission/days/20261012/week3_poc_acceptance.md) và
+[hướng dẫn chạy](../USAGE.md#week-3-fixed-online-poc).
+
+Nhánh controlled cung lao động được giữ làm bằng chứng khoa học riêng; không dùng
+hiệu ứng ưu đãi để thay đổi roster của PoC. Cung online cố định và nhận đơn không
+xác định elasticity cung lao động; nghiệm thu PoC không đóng ba đáp ứng nhân quả
+GSM hoặc nghiệm thu cơ chế dự báo đề xuất ở mục 3.
+
+| Kết quả mở rộng | Phụ thuộc |
+|---|---|
+| Cung phục vụ | Điều kiện trả công biết trước quyết định, mô hình participation/hours và attendance |
+| Nhận đơn | Exposure offer, điều kiện offer và đáp ứng nhận/từ chối riêng |
+| Chuyến hoàn thành, chờ, hủy, idle hours | Dự báo request, cung, matching và calibration vận hành |
+| Simulated gross booking value | Chuyến hoàn thành nhân giá hiệu dụng trong kịch bản |
+| Lợi nhuận/ROI GSM có điều kiện | Doanh thu ghi nhận và đầy đủ chi phí/định nghĩa tài chính được GSM xác nhận |
+
+Simulator chuyển request rates (requests/giờ) và cung (giờ xe có thể phục vụ)
+thành kết quả vận hành; chỉ áp dụng đáp ứng giá vào requests một lần, không áp lại
+vào số chuyến hoàn thành. Idle hours là phần của cung, không đồng nhất với chênh
+lệch request–capacity. Matching, pickup/service, hủy, sạc và state qua cửa sổ cần
+được hiệu chỉnh/kiểm chứng riêng; khi thiếu GSM chỉ đối chiếu synthetic truth.
+
+Giả định phát triển trả công 100% giá hiển thị được đóng băng trước mô phỏng;
+hủy/expiry trả 0, completion chỉ thanh toán một lần qua các cửa sổ tương thích.
+Giữ cả tài xế không có chuyến và giờ hiện diện. Quy tắc kế toán này không tự nhận
+dạng đáp ứng thu nhập/cung. Nếu nghiên cứu equilibrium, vòng kỳ vọng thu nhập →
+giờ phục vụ → utilization/thu nhập → kỳ vọng mới phải có damping, ngân sách hữu
+hạn và trạng thái không hội tụ; cung cố định chỉ cần một lượt.
+
+Thiết kế thuật toán/gate vận hành theo [core engine design](CORE_ENGINE_DESIGN.md)
+và [benchmark](../BENCHMARK.md). Bảng dữ liệu/artifact theo
+[architecture](../ARCHITECTURE.md). Tài liệu này quản lý mô tả đề tài; các đặc tả
+kỹ thuật đó không phải các phiên bản contribution cạnh tranh. Chưa thực hiện giá
+cá nhân, dispatch sản xuất, mô hình cạnh tranh toàn thành phố hoặc tự động triển
+khai chính sách.
+
+## 6. Kiểm chứng lõi dự báo và điều kiện triển khai
+
+| Câu hỏi kiểm chứng | Thiết kế/bằng chứng cần đạt |
+|---|---|
+| Cơ chế mới mang lại gì? | So sánh OLS/DML hiện tại và baseline đơn giản trên cùng dữ liệu, quần thể, phép đổi giá và điều kiện đánh giá |
+| Phân biệt đủ/thiếu nhận dạng? | Hai giá độc lập, chỉ một giá biến thiên, hai giá đồng biến, không còn biến thiên sau điều chỉnh bối cảnh |
+| Chặn dự báo thiếu căn cứ? | Giá cơ sở/ứng viên ngoài support, bối cảnh mỏng, xác suất không hợp lệ, refit mất nhận dạng; giữ lý do và mẫu số |
+| Thành phần nào tạo cải thiện? | Bỏ từng thành phần; tách lợi ích do thuật toán, dữ liệu và thay đổi phạm vi đánh giá |
+| Tác động và bất định có đúng? | Bias/RMSE X/Y/tổng, báo sai dấu, coverage/độ rộng CI, null/placebo và tỷ lệ thất bại |
+| Hiệu lực ngoài development? | Đóng băng mô hình, giả định, phép so sánh và tiêu chí trước assessment độc lập; đối chiếu thử nghiệm hợp lệ khi có dữ liệu |
+
+Không yêu cầu mô hình phức tạp phải thắng hoặc chính sách phải có uplift dương.
+Kết quả chưa nhận dạng là đầu ra minh bạch, nhưng phép đo GSM tương ứng vẫn mở.
+Dữ liệu kiểm soát chỉ xác nhận điều kiện đã thử; chưa chứng nhận mọi CI đạt 95%.
+[Kết quả inference hiện có](../submission/days/20261011/week2_inference_closeout.md)
+giữ nguyên giới hạn coverage, support và calibration.
+
+Trước khi viết mã cơ chế mới cần chốt: estimand/quần thể; một cơ chế khác biệt
+chính; dữ liệu nhận dạng; quy tắc support và nhận dạng; cấu trúc kết quả một phần;
+suy luận bất định; baseline và tiêu chí assessment. Ngưỡng phải được đóng băng
+trước đánh giá cuối. Chỉ thêm phi tuyến/heterogeneity khi có nhu cầu và bằng chứng.
+
+Với dự báo tích hợp, giữ riêng bất định thống kê, nhiễu Monte Carlo và sensitivity
+với giả định vận hành. CI Monte Carlo khi giữ demand fit/rules cố định không trở
+thành CI nhân quả hoặc full-chain. Kiểm chứng mô phỏng còn cần baseline holdout
+cho trip/wait/cancel/idle, bất biến state/accounting, carryover và giới hạn workload.
+Hội tụ, replay và kế toán đúng không thay thế kiểm chứng hành vi.
+
+## 7. Đánh giá chính sách và đối chiếu thử nghiệm
+
+Pricing/operations chọn tập giá/ưu đãi hữu hạn có hỗ trợ theo dịch vụ, zone và
+horizon. Trước selection/assessment phải thống nhất với GSM chỉ tiêu kinh doanh,
+mức tác động đáng thử, biên độ chính sách và guardrail chờ/hủy/thu nhập/ngân sách.
+Không mặc định tối đa gross booking value hoặc lợi nhuận. Mỗi ứng viên được so
+với baseline cùng phạm vi; báo bất định, giới hạn và lý do: đáng thử, cần thêm dữ
+liệu hoặc ngoài giới hạn. Selection dùng development, đánh giá cuối dùng dữ liệu
+độc lập hoặc thử nghiệm hợp lệ; không dùng mô hình chọn chính sách làm bằng chứng
+duy nhất cho giá trị của chính sách đó.
+
+Lợi nhuận/ROI và contribution margin chỉ xuất khi định nghĩa, cost coverage và
+phân bổ tương ứng được GSM xác nhận. Booking value, tiền công và proxy vận hành
+phải gắn nhãn riêng. Khi thiếu tài chính, kết quả kinh tế phụ thuộc giữ unavailable.
+
+Switchback luân phiên chính sách theo cụm địa lý/time block. Độ dài block và
+washout dựa trên hành trình, dịch chuyển tài xế và carryover; cần xử lý spillover
+và phụ thuộc không gian/thời gian. Lịch giá X/Y phải cung cấp biến thiên phù hợp
+với phép hỏi; factorial giá–ưu đãi cần các tổ hợp hỗ trợ. Chân trời của switchback
+giá ngắn có thể phù hợp với requests nhưng chưa đủ cho tham gia/giờ làm.
+
+Gói thử nghiệm cần có:
+
+1. Assignment/exposure, cluster/block/washout, power, analysis, chỉ tiêu chính,
+   guardrail và stopping rules; cỡ mẫu gắn với mức tác động đáng phát hiện.
+2. A/A kiểm tra log, dựng lại metric và inference khi không có tác động; chỉ báo
+   kết quả thực thi khi có log hợp lệ.
+3. Ledger dự báo đóng băng: data/model/policy version, point/CI/status, quần thể,
+   horizon, support và giả định.
+4. Monitor guardrail tách khỏi suy luận efficacy theo lịch phân tích đã định.
+5. Đối chiếu tác động đo được với dự báo cùng quần thể/horizon, chẩn đoán sai lệch
+   rồi ghi phiên bản mô hình tiếp theo.
+
+Đóng băng thiết kế, kiểm tra A/A và inference bằng mô phỏng lặp trước thực thi.
+Theo dõi thời gian thực không cho phép kiểm định efficacy lặp tùy ý. Thiếu log
+thực tế hợp lệ chỉ bàn giao thiết kế và giữ tác động/đối chiếu `not_evaluated`.
+GSM phê duyệt thực thi chính sách; phê duyệt thiết kế không tự tạo evidence A.
+
+## 8. Bàn giao, lộ trình và tiêu chí hoàn tất
+
+| Bàn giao | Nội dung |
+|---|---|
+| Lõi dự báo nhu cầu | Estimand, tác động trực tiếp/chéo/kết hợp/tổng có nhận dạng, baseline, CI/status, support, giả định và phần chưa xác định |
+| Nhánh cung lao động | Participation/hours/serviceable hours, phân biệt thêm giờ với dịch chuyển, nhận đơn báo riêng |
+| Đánh giá chính sách | So sánh hữu hạn, assessment độc lập, guardrail, bất định và quyết định có lý do |
+| Gói thử nghiệm | Thiết kế switchback/A/A có thể thực thi, ledger đóng băng, monitor và đối chiếu có điều kiện |
+| Hệ thống hỗ trợ | Core engine, simulator một cụm, kịch bản không phụ thuộc UI, dashboard và CSV/JSON dùng cùng kết quả versioned |
+| Hồ sơ tái lập | Dữ liệu/model/config/môi trường/seed, diagnostics, giới hạn và kế hoạch bổ sung dữ liệu/thử nghiệm |
+
+Pricing/operations nhận báo cáo so sánh và demo; Group 4 nhận price sensitivity và
+ma trận 2×2 đầy đủ/một phần hoặc phép so sánh được nhận dạng; Group 1 nhận đáp ứng
+participation/hours và acceptance riêng; lãnh đạo/cơ quan quản lý nhận diễn giải
+tác động và giới hạn bằng chứng. Mỗi đầu ra giữ đơn vị, zone/service/horizon,
+uncertainty, evidence và nguồn còn thiếu.
+
+Lộ trình năm tuần ban đầu vẫn là khung tổ chức; cập nhật contribution không tự
+mở lại các mốc nghiệm thu hoặc coi cơ chế mới đã hoàn tất. Công việc còn lại và
+gate theo tuần quản lý tại [roadmap](../ROADMAP.md).
+
+| Tuần | Mục tiêu |
+|---|---|
+| 1 | Câu hỏi/estimand, mapping/chất lượng, nhận dạng/split, tiêu chí nghiệp vụ và kế hoạch đánh giá |
+| 2 | Gói demand/choice, tác động đầy đủ/một phần, baseline, support, bất định và assessment độc lập |
+| 3 | Nhánh cung riêng, demand handoff và kiểm chứng vận hành trong phạm vi PoC được chốt |
+| 4 | So sánh chính sách có bất định/guardrail, thiết kế thí nghiệm, A/A và ledger dự báo |
+| 5 | Hồ sơ tái lập, gate/giới hạn, kế hoạch pilot và đối chiếu có điều kiện theo dữ liệu thực |
+
+Hoàn tất kỹ thuật cần bằng chứng độc lập cho nhận dạng/sai số/coverage trong phạm
+vi đã thử, gate vận hành khi xuất kết quả vận hành, và truy vết được phiên bản.
+Runtime/memory/workload phải có ngân sách chốt trước assessment. Dashboard và
+exports phải hiển thị cùng scope, đơn vị và trạng thái với kết quả chạy độc lập.
+
+Thiếu GSM thì calibration, tác động thực, lợi nhuận/ROI và đối chiếu thực nghiệm
+giữ `not_evaluated`; phát triển evidence C vẫn tiếp tục. Pilot đầu tiên ưu tiên
+kiểm tra quy trình; đo tác động đủ power có thể vượt năm tuần. Chỉ mở rộng pilot
+khi phạm vi nhân quả/support, lý do thử chính sách, gate kỹ thuật, dữ liệu/design
+và A/A/logging đủ; thực thi vẫn cần GSM phê duyệt. Thiếu nhận dạng/power thì nêu
+nguồn cần thu và mốc rà soát; process/logging hoặc giới hạn thử nghiệm không đạt
+thì tạm dừng rollout.
+
+## 9. Giới hạn kết luận sáng chế và tham chiếu
+
+Điểm sơ bộ **5,2/10** trước đây áp dụng cho tổ hợp đánh giá chính sách/mô phỏng
+được mô tả lúc đó. Bản tích hợp này không chấm lại lõi dự báo và không bảo đảm
+nâng điểm. Cần chọn cơ chế cụ thể, kiểm chứng và tra cứu lại cả ngoài lĩnh vực
+gọi xe trước khi phát biểu tính mới hoặc trình độ sáng tạo. Cải thiện dự báo
+không tự chứng minh khả năng bảo hộ; chưa kết luận cơ chế đề xuất là mới, đã
+được bảo hộ hoặc đang nộp đơn.
+
+Các tham chiếu dưới đây là điểm bắt đầu, không phải tra cứu đầy đủ hoặc ý kiến
+pháp lý. Phương pháp chuẩn là nền tảng đối chiếu, không phải contribution tự thân:
+
+- Chernozhukov và cộng sự (2018), Double/debiased machine learning:
+  [tài liệu phương pháp/triển khai](https://www.pywhy.org/EconML/spec/estimation/dml.html).
+- Callaway và Sant’Anna (2021), Difference-in-Differences:
+  [tài liệu phương pháp](https://bcallaway11.github.io/did/).
+- Bojinov, Simchi-Levi và Zhao, Design and Analysis of Switchback Experiments:
+  [bản thảo](https://arxiv.org/abs/2009.00148).
+- Tham chiếu sáng chế đã dùng trong tra cứu ban đầu:
+  [WO2025080207A1](https://patents.google.com/patent/WO2025080207A1/en) và
+  [CA3268977A1](https://patents.google.com/patent/CA3268977A1/en).

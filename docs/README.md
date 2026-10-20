@@ -1,15 +1,17 @@
 # Tài liệu GSM Causal Marketplace PoC
 
 Đọc tài liệu theo thứ tự: tiến độ hiện tại → roadmap → contract → thiết kế hoặc
-hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **12/10/2026**;
+hướng dẫn kỹ thuật cần cho công việc. Cập nhật danh mục ngày **20/10/2026**;
 kết quả reporting tuần 2 chốt lúc **17:13:28 ngày 07/10/2026, Asia/Bangkok**.
 
-Mục tiêu là ước lượng và kiểm chứng nhân quả **độ nhạy giá khách hàng, cung lao động
-tài xế và thay thế giữa dịch vụ**, rồi dự báo, đánh giá chính sách và đối chiếu
-bằng thí nghiệm. [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) quản lý
-mục tiêu/phạm vi; [core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard)
-quản lý thuật toán và tiêu chuẩn hỗ trợ. Các đặc tả và trạng thái hiện hành được
-dẫn bên dưới; kết quả thiếu dữ liệu hoặc nhận diện giữ `not_evaluated`.
+[Mô tả thống nhất](reference/GSM_Causal_Marketplace_Proposal.md) là nguồn duy nhất
+quản lý bài toán, contribution, phạm vi và yêu cầu kiểm chứng của đề tài. Lõi là
+**dự báo phản thực nhu cầu khi đổi giá X/Y**; nhánh cung lao động, mô phỏng và
+thử nghiệm phục vụ phạm vi nghiên cứu và đánh giá chính sách tương ứng. Bản mô tả
+phân biệt PoC hiện có với cơ chế nhận dạng theo từng phép đổi giá còn là đề xuất.
+[Core engine design](reference/CORE_ENGINE_DESIGN.md#11-engine-delivery-standard)
+quản lý thiết kế thuật toán và tiêu chuẩn hỗ trợ; trạng thái và bằng chứng có ngày
+chốt được dẫn bên dưới. Kết quả thiếu dữ liệu hoặc nhận diện giữ `not_evaluated`.
 
 **Phạm vi PoC hiện tại được Bun chốt ngày 12/10/2026:** giả sử một nhóm tài xế
 online cố định trong khoảng quan sát; tài xế được nhận hoặc từ chối từng đơn,
@@ -174,13 +176,15 @@ dữ liệu GSM, thực thi thí nghiệm thực tế và nghiệm thu của Bun
 
 | Nguồn | Mục đích |
 |---|---|
-| [Proposal](reference/GSM_Causal_Marketplace_Proposal.md) | Mục tiêu, phạm vi và lộ trình năm tuần |
+| [Mô tả thống nhất](reference/GSM_Causal_Marketplace_Proposal.md) | Nguồn mô tả chính: bài toán, contribution lõi dự báo, hiện trạng/đề xuất, phạm vi, kiểm chứng và lộ trình |
 | [Core engine design](reference/CORE_ENGINE_DESIGN.md) | Thiết kế thuật toán, supply, simulator và equilibrium; chưa phải trạng thái triển khai |
 | [Submission](submission/README.md) | Báo cáo/PDF theo ngày; [chốt kỹ thuật Week 3 ngày 12/10](submission/days/20261012/week3_poc_closeout.md), nghiệm thu Week 2 và hồ sơ lịch sử được giữ nguyên |
 | [Validation lịch sử](submission/days/20261003/validation.md) | Bằng chứng TLC/model/browser ngày 03/10 |
 
 ## Quy ước cập nhật
 
+- Cập nhật mô tả bài toán/contribution/phạm vi tại bản mô tả thống nhất; các tài
+  liệu khác trỏ về đó, không duy trì thêm một phiên bản mô tả độc lập.
 - Cập nhật tiến độ ở đây bằng tóm tắt và link đến bằng chứng có ngày chốt;
   kết luận nghiệm thu chi tiết nằm trong hồ sơ tương ứng.
 - Giữ roadmap cho việc còn lại và yêu cầu đầu vào/đầu ra theo tuần; architecture

@@ -1,5 +1,9 @@
 # Project architecture
 
+The [unified proposal](reference/GSM_Causal_Marketplace_Proposal.md) owns the
+problem, contribution and scope. This document maps them to data flow, boundaries
+and artifacts; the current implemented flow remains distinct from target design.
+
 ```text
 gsm-ride-hailing/
 ├── src/gsm_poc/              # Core application package
@@ -195,10 +199,18 @@ the full simulator is complete. Simulation supplies the operational translation
 when the policy forecast requires it; its technical gates remain mandatory for
 those outputs. Initial target scope is one cluster and two services.
 
+**Demand forecast extension, 20 October 2026 — proposed, not implemented:** the
+target flow below adds separate identification and support checks for the requested
+baseline-to-target price contrast, following the
+[contribution specification](reference/GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution).
+A joint price contrast may be estimable without every separate price coefficient;
+this requires its own model assumptions and validation. It does not change the
+current PoC's collinear-price rejection, support rules or artifact schemas.
+
 | Package | Target responsibility |
 |---|---|
 | `data/` | Map native sources to validated quote, eligibility, shift, trip-offer, state and finance ledger tables; retain nonparticipants, zero outcomes and cost-source coverage |
-| `causal/` | Identify, fit and independently validate rider-price/choice and driver participation/conditional-hours responses, with trip acceptance as a separate dispatch response; export estimands, estimates/intervals, assumptions, diagnostics, identified matrix scope, support and evidence independently of the full simulator |
+| `causal/` | Independently validate demand/choice and labor responses; the proposed demand extension checks the requested price contrast separately from support and exports estimable contrasts, available matrix components, intervals/statuses and reasons for unavailable results; trip acceptance remains a separate dispatch response |
 | `simulation/` | Apply compensation rules; construct physical driver/vehicle schedules; dispatch offers, resolve acceptance and operate the state simulator; produce individual earnings ledgers and bounded income-supply trials |
 | `pipeline/` | Freeze compatible model/calibration/policy/snapshot and evaluation inputs; orchestrate bounded supported forecasts, paired baseline/target scenarios, uncertainty, independent finite-policy comparisons against confirmed business criteria/guardrails, frozen experimental forecasts and reconciliation |
 | `core/` | Define shared contracts, units, versions, support/status checks, seeds, budgets and artifact lifecycle |
@@ -214,12 +226,22 @@ flowchart TD
   Version --> Runner[Bounded paired scenario runner]
   Policy[Customer price + driver incentive policy] --> Runner
   Snapshot[Common initial snapshot + roster + seed plan] --> Runner
-  Runner --> Demand[Customer prices to X/Y/NONE choice and request flows]
+  Runner --> Contrast[Baseline and target prices + population/context/horizon]
+  Version --> Identification[Contrast identification + assumptions]
+  Contrast --> Identification
+  Version --> Support[Baseline and target joint price/context support]
+  Contrast --> Support
+  Identification --> Qualification{Qualify each requested demand output}
+  Support --> Qualification
+  Qualification -->|Gates pass| Demand[X/Y/total demand forecasts + interval status]
+  Qualification -->|Gates fail| Unavailable[Unavailable outputs + reasons and diagnostics]
+  Unavailable --> Artifacts
+  Demand --> Artifacts
   Runner --> Terms[Compensation rules to predecision driver terms]
   Terms --> Participation[Driver shift attendance / schedule]
   Participation --> Admission[Physical driver/vehicle admission schedule]
   Terms --> Acceptance[Trip-acceptance response conditional on an actual offer]
-  Demand --> Simulator[Dispatch offers and request/driver/vehicle state simulation]
+  Demand -->|Required request levels and operational inputs qualify| Simulator[Dispatch offers and request/driver/vehicle state simulation]
   Admission --> Simulator
   Simulator -->|Actual trip offer| Acceptance
   Acceptance -->|Decision| Simulator
@@ -232,6 +254,7 @@ flowchart TD
   BookingValue --> Results
   DriverSummary --> Results
   Results --> Compare[Independent supported finite-policy evaluation + guardrails]
+  Demand --> Compare
   Compare --> Pilot[Candidate pilot recommendation + frozen forecast/analysis plan]
   Pilot --> Experiment[Authorized A/A and designed experiment]
   Experiment --> Reconcile[Measured effects versus frozen forecast]
@@ -245,6 +268,16 @@ Offline fitting and calibration precede scenario execution. A frozen model
 version links the demand/choice, participation and acceptance bundles, calibration,
 compensation rules, units, support and evidence. Scenario trials use those inputs;
 they do not fit responses from their own simulated outcomes.
+
+The proposed demand checks retain separate per-output identification and support
+reports. Neither support nor residual price variation establishes a causal basis
+without assignment or defensible observational assumptions. Passing one gate
+cannot override failure of the other; unsupported or unidentified outputs remain
+unavailable without blocking independent qualified outputs. A contrast alone does
+not provide the baseline/target request rates needed by simulation: a compatible
+baseline, exposure and valid service-level probabilities/rates must also qualify.
+Fixed-quote forecasts retain that population; they do not become total-market
+demand through the handoff. Demand-only evaluation does not require a simulator.
 
 Customer prices and driver compensation are separate policy paths. A tariff
 change affects offered driver pay only through an explicit compensation rule.
@@ -411,6 +444,18 @@ outcome and treatment order, baseline model and support diagnostics. A full
 demand/participation/acceptance/calibration model version remains a target
 interface. New logical schemas require explicit versioning and implementation
 mapping; current manifests provide run/source/configuration references and checksums.
+
+For the **proposed contrast-specific extension**, `scenario_result` must preserve
+the actual baseline/target price contrast, estimand/population/context/horizon,
+separate identification and support decisions with diagnostics, and per-output
+X/Y/total estimates, units, interval status and unavailable reasons. Separate price
+coefficients remain null/unavailable when not identified, even if a combined
+contrast is estimable. Record model/data/configuration and diagnostic-rule versions;
+refit results retain attempted/successful/failed counts and failure reasons.
+`demand_plan` may consume only qualified absolute request rates, with compatible
+baseline/exposure, never an unidentified coefficient or an unsupported rate inferred
+from a contrast alone. These are logical requirements pending schema/version mapping,
+not changes to existing bundles, CSV/JSON columns or manifests.
 
 Research durations, distances and energy use seconds, km and kWh, with SOC in
 `[0,1]`. Preserve original TLC miles/USD alongside normalized distance; currency

@@ -354,6 +354,11 @@ the probability complement. Expected bookings equal assumed sessions times the
 sum of X and Y probabilities. Separate columns are withheld when price residuals
 have insufficient rank; only a varying, identifiable price may be reported alone.
 
+The research contribution and proposed next scope are defined in the
+[unified proposal](reference/GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution).
+This technical specification describes the current implementation; its
+collinear-price rejection is unchanged.
+
 ### Limits and extension gates
 
 TLC context comes from completed NYC trips. It does not reconstruct quote viewers,

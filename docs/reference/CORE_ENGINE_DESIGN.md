@@ -7,6 +7,13 @@ is one cluster and two services, with a five-week development plan.
 **Document type:** implementation and acceptance design. Formulas, interfaces,
 and starting values are design choices, not measurements or implementation status.
 
+**Demand contribution alignment, 20 October 2026:** the
+[unified proposal](GSM_Causal_Marketplace_Proposal.md#demand-forecasting-contribution)
+owns the research contribution. Contrast-specific demand identification below is
+proposed, not implemented or accepted; its algorithm, numerical thresholds and
+inference rules must be frozen before independent assessment. Existing PoC
+behavior and acceptance evidence remain unchanged.
+
 **Current PoC scope (Bun, 12 October 2026):** use a fixed online driver roster,
 individual trip acceptance and the 100%-displayed-fare pay assumption. Incentives,
 behavioral scheduling, online/offline dynamics and income-supply equilibrium below
@@ -30,8 +37,11 @@ current progress and executed evidence are indexed in [docs README](../README.md
 
 ## 1. Objectives and required outputs
 
-Estimate and validate three causal responses: customer price sensitivity, driver
-labor supply and cross-service substitution. Use identified responses to forecast
+The core research contribution is counterfactual demand forecasting under joint
+X/Y price interventions, with identification and support assessed for the requested
+contrast. Customer price sensitivity and cross-service substitution form this
+demand core; driver labor supply remains a separate causal response. Use identified
+responses to forecast
 policy effects, assess trade-offs and identify policies worth testing under an
 agreed business criterion, uncertainty and service/driver guardrails. Design
 switchback or other suitable randomized interventions to reconcile frozen
@@ -55,7 +65,7 @@ Offer dispatch and trip acceptance affect matching and operational outcomes.
 |---|---|---|
 | Customer price sensitivity | Request effects and valid elasticities; quote conversion separately; point/interval estimates and identification/support | DemandResponse |
 | Driver labor supply | Participation/hours effects of predecision offered terms; serviceable-hour response and extra hours versus relocation | DriverParticipation |
-| Cross-service response | Supported own/cross 2x2 matrix or identified columns; X/Y/total request effects and nonbooking where observed | ChoiceResponse |
+| Cross-service response | Supported own/cross 2x2 matrix or identified columns; proposed estimable joint contrasts when columns are unavailable; X/Y/total request effects and nonbooking where observed | ChoiceResponse |
 | Policy assessment | Finite supported policy comparisons, agreed business metric/guardrails, uncertainty and pilot disposition with reasons | ScenarioRunner, EconomicEvaluator |
 | Experimental validation | Assignment and A/A protocol, power/carryover design, frozen forecasts, live guardrail monitoring and causal reconciliation | ExperimentInterface |
 | Uncertainty/evidence | Intervals, support, assumptions, A/B/C per output; statistical, simulator and sensitivity sources separately | UncertaintyEngine, EvidenceRegistry |
@@ -387,6 +397,10 @@ Near-zero baselines require absolute effects and denominators instead of unstabl
 elasticities. Zero/negative prices need monetary or categorical treatments;
 adding an arbitrary epsilon does not make log prices valid.
 
+For the proposed contrast-specific extension in section 6.6, this matrix form is
+a response representation, not a requirement to identify every matrix entry.
+An estimable matrix-vector product does not identify its separate coefficients.
+
 ### 6.3 DML and baselines
 
 Retain naive and adjusted OLS. DML learns $\mathbb{E}[Q\mid W]$ and
@@ -415,6 +429,11 @@ train/folds; oracle and test outcomes cannot enter fitting.
 counts, and domain validity. Separate min/max ranges are insufficient. Derive
 support from data and approved policy bounds; do not apply 0.90-1.10 universally.
 
+In the proposed extension, identification diagnostics and empirical support are
+reported separately, even if stored together. Check both baseline and target in
+the requested context; an estimable direction alone does not support their absolute
+price levels. Interpolation needs a declared model assumption and supporting data.
+
 Check each context before aggregation. Negative probabilities, probabilities
 above one, or sums above one invalidate actions; no clipping/renormalization.
 Supported actions satisfy data support, probability validity, and operational
@@ -441,6 +460,35 @@ which a reduced-form demand response was identified. Check that compatibility fo
 the full scenario; passing a price-support gate alone is insufficient. Holding
 the existing request response fixed under an unvalidated driver mechanism is an
 explicit C sensitivity assumption, not an identified total marketplace effect.
+
+### 6.6 Proposed contrast-specific demand identification
+
+**Not implemented:** evaluate the requested baseline-to-target contrast for each
+demand outcome, rather than requiring every price coefficient to be identified.
+The current PoC still rejects jointly varying prices with rank-deficient residual
+covariance; the single-varying-price case is already supported under current rules.
+
+For example, under a compatible local linear model and causal assumptions, data
+where X/Y prices move together may identify a common price-change effect while
+leaving an X-only change and separate matrix columns unidentified. Collinearity
+alone neither guarantees this combined forecast nor invalidates every contrast.
+
+Before implementation, specify how the requested log-price change is checked
+against residual price variation after pretreatment adjustment. A residual-subspace
+check is a candidate, not a selected algorithm or a novelty claim. Freeze numerical
+tolerances, weak-variation handling and sensitivity checks before assessment.
+Assignment/observational identification assumptions remain necessary independently
+of any numerical check. Do not condition away post-price supply/wait mediators when
+the estimand is the total policy effect.
+
+Retain only estimable outcome contrasts and genuinely identified coefficients;
+leave other coefficients null with reasons. Do not use an arbitrary coefficient
+solution or a nearest supported projection to answer a different price question.
+Check support and probability validity in each context before aggregation. Report
+X/Y/total with their own qualification; availability of one does not imply all.
+Absolute forecasts additionally require a compatible identified baseline and
+exposure definition. Fixed-quote conversion cannot become total-market demand
+without an identified exposure model; effects alone cannot generate request rates.
 
 ## 7. Supply response engine
 
@@ -887,6 +935,15 @@ This choice-only conditional approximation does not supply operational/equilibri
 CI. Bun accepted its technical exception on 11/10/2026; see
 [the decision](../submission/days/20261011/week2_hybrid_acceptance.md).
 
+For **proposed contrast-specific inference**, target uncertainty of the estimable
+contrast, not confidence intervals for unidentified individual coefficients. The
+current full-coefficient covariance path does not establish validity for a deficient
+price design. Freeze the analytic/resampling method and CI publication rules before
+assessment. Original training data defines support during refits; each refit still
+needs its own identification/probability checks. Preserve attempted, successful and
+failed counts with reasons, including lost identification. Do not silently condition
+the reported interval on favorable refits or treat a missing interval as zero error.
+
 For the proposed integrated marketplace uncertainty path, refit responses,
 baselines, and learned calibration components relevant to the
 uncertainty target; fixed business rules remain fixed. Solve baseline/target in
@@ -944,7 +1001,7 @@ announcement/effectiveness and shift-decision horizon, not payment time alone.
 ### 13.2 Execution
 
 1. Validate schema, scope, units, policy, version compatibility, criterion/guardrails and budgets.
-2. Check identification/support for each requested result and calibration quality for outputs that depend on operational forecasts.
+2. Check identification and baseline/target support separately for each requested result; the proposed demand extension assesses the actual price contrast. Check calibration quality for outputs that depend on operational forecasts.
 3. Produce supported request/supply counterfactuals; construct schedules and solve baseline/target when integrated operational forecasts are required.
 4. Reconcile requests, offers, driver/vehicle-hours, ledgers and any modeled energy in each applicable trajectory.
 5. Evaluate the agreed economic measure when its inputs qualify; reporting profit additionally reconciles all in-scope costs. Retain operational trade-offs, guardrails and decision reasons.
@@ -981,9 +1038,17 @@ Stage execution: `pending/running/succeeded/failed`. Module/metric behavior:
 | `interval_unstable` / `interval_unavailable` | Separate interval status; valid points may remain available |
 | `sensitivity_only` | Assumption-based results separate from supported forecasts |
 
-If an action needs two matrix columns but only one is identified, never fill the
-other with zero. Module failures do not turn missing metrics into zero. Display
-flags alongside results and preserve them in CSV/JSON.
+If separate matrix columns are required but unavailable, never fill them with
+zero. Under the proposed extension, an independently qualified combined contrast
+may still be reported without those columns. Failures do not turn missing metrics
+into zero. Display flags alongside results and preserve them in CSV/JSON.
+
+The proposed demand result contract retains the requested baseline/target prices,
+estimand/population/context/horizon, separate identification and support decisions
+with diagnostics, and per-output estimate/unit/interval status or unavailable reason.
+Keep data/model/configuration and diagnostic-rule versions, plus refit denominators
+and failure reasons. Do not silently substitute a projected contrast. These are
+logical requirements pending schema/version mapping, not new implemented fields.
 
 ## 14. Proposed module and artifact interfaces
 
@@ -1018,6 +1083,12 @@ baseline/calibration, taxonomy, support, compensation/accounting,
 state/boundary conventions, and model cards. Check
 compatibility when zones/services/currency/horizon/causal conventions change.
 A DML file alone is insufficient.
+
+For the proposed demand extension, the representation retained by a bundle must
+support qualified contrasts without presenting arbitrary individual coefficients
+as identified. Its exact serialization and diagnostic interface remain to be chosen;
+existing `.joblib` bundles and implemented APIs are unchanged. Result/artifact
+requirements are maintained in [architecture conventions](../ARCHITECTURE.md#artifact-conventions).
 
 Tables/draws/trajectories use Parquet; specs/manifests/diagnostics JSON; models
 implementation bundles (`.joblib` in the PoC); handoff CSV/JSON. Mobility Assistant
@@ -1113,7 +1184,7 @@ without GSM; real forecasts/calibration/economics require corresponding sources.
 |---|---|
 | Data | Grain/keys/cardinality/timezones/reconciliation; unknown differs from zero |
 | Choice | X/Y/NONE conservation, availability respected, correct log ratios |
-| Identification | Reject collinear full matrices and unidentified scenario effects |
+| Identification | Never publish unidentified matrix entries or scenario effects; the proposed extension qualifies each requested contrast separately, without requiring a full matrix |
 | Leakage | No oracle/future outcomes in fitting; original units preserved in splits/folds |
 | Supply | Relocation adds no hours; shared fleet/charging counted once |
 | Driver decisions | No offer is not a rejection; acceptance does not scale physical hours; eligible nonparticipants and zero-trip drivers remain in their applicable populations |
@@ -1131,6 +1202,27 @@ defines correctness, repeated-seed, failure and workload checks. Method and poli
 protocols in the same document retain simple baselines, independent evaluators
 and frozen holdouts. Declare truths/assumptions and retain all rejected/failed
 attempts in their applicable denominators.
+
+The **proposed contrast-specific demand extension** requires an independent
+controlled assessment after algorithm, tolerances, estimands, support and interval
+rules are frozen. Compare current OLS/DML and a simple baseline on the same data,
+population, horizon and requested contrasts; retain unavailable results and their
+denominators rather than scoring only successful forecasts.
+
+| Case | Required evidence under declared model/causal assumptions |
+|---|---|
+| Independent residual X/Y variation | Recover qualified separate and combined effects; existing supported cases retain their interpretation |
+| Only one price varies | Recover the identified column; changes needing the other price remain unavailable; do not count existing behavior as a new capability |
+| Both prices move together | Recover a supported estimable joint contrast while withholding unidentified columns and an out-of-span contrast such as an X-only change in the common-movement case |
+| No residual price variation or weak variation | Withhold unidentified effects; weak-variation decisions and sensitivity follow frozen rules, not achieved accuracy |
+| Invalid baseline/target/context or probabilities | Reject the affected forecast even when its direction is estimable; check each context before aggregation |
+| Refit loses identification or validity | Retain failure reasons and all attempted/successful/failed counts; follow prespecified CI publication rules |
+
+Measure effect bias/RMSE, sign errors, CI coverage/width, failure rates and retained
+scope for X/Y/total. Ablate identification and support components separately; do not
+attribute gains from changed data or evaluation scope to the estimator. Separate
+development from final assessment, including repeated units and time ordering.
+Controlled success does not certify real GSM effects or universal 95% coverage.
 
 Driver integration adds controlled checks before market-level evaluation:
 
@@ -1153,8 +1245,8 @@ Driver integration adds controlled checks before market-level evaluation:
 
 | Gate | Requirement |
 |---|---|
-| Identification | Defined estimands/populations/horizons, assessed assignment/assumptions and passing support/rank gates for every claimed response; partial and unidentified effects explicit |
-| Estimation | Recovery and repeated-run coverage in applicable validated DGPs |
+| Identification | Defined estimands/populations/horizons and assessed assignment/assumptions; separate support and identification checks for every claimed response; proposed demand contrasts need their own qualification, not a full matrix; partial/unidentified effects remain explicit |
+| Estimation | Recovery and repeated-run coverage in applicable validated DGPs; proposed contrast-specific forecasts must pass the independent demand cases above under frozen rules |
 | Policy assessment | Finite supported candidates evaluated independently under the frozen business criterion and service/driver/budget guardrails; uncertainty, unavailable economics and disposition reasons retained |
 | Experiment readiness | Executable assignment, behavioral-horizon/carryover/power, A/A, monitoring and analysis plan; immutable forecast package; execution conditional on GSM approval/data |
 | Counterfactual | Reconcile identified experimental/historical effects at the same estimand |
