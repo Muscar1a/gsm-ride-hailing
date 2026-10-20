@@ -5,15 +5,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-
 from gsm_poc.artifacts import completed_run, read_json, sha256_file, write_json
-from gsm_poc.cli import main
 from gsm_poc.demand import prepare_demand_plan
 from gsm_poc.estimate import fit_estimator
 from gsm_poc.features import date_splits
 from gsm_poc.generate import generate, save_generated
-from gsm_poc.pipeline import Pipeline
 from gsm_poc.scenario import ScenarioRequest
+
+from gsm_poc.cli import main
+from gsm_poc.pipeline import Pipeline
 
 
 @pytest.fixture
@@ -288,3 +288,16 @@ def test_same_run_cannot_modify_frozen_model_manifest(choice_run, snapshot):
     with pytest.raises(ValueError, match="separate"):
         choice_run.prepare_demand(choice_run.run.run_id, snapshot_path)
     assert sha256_file(choice_run.run.manifest_path) == source_hash
+
+
+def test_demand_bridge_rejects_scenario_request_not_matching_snapshot_zones(choice_run, snapshot):
+    source = choice_run
+    snapshot_path = source.config.workspace / "snapshot.json"
+    write_json(snapshot_path, snapshot)
+    output = Pipeline(source.config, "mismatched-zone-demand")
+    with pytest.raises(ValueError, match="does not match snapshot zones"):
+        output.prepare_demand(
+            source.run.run_id,
+            snapshot_path,
+            request=ScenarioRequest(target_context_set="zone_161"),
+        )

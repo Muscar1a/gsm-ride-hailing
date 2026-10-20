@@ -208,6 +208,8 @@ async function load_run(run_id) {
     options_for($("#estimator"), Object.keys(data.manifest.model_results || {}).map((value) => [value, value]), config.model.scenario_estimator);
     options_for($("#zone"), [["", "All zones"], ...(data.zones || []).map((value) => [value, value])]);
     $("#n-sessions").value = config.scenario.n_sessions;
+    const tz = config.source?.assumed_timezone || "America/New_York";
+    $("#source-timezone").textContent = `Timezone: ${tz}`;
     $("#scenario-controls").hidden = false;
     await forecast();
     return;
@@ -287,25 +289,88 @@ async function forecast() {
   const run_id = state.run_id;
   if (!run_id) return;
   const fields = Object.fromEntries(new FormData($("#scenario-form")));
-  const result = await post_json("/api/scenario", {run_id, ...fields, zone: fields.zone ? Number(fields.zone) : null, delta_x: Number(fields.delta_x) / 100, delta_y: Number(fields.delta_y) / 100, n_sessions: Number(fields.n_sessions)});
+  const payload = {
+    run_id,
+    estimator: fields.estimator,
+    inference_method: fields.inference_method,
+    baseline_x: Number(fields.baseline_x || 1.0),
+    baseline_y: Number(fields.baseline_y || 1.0),
+    delta_x: Number(fields.delta_x) / 100,
+    delta_y: Number(fields.delta_y) / 100,
+    n_sessions: Number(fields.n_sessions),
+    zone: fields.zone ? Number(fields.zone) : null,
+    horizon_start: fields.horizon_start?.trim() || null,
+    horizon_end: fields.horizon_end?.trim() || null,
+  };
+  const result = await post_json("/api/scenario", payload);
   if (run_id !== state.run_id || state.view !== "scenario") return;
   const root = $("#results");
   root.replaceChildren(element("p", result.coverage_warning, "notice"));
   root.append(element("p", `Status: ${result.status} · Support: ${result.support_status || "unavailable"} · Interval: ${result.interval_status || "unavailable"}`, "muted"));
   if (result.reasons?.length) root.append(element("p", result.reasons.join(" · "), "notice"));
-  if (!["out_of_support", "not_identified", "invalid_probability"].includes(result.status)) {
-    metrics(root, [["Expected bookings", result.after_expected_bookings], ["Change in bookings", result.delta_expected_bookings], ["Quote sessions", Number(fields.n_sessions)]]);
-    const rows = Object.entries(result.probabilities).map(([service, value]) => ({Service: service, "Before (%)": value.before_probability * 100, "After (%)": value.after_probability * 100, "Change (pp)": value.delta_percentage_points, "Expected before": value.before_expected_choices, "Expected after": value.after_expected_choices}));
+  const display_metrics = [];
+  if (result.after_expected_bookings != null) {
+    display_metrics.push(["Expected requests / Yêu cầu kỳ vọng", result.after_expected_bookings]);
+  }
+  if (result.before_expected_bookings != null) {
+    display_metrics.push(["Baseline expected requests", result.before_expected_bookings]);
+  }
+  if (result.delta_expected_bookings != null) {
+    display_metrics.push(["Change in requests", result.delta_expected_bookings]);
+  }
+  display_metrics.push(["Quote sessions", Number(fields.n_sessions)]);
+  metrics(root, display_metrics);
+
+  if (result.probabilities && Object.keys(result.probabilities).length > 0) {
+    const rows = Object.entries(result.probabilities).map(([service, value]) => ({
+      Service: service,
+      "Before (%)": value.before_probability != null ? value.before_probability * 100 : null,
+      "After (%)": value.after_probability != null ? value.after_probability * 100 : null,
+      "Change (pp)": value.delta_percentage_points,
+      "Expected before": value.before_expected_choices,
+      "Expected after": value.after_expected_choices,
+    }));
     bars(root, rows, "Service", "After (%)", "Before (%)");
     const frame = element("div"); table(frame, rows); root.append(frame);
-    root.append(element("p", `${result.interval_kind} · nominal ${Math.round(result.interval_level * 100)}%. Technical stability does not establish empirical coverage. Expected bookings are choices, not completed trips.`, "muted"));
+  }
+  if (!["out_of_support", "not_identified", "invalid_probability"].includes(result.status)) {
+    root.append(element("p", `${result.interval_kind} · nominal ${Math.round((result.interval_level || 0.95) * 100)}%. Technical stability does not establish empirical coverage. Expected requests are quote choices, not completed trips.`, "muted"));
     if (result.interval) json_details(root, "Uncertainty intervals", result.interval);
     json_details(root, "Effect matrix and interpretation", {theta: result.theta, scope: fields.zone || "All zones", units: "Choice probability per log price; shared cluster response"});
   }
-  const button = element("button", "Export scenario JSON");
-  button.type = "button";
-  button.onclick = () => save_blob(new Blob([JSON.stringify(result, null, 2)], {type: "application/json"}), "scenario.json");
-  root.append(button);
+  const buttons = element("div", undefined, "fields");
+  const json_button = element("button", "Export scenario JSON");
+  json_button.type = "button";
+  json_button.onclick = () => save_blob(new Blob([JSON.stringify(result, null, 2)], {type: "application/json"}), "scenario.json");
+  buttons.append(json_button);
+
+  if (result.metrics) {
+    const csv_button = element("button", "Export scenario_metrics.csv");
+    csv_button.type = "button";
+    csv_button.onclick = () => {
+      const header = ["metric_id", "service", "period", "estimate", "unit", "status", "identification_status", "support_status", "interval_status", "interval_lower", "interval_upper", "reasons"];
+      const lines = [header.join(",")];
+      for (const m of Object.values(result.metrics)) {
+        lines.push([
+          m.metric_id,
+          m.service,
+          m.period,
+          m.estimate != null ? m.estimate : "",
+          m.unit,
+          m.status,
+          m.identification_status,
+          m.support_status,
+          m.interval_status,
+          m.interval?.lower != null ? m.interval.lower : "",
+          m.interval?.upper != null ? m.interval.upper : "",
+          `"${(m.reasons || []).join('; ')}"`
+        ].join(","));
+      }
+      save_blob(new Blob([lines.join("\n")], {type: "text/csv"}), "scenario_metrics.csv");
+    };
+    buttons.append(csv_button);
+  }
+  root.append(buttons);
   json_details(root, "Full scenario result", result);
 }
 
@@ -419,7 +484,16 @@ $("#job-form").onsubmit = (event) => {
   event.preventDefault();
   perform(event.submitter, async () => {
     const fields = Object.fromEntries(new FormData(event.target));
-    const record = await post_json("/api/jobs", {...fields, source_run_id: fields.action === "train" ? null : fields.source_run_id || null, seed: Number(fields.seed), bootstrap_draws: Number(fields.bootstrap_draws), delta_x: Number(fields.delta_x) / 100, delta_y: Number(fields.delta_y) / 100, upload_id: fields.action === "simulate" ? fields.upload_id || null : null});
+    const record = await post_json("/api/jobs", {
+      ...fields,
+      estimator: fields.action === "train" ? fields.estimator : null,
+      source_run_id: fields.action === "train" ? null : fields.source_run_id || null,
+      seed: Number(fields.seed),
+      bootstrap_draws: Number(fields.bootstrap_draws),
+      delta_x: Number(fields.delta_x) / 100,
+      delta_y: Number(fields.delta_y) / 100,
+      upload_id: fields.action === "simulate" ? fields.upload_id || null : null,
+    });
     state.job_id = record.job_id;
     sessionStorage.setItem("gsm_job", state.job_id);
     await poll_job();

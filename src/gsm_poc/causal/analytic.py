@@ -181,7 +181,8 @@ def analytic_intervals(
                 "reason": (
                     "Compact covariance unavailable; prepare inference offline or select bootstrap"
                 ),
-            }
+            },
+            "interval_level": level,
         }
     covariance = validate_covariance(bundle, record)
     degrees = record["degrees_of_freedom"]
@@ -223,6 +224,24 @@ def analytic_intervals(
     intervals["delta_expected_bookings"] = bounds(
         output["delta_expected_bookings"], n_sessions * delta[:2].sum(axis=0)
     )
+    intervals["before_expected_bookings"] = bounds(
+        output["before_expected_bookings"], n_sessions * before[:2].sum(axis=0)
+    )
+    intervals["after_expected_bookings"] = bounds(
+        output["after_expected_bookings"], n_sessions * after[:2].sum(axis=0)
+    )
+    for j, label in enumerate(("X", "Y", "NONE")):
+        intervals[f"{label}_before_expected_choices"] = bounds(
+            output["probabilities"][label]["before_expected_choices"], n_sessions * before[j]
+        )
+        intervals[f"{label}_after_expected_choices"] = bounds(
+            output["probabilities"][label]["after_expected_choices"], n_sessions * after[j]
+        )
+        intervals[f"{label}_delta_expected_choices"] = bounds(
+            output["probabilities"][label]["after_expected_choices"]
+            - output["probabilities"][label]["before_expected_choices"],
+            n_sessions * delta[j],
+        )
     theta_intervals, elasticity_intervals = (
         [[None, None], [None, None]],
         [[None, None], [None, None]],

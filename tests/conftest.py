@@ -9,7 +9,6 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
-
 from gsm_poc.artifacts import sha256_file
 from gsm_poc.config import Config, EvaluationConfig, ModelConfig, SimulationConfig, SourceConfig
 from gsm_poc.generate import generate

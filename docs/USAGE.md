@@ -101,7 +101,7 @@ Every command accepts `--config`, optional `--run-id`, `--seed`, `--dgp`,
 | generate | Policy/session/block/oracle tables | TLC needs `--build-id`, or build in the same run |
 | fit | Models, uncertainty, oracle method check, example scenario | `--dataset-id` |
 | evaluate | Checkpointed repeated-seed evaluation | Optional TLC `--build-id`; `--seeds`, `--dgps` |
-| scenario | Scenario from a completed model | `--model-run-id` |
+| scenario | Scenario from a completed model (Forecast Contract v2) | --model-run-id; optional --delta-x, --delta-y, --baseline-x, --baseline-y, --horizon-start, --horizon-end, --zone, --estimator |
 | prepare-demand | Freeze choice handoff; prepare request rates and initial snapshot | `--model-run-id`, `--snapshot` |
 | simulate-marketplace | Fixed-online offers, request/vehicle trajectories and operational metrics; optional 100%-fare settlement | `--demand-run-id`, `--rules`; optional `--requests` CSV, `--compensation` and window/carry-in flags |
 | evaluate-marketplace | Frozen paired baseline/price, controlled-truth and workload assessment | `--baseline-demand-run-id`, `--target-demand-run-id`, `--rules`, `--compensation`, `--protocol` |
@@ -148,8 +148,10 @@ Only local completed runs with verified artifacts are loaded by the dashboard.
 
 - `effects.csv`: common effect matrix, elasticity, baseline denominator, units,
   individual bootstrap intervals/status, source kind, evidence and run ID.
-- `scenario_result.json`: X/Y/NONE probabilities, changes in percentage points,
-  assumed sessions, expected bookings, matrix, support and interval status.
+- scenario_result.json: Forecast Contract schema version 2 output (scope, provenance,
+  identification, support, metrics, evidence, and compatibility aliases).
+- scenario_metrics.csv: Tabular export of every forecast estimand with metric ID, service,
+  period, estimate, unit, point/interval status, confidence intervals, and scope.
 - `method_metrics.csv`: one-run estimates against truth; this is not empirical coverage.
 - `evaluation/evaluation_metrics.csv`: per-DGP/cell bias, RMSE, coverage, exact
   binomial intervals and the number of attempted/valid runs.

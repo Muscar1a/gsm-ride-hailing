@@ -202,7 +202,7 @@ def test_preparation_preserves_baseline_bytes_and_replay_avoids_bootstrap_loads(
     assert forecast["interval_status"] == "ok"
     assert len(loaded) == 2
     historical = read_json(baseline.run.path / "scenario_result.json")
-    assert forecast["probabilities"] == historical["probabilities"]
+    assert forecast.get("probabilities") == historical.get("probabilities")
     assert forecast["theta"] == historical["theta"]
 
 

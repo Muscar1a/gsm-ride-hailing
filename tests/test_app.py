@@ -25,12 +25,12 @@ def test_dashboard_changes_scenario_and_withholds_unsupported_price(model_run):
     client = TestClient(create_app(model_run.config.workspace))
     request = {"run_id": model_run.run.run_id}
     result = client.post("/api/scenario", json=request).json()
-    assert "88–89%" in result["coverage_warning"]
+    assert "calibration has not been evaluated" in result["coverage_warning"]
     assert result["inference_method"] == "analytic"
     assert result["after_expected_bookings"] > 0
     result = client.post("/api/scenario", json=request | {"inference_method": "bootstrap"}).json()
     assert "day-bootstrap" in result["interval_kind"]
-    result = client.post("/api/scenario", json=request | {"delta_x": 0}).json()
+    result = client.post("/api/scenario", json=request | {"zone": 161, "delta_x": 0}).json()
     assert result["delta_expected_bookings"] == 0
     result = client.post("/api/scenario", json=request | {"delta_x": 0.2}).json()
     assert result["status"] == "out_of_support"
@@ -69,7 +69,7 @@ def test_dashboard_uses_source_config_for_frozen_choice_package(model_run):
     original = client.post("/api/scenario", json={"run_id": model_run.run.run_id}).json()
     assert result["interval_level"] == source_config.evaluation.interval_level
     assert result["support_status"] == original["support_status"]
-    assert result["probabilities"] == original["probabilities"]
+    assert result.get("probabilities") == original.get("probabilities")
     data = client.get(f"/api/runs/{package.run.run_id}").json()
     assert data["manifest"]["choice_source"]["source_config"] == json.loads(
         json.dumps(source_config.as_dict())

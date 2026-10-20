@@ -15,6 +15,10 @@ from gsm_poc.causal.analytic import model_identity, validate_covariance
 from gsm_poc.causal.estimate import FitResult, fit_all, fit_estimator
 from gsm_poc.causal.evaluate import effect_rows, monte_carlo, saved_method_evaluation
 from gsm_poc.causal.features import date_splits, require_observed
+from gsm_poc.causal.forecast_contract import (
+    format_scenario_metrics_csv,
+    select_scenario_contexts,
+)
 from gsm_poc.causal.scenario import ScenarioRequest, scenario
 from gsm_poc.causal.uncertainty import BootstrapResult, bootstrap
 from gsm_poc.core.artifacts import (
@@ -428,21 +432,25 @@ class Pipeline:
                 historical = read_json(self.run.path / "scenario_result.json")
                 contexts = pd.read_parquet(self.run.path / "scenario_contexts.parquet")
                 request = ScenarioRequest(**historical["request"])
-                zone = historical.get("scope", {}).get("selected_zone")
-                if request.target_context_set.startswith("zone_"):
-                    requested_zone = int(request.target_context_set.removeprefix("zone_"))
-                    if zone is not None and zone != requested_zone:
-                        raise ValueError("Saved scenario zone differs from its scope")
-                    zone = requested_zone
-                if zone is not None:
-                    contexts = contexts[contexts.zone_id == zone]
-                if historical.get("context_blocks", len(contexts)) != len(contexts):
+                scoped_contexts, scope_info = select_scenario_contexts(
+                    contexts,
+                    target_context_set=request.target_context_set,
+                    zone=historical.get("scope", {}).get("selected_zone"),
+                    horizon_start=request.horizon_start,
+                    horizon_end=request.horizon_end,
+                    timezone=getattr(source_config.source, "assumed_timezone", "America/New_York"),
+                    slot_minutes=source_config.simulation.slot_minutes,
+                )
+                expected_blocks = historical.get("scope", {}).get(
+                    "context_blocks", historical.get("context_blocks", len(scoped_contexts))
+                )
+                if expected_blocks != len(scoped_contexts):
                     raise ValueError(
                         "Saved scenario scope cannot be reproduced from frozen contexts"
                     )
                 current = scenario(
                     bundle,
-                    contexts,
+                    scoped_contexts,
                     request,
                     source_config,
                     model_run_id,
@@ -728,6 +736,8 @@ class Pipeline:
             if not contexts_path.is_file():
                 raise FileNotFoundError(f"Scenario contexts not found: {contexts_path}")
             return {
+                "schema_version": 2,
+                "contract_version": "forecast_contract_v2",
                 "model_run_id": selected_run,
                 "request": dataclasses.asdict(resolved_request),
                 "zone": zone,
@@ -744,6 +754,7 @@ class Pipeline:
 
         with self.run.stage("scenario", scenario_inputs) as execute:
             path = self.run.path / "scenario_result.json"
+            metrics_csv_path = self.run.path / "scenario_metrics.csv"
             if execute:
                 name = self.config.model.scenario_estimator
                 diagnostics = read_json(directory / "models" / name / "diagnostics.json")
@@ -762,6 +773,12 @@ class Pipeline:
                 contexts = pd.read_parquet(directory / "scenario_contexts.parquet")
                 if zone is not None:
                     contexts = contexts[contexts.zone_id == zone]
+                provenance_payload = {
+                    "model_run_id": selected_run,
+                    "source_context_sha256": sha256_file(directory / "scenario_contexts.parquet"),
+                    "source_config_hash": fingerprint(source_config.as_dict()),
+                    "code_version": self.run.manifest.get("code_version", "unavailable"),
+                }
                 result = scenario(
                     bundle,
                     contexts,
@@ -770,9 +787,15 @@ class Pipeline:
                     selected_run,
                     draws,
                     inference_method=inference_method,
+                    provenance=provenance_payload,
                 )
                 write_json(path, result)
-                self.run.outputs("scenario", [path], output_status=result["status"])
+                outputs = [path]
+                if "metrics" in result:
+                    metrics_csv_content = format_scenario_metrics_csv(result)
+                    metrics_csv_path.write_text(metrics_csv_content, encoding="utf-8")
+                    outputs.append(metrics_csv_path)
+                self.run.outputs("scenario", outputs, output_status=result["status"])
             else:
                 result = read_json(path)
         return result

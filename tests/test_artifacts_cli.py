@@ -2,9 +2,9 @@ import dataclasses
 
 import pandas as pd
 import pytest
-
 from gsm_poc.artifacts import Run, completed_run, read_json, safe_id, write_json
 from gsm_poc.config import Config
+
 from gsm_poc.pipeline import Pipeline
 
 
@@ -39,6 +39,7 @@ def test_id_traversal_and_unknown_config_rejected(tmp_path):
 def test_offline_end_to_end_and_verified_stage_reuse(config):
     config = dataclasses.replace(
         config,
+        simulation=dataclasses.replace(config.simulation, seed=0),
         model=dataclasses.replace(
             config.model, estimators=("adjusted_ols",), scenario_estimator="adjusted_ols"
         ),

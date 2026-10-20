@@ -29,7 +29,7 @@ class JobRequest(BaseModel):
 
     action: Literal["train", "prepare_demand", "simulate"]
     source_run_id: str | None = None
-    estimator: Literal["naive_ols", "adjusted_ols", "dml"] = "adjusted_ols"
+    estimator: Literal["naive_ols", "adjusted_ols", "dml", "contrast_ols"] | None = None
     seed: int = Field(default=42, ge=0, le=2**32 - 1)
     bootstrap_draws: int = Field(default=10, ge=0, le=39)
     delta_x: float = Field(default=0, ge=-0.9, le=1)
@@ -39,13 +39,19 @@ class JobRequest(BaseModel):
 
 def prepare_job(workspace: Path, request: JobRequest) -> dict:
     if request.action == "train":
-        config = Config.load(workspace / "configs/week4.toml")
+        estimator = request.estimator or "adjusted_ols"
+        config_path = (
+            workspace / "configs/demand_contrast.toml"
+            if estimator == "contrast_ols"
+            else workspace / "configs/week4.toml"
+        )
+        config = Config.load(config_path)
         config = dataclasses.replace(
             config,
             model=dataclasses.replace(
                 config.model,
-                estimators=(request.estimator,),
-                scenario_estimator=request.estimator,
+                estimators=(estimator,),
+                scenario_estimator=estimator,
                 n_trees=min(config.model.n_trees, 20),
             ),
             evaluation=dataclasses.replace(
@@ -98,6 +104,7 @@ def execute_job(workspace: Path, job_id: str) -> None:
                     delta_price_y=request.delta_y,
                     interval_level=config.evaluation.interval_level,
                 ),
+                estimator=request.estimator,
             )
             pipeline.run.complete()
         else:

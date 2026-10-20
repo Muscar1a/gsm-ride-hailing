@@ -132,6 +132,8 @@ def parser() -> argparse.ArgumentParser:
             cmd.add_argument("--delta-y", type=float, default=0.0)
             cmd.add_argument("--baseline-x", type=float, default=1.0)
             cmd.add_argument("--baseline-y", type=float, default=1.0)
+            cmd.add_argument("--horizon-start", help="Horizon start ISO timestamp with offset")
+            cmd.add_argument("--horizon-end", help="Horizon end ISO timestamp with offset")
         if name in ("freeze-choice", "prepare-inference"):
             cmd.add_argument("--model-run-id", required=True)
         if name == "prepare-demand":
@@ -242,6 +244,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.n_sessions,
                 config.evaluation.interval_level,
                 target_context_set=target_context_set,
+                horizon_start=args.horizon_start,
+                horizon_end=args.horizon_end,
             )
             result = pipeline.scenario(
                 request, args.model_run_id, args.zone, inference_method=args.inference_method
@@ -258,6 +262,8 @@ def main(argv: list[str] | None = None) -> int:
                     args.delta_x,
                     args.delta_y,
                     interval_level=config.evaluation.interval_level,
+                    horizon_start=args.horizon_start,
+                    horizon_end=args.horizon_end,
                 ),
                 estimator=args.estimator,
             )

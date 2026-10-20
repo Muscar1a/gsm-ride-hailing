@@ -37,7 +37,9 @@ def test_web_jobs_train_prepare_and_simulate_in_real_worker(tmp_path):
             return record["run_id"]
 
         model_id = finish_job({"action": "train", "bootstrap_draws": 0})
-        response = client.post("/api/scenario", json={"run_id": model_id, "delta_x": 0})
+        response = client.post(
+            "/api/scenario", json={"run_id": model_id, "zone": 161, "delta_x": 0}
+        )
         assert response.status_code == 200
         assert response.json()["delta_expected_bookings"] == 0
         demand_id = finish_job({"action": "prepare_demand", "source_run_id": model_id})
@@ -93,3 +95,38 @@ def test_worker_is_bounded_and_failures_do_not_look_successful(tmp_path, monkeyp
     assert result["status"] == "failed"
     assert "exceeded 1 seconds" in result["error"]
     assert not (tmp_path / "runs" / record["run_id"] / "manifest.json").exists()
+
+
+def test_prepare_demand_job_defaults_to_source_run_estimator(tmp_path):
+    directory = tmp_path / "configs"
+    directory.mkdir()
+    for name in ("week3_snapshot.json", "week3_poc.json", "week3_compensation.json"):
+        shutil.copyfile(ROOT / "configs" / name, directory / name)
+    (directory / "week4.toml").write_text(
+        "[source]\nzones = [161, 162]\n[simulation]\nslot_minutes = 120\n"
+        "[model]\nestimators = ['dml']\nscenario_estimator = 'dml'\n"
+        "min_price_cell_count = 1\nn_trees = 5\n",
+        encoding="utf-8",
+    )
+    with TestClient(create_app(tmp_path)) as client:
+        # Train a DML model
+        response = client.post(
+            "/api/jobs", json={"action": "train", "estimator": "dml", "bootstrap_draws": 0}
+        )
+        assert response.status_code == 202
+        record = response.json()
+        client.app.state.jobs.thread.join(timeout=60)
+        assert client.get(f"/api/jobs/{record['job_id']}").json()["status"] == "succeeded"
+        dml_run_id = record["run_id"]
+
+        # Prepare demand without providing an estimator field - should default to DML from source
+        response = client.post(
+            "/api/jobs", json={"action": "prepare_demand", "source_run_id": dml_run_id}
+        )
+        assert response.status_code == 202
+        prep_record = response.json()
+        client.app.state.jobs.thread.join(timeout=60)
+        prep_status = client.get(f"/api/jobs/{prep_record['job_id']}").json()
+        assert prep_status["status"] == "succeeded", prep_status
+        manifest = completed_run(tmp_path, prep_record["run_id"])
+        assert manifest["demand_source"]["estimator"] == "dml"

@@ -193,7 +193,28 @@ def prepare_demand_plan(
     source_version: str,
 ) -> DemandPlan:
     snapshot = validate_snapshot(snapshot, config)
+    if request.horizon_start is not None or request.horizon_end is not None:
+        snap_start = snapshot.get("horizon_start")
+        snap_end = snapshot.get("horizon_end")
+        if snap_start and request.horizon_start:
+            if pd.Timestamp(request.horizon_start) != pd.Timestamp(snap_start):
+                raise ValueError(
+                    "Scenario request horizon does not match snapshot operational horizon"
+                )
+        if snap_end and request.horizon_end:
+            if pd.Timestamp(request.horizon_end) != pd.Timestamp(snap_end):
+                raise ValueError(
+                    "Scenario request horizon does not match snapshot operational horizon"
+                )
     blocks = _select_blocks(contexts, snapshot, config)
+    snapshot_zones = set(int(z) for z in snapshot.get("zones", blocks.zone_id.unique()))
+    if request.target_context_set.startswith("zone_"):
+        requested_zone = int(request.target_context_set.removeprefix("zone_"))
+        if snapshot_zones != {requested_zone}:
+            raise ValueError(
+                f"Scenario request target_context_set '{request.target_context_set}' "
+                f"does not match snapshot zones {sorted(snapshot_zones)}"
+            )
     if bundle is not None and (
         not blocks.dataset_id.eq(bundle.dataset_id).all()
         or bundle.source_kind not in ("synthetic", "semi_synthetic")
@@ -211,14 +232,38 @@ def prepare_demand_plan(
         model_run_id,
         inference_method="bootstrap",
     )
-    status = gate.get("support_status", gate["status"])
-    if gate["status"] not in ("ok", "interval_unstable", "insufficient_support"):
-        status = gate["status"]
-    usable = status == "ok" and bundle is not None
+    sup = gate.get("support", {})
+    ident = gate.get("identification", {})
+    gate_zones = set(gate.get("scope", {}).get("zones", []))
+    if gate_zones and gate_zones != snapshot_zones:
+        raise ValueError(
+            f"Gate evaluation zones {sorted(gate_zones)} "
+            f"differ from snapshot zones {sorted(snapshot_zones)}"
+        )
+    b_sup_ok = sup.get("baseline_status", gate.get("support_status")) == "ok"
+    t_sup_ok = sup.get("target_status", gate.get("support_status")) == "ok"
+    contrast_id_ok = ident.get("contrast_identified", True)
+    levels_id_ok = ident.get("absolute_levels_identified", True)
+    prob_ok = gate["status"] != "invalid_probability"
+    id_ok = ident.get("status") != "not_identified" and contrast_id_ok and levels_id_ok
+
+    usable = bundle is not None and prob_ok and id_ok and b_sup_ok and t_sup_ok
+    if not prob_ok:
+        status = "invalid_probability"
+    elif not id_ok:
+        status = "not_identified"
+    elif not b_sup_ok or not t_sup_ok:
+        status = gate.get("support_status", "insufficient_support")
+    else:
+        status = "ok"
+
     policy = dataclasses.asdict(request)
     policy.pop("n_sessions")
     spec = {
         "schema_version": 1,
+        "forecast_contract_version": 2,
+        "forecast_provenance": gate.get("provenance"),
+        "forecast_scope": gate.get("scope"),
         "model_run_id": model_run_id,
         "model_version": model_version,
         "source_version": source_version,
@@ -318,6 +363,8 @@ def prepare_demand_plan(
     }
     result = {
         "schema_version": 1,
+        "forecast_contract_version": 2,
+        "forecast_provenance": gate.get("provenance"),
         "demand_plan_version": version,
         "status": status,
         "usable_for_simulation": usable,

@@ -450,20 +450,19 @@ demand/participation/acceptance/calibration model version remains a target
 interface. New logical schemas require explicit versioning and implementation
 mapping; current manifests provide run/source/configuration references and checksums.
 
-For the **contrast-specific extension**, the result contract must preserve
-the actual baseline/target price contrast, estimand/population/context/horizon,
-separate identification and support decisions with diagnostics, and per-output
-X/Y/total estimates, units, interval status and unavailable reasons. Separate price
-coefficients remain null/unavailable when not identified, even if a combined
-contrast is estimable. Record model/data/configuration and diagnostic-rule versions;
-refit results retain attempted/successful/failed counts and failure reasons.
-`demand_plan` may consume only qualified absolute request rates, with compatible
-baseline/exposure, never an unidentified coefficient or an unsupported rate inferred
-from a contrast alone. These are logical requirements pending schema/version mapping,
-not a claim that all proposed metadata fields have been added to existing exports.
-V1 adds an `identification` report to scenario JSON, stores the price subspace and
-context anchor in its model bundle, masks unavailable coefficients/intervals in
-existing exports, and counts lost-identification bootstrap draws separately.
+For the **contrast-specific extension and Forecast Contract v2**, the result contract
+preserves schema version 2 with six standardized namespaces:
+1. scope: selected zone, services, actual horizon boundaries, timezone, block count, total context weight, and assumed fixed quote population.
+2. provenance: source model run ID, dataset ID, hashes of source context, selected blocks, source config, code version, and rules version.
+3. identification: status for relative price contrasts and absolute levels, diagnostics, and assumptions.
+4. support: baseline and target evaluations, thresholds from training config, and component reasons.
+5. metrics: structured per-estimand records (probabilities and expected requests for X/Y/NONE/TOTAL across baseline, target, and delta) with estimate, unit, point status, interval status, confidence bounds, and unavailable reasons.
+6. evidence: source kind (synthetic/semi-synthetic), evidence level C, inference method, interval scope, and calibration status.
+
+The pipeline exports both scenario_result.json and tabular scenario_metrics.csv. Compatibility aliases (probabilities, efore_expected_bookings, fter_expected_bookings, delta_expected_bookings) are derived from the unified metric records.
+demand_plan consumes only qualified absolute request rates with matching operational horizon coverage across all required blocks, never an unidentified coefficient or an unsupported rate inferred from a contrast alone.
+Target prices lacking support withhold target expected bookings and uplift while preserving qualified baseline figures. Separate price coefficients remain null/unavailable when not identified.
+All inference intervals report nominal level, method, and unit without unsupported global coverage claims (calibration_status = not_evaluated_for_this_run).
 
 Research durations, distances and energy use seconds, km and kWh, with SOC in
 `[0,1]`. Preserve original TLC miles/USD alongside normalized distance; currency

@@ -20,6 +20,7 @@ from gsm_poc.pipeline import Pipeline
 def fitted_pipeline(config):
     config = dataclasses.replace(
         config,
+        simulation=dataclasses.replace(config.simulation, seed=0),
         model=dataclasses.replace(
             config.model, estimators=("adjusted_ols",), scenario_estimator="adjusted_ols"
         ),

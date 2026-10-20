@@ -28,7 +28,14 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from gsm_poc.causal.estimate import ModelBundle
 from gsm_poc.causal.scenario import ScenarioRequest, scenario
 from gsm_poc.causal.uncertainty import BootstrapResult
-from gsm_poc.core.artifacts import completed_run, read_json, safe_id, sha256_file, write_json
+from gsm_poc.core.artifacts import (
+    completed_run,
+    fingerprint,
+    read_json,
+    safe_id,
+    sha256_file,
+    write_json,
+)
 from gsm_poc.core.config import Config
 from gsm_poc.ui.jobs import JobManager, JobRequest, prepare_job
 from gsm_poc.ui.results import load_simulation
@@ -85,10 +92,14 @@ class PriceRequest(BaseModel):
     run_id: str
     estimator: Literal["naive_ols", "adjusted_ols", "dml", "contrast_ols"] = "adjusted_ols"
     inference_method: Literal["analytic", "bootstrap"] = "analytic"
+    baseline_x: float = Field(default=1.0, gt=0, le=2)
+    baseline_y: float = Field(default=1.0, gt=0, le=2)
     delta_x: float = Field(default=0.1, ge=-0.9, le=1)
     delta_y: float = Field(default=0, ge=-0.9, le=1)
     n_sessions: int = Field(default=10000, ge=1, le=10000000)
     zone: int | None = None
+    horizon_start: str | None = None
+    horizon_end: str | None = None
 
 
 def registered_path(workspace: Path, manifest: dict, relative: str) -> Path:
@@ -297,21 +308,32 @@ def create_app(workspace: Path, run_id: str | None = None, token: str | None = N
             bundle, draws = load_model(
                 workspace, manifest, request.estimator, request.inference_method
             )
+            provenance_payload = {
+                "model_run_id": request.run_id,
+                "source_context_sha256": manifest["artifacts"].get(relative, "unavailable"),
+                "source_config_hash": fingerprint(config.as_dict()),
+                "code_version": manifest.get("code_version", "unavailable"),
+            }
             return scenario(
                 bundle,
                 context,
                 ScenarioRequest(
                     "interactive-price-scenario",
+                    baseline_multiplier_x=request.baseline_x,
+                    baseline_multiplier_y=request.baseline_y,
                     delta_price_x=request.delta_x,
                     delta_price_y=request.delta_y,
                     n_sessions=request.n_sessions,
                     interval_level=config.evaluation.interval_level,
                     target_context_set="all" if request.zone is None else f"zone_{request.zone}",
+                    horizon_start=request.horizon_start,
+                    horizon_end=request.horizon_end,
                 ),
                 config,
                 request.run_id,
                 draws,
                 inference_method=request.inference_method,
+                provenance=provenance_payload,
             )
         finally:
             forecast_slot.release()

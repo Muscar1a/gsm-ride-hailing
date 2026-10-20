@@ -27,15 +27,17 @@ def test_opt_in_dml_capture_preserves_point_and_default_memory(config, generated
 
 
 @pytest.mark.parametrize("estimator", ["adjusted_ols", "dml"])
-def test_joint_scores_reconstruct_production_point_and_scenario(config, generated, estimator):
+def test_joint_scores_reconstruct_production_point_and_scenario(config, estimator):
     config = dataclasses.replace(
         config,
+        simulation=dataclasses.replace(config.simulation, seed=0),
         model=dataclasses.replace(
             config.model, estimators=(estimator,), scenario_estimator=estimator
         ),
     )
-    results, _ = fit_all(generated.blocks, config, capture_residuals=True)
-    splits = date_splits(generated.blocks, config)
+    blocks = generate(config).blocks
+    results, _ = fit_all(blocks, config, capture_residuals=True)
+    splits = date_splits(blocks, config)
     result = results[estimator]
     point, scores, leverage, rank = runner.score_influence(result, splits["train"], splits["test"])
     np.testing.assert_allclose(scores.sum(axis=0), 0, atol=1e-8)
