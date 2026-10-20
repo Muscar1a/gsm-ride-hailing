@@ -194,7 +194,7 @@ Financial continuation preserves the financial context and settles each completi
 only once. See [compensation usage](USAGE.md#week-3-minimal-compensation).
 `driver_offers` and `offer_events` retain exposure, response, unresolved offers
 and immutable predecision terms. Acceptance rates report their actual response
-denominator and keep pending/withdrawn offers separate. The read-only dashboard
+denominator and keep pending/withdrawn offers separate. The artifact-reading dashboard
 selects completed simulation runs independently of choice fits and exports the
 same metrics/statuses.
 Behavioral schedules, incentive response, endogenous online/offline behavior,
@@ -242,9 +242,9 @@ The [frozen operational protocol](BENCHMARK.md#week-3-fixed-online-operational-a
 separates pilot seeds 72001–72003 from assessment seeds 73001–73100. The
 [12 October closeout](submission/days/20261012/week3_poc_closeout.md) records
 303/303 assessment jobs with all frozen gates passed, 609 passing tests, replay
-and pending-offer continuation checks. The scoped Week-3 PoC is ready for Bun's
-review; no reviewer acceptance or original three-response/GSM completion is
-implied. Retain every failed/unavailable count and do not tune on these assessment
+and pending-offer continuation checks. Bun accepted the scoped Week-3 PoC on
+12/10/2026; original three-response/GSM completion is not implied.
+Retain every failed/unavailable count and do not tune on these assessment
 seeds. Measured workload evidence covers 2/20/100 drivers at about 450 requests,
 not the 10,000-request cap. Incentive scenarios, allocated schedules and
 income-to-hours feedback are not current prerequisites.
@@ -257,6 +257,13 @@ implementation responsibilities require them.
 SimPy is now declared and locked for the implemented fixed-supply simulator.
 
 ## 3. Handoff and follow-up
+
+The [Week 4–5 controlled workflow](WEEK4_5.md) is implemented with CLI and read-only
+dashboard support: finite supported price policies, bootstrap model propagation,
+guardrails and rule sensitivity, conditional costs, separate oracle evaluation,
+prospective assignment/power and frozen-forecast reconciliation, and transitive
+artifact/data handoff archives. These capabilities do not close the GSM data,
+accounting, identification, nominal-coverage or actual-experiment gates below.
 
 Keep large model/data/run artifacts ignored; every output has a manifest/checksum.
 Identification, response-model validity, supported forecast and independent

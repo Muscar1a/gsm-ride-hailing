@@ -140,7 +140,7 @@ to components supported by executed valid experiments.
 Confounder features must precede intervention; post-treatment variables are
 outcomes or mediators. Check duplicates, missingness, timezones, and joins.
 Use Python/SQL, EconML or DoWhy for causal analysis, SimPy for discrete events,
-and Streamlit for the demo. Store data/config/model versions for reproducibility.
+and a browser dashboard backed by FastAPI for the demo. Store data/config/model versions for reproducibility.
 GSM approves operational policy execution.
 
 ## Estimating the three responses

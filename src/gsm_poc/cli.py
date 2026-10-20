@@ -12,6 +12,13 @@ from gsm_poc.causal.scenario import ScenarioRequest
 from gsm_poc.core.config import DGPS, ESTIMATORS, Config
 from gsm_poc.pipeline.marketplace import evaluate_marketplace_run
 from gsm_poc.pipeline.pipeline import Pipeline
+from gsm_poc.pipeline.policy import (
+    compare_policies_run,
+    evaluate_policies_run,
+    export_handoff_run,
+    plan_experiment_run,
+    reconcile_experiment_run,
+)
 from gsm_poc.pipeline.supply import (
     evaluate_supply_run,
     fit_supply_run,
@@ -35,6 +42,11 @@ def parser() -> argparse.ArgumentParser:
         "prepare-demand",
         "simulate-marketplace",
         "evaluate-marketplace",
+        "compare-policies",
+        "evaluate-policies",
+        "plan-experiment",
+        "reconcile-experiment",
+        "export-handoff",
         "generate-supply",
         "fit-supply",
         "scenario-supply",
@@ -44,6 +56,31 @@ def parser() -> argparse.ArgumentParser:
         cmd = commands.add_parser(name)
         cmd.add_argument("--config", default="configs/demo.toml")
         cmd.add_argument("--run-id", help="Resume only a matching code/config/environment run")
+        if name in (
+            "compare-policies",
+            "evaluate-policies",
+            "plan-experiment",
+            "reconcile-experiment",
+            "export-handoff",
+        ):
+            cmd.set_defaults(dgp=None, seed=None, bootstrap_draws=None, estimator=None)
+            if name == "compare-policies":
+                cmd.add_argument("--demand-run-id", required=True)
+                cmd.add_argument("--rules", type=Path, required=True)
+                cmd.add_argument("--compensation", type=Path, required=True)
+            if name in ("evaluate-policies", "plan-experiment"):
+                cmd.add_argument("--comparison-run-id", required=True)
+            if name == "evaluate-policies":
+                cmd.add_argument("--truth-run-id", required=True)
+            if name in ("compare-policies", "evaluate-policies", "plan-experiment"):
+                cmd.add_argument("--spec", type=Path, required=True)
+            if name == "reconcile-experiment":
+                cmd.add_argument("--experiment-run-id", required=True)
+                cmd.add_argument("--observations", type=Path, required=True)
+            if name == "export-handoff":
+                cmd.add_argument("--source-run-ids", nargs="+", required=True)
+                cmd.add_argument("--max-bytes", type=int, default=268435456)
+            continue
         if name == "evaluate-marketplace":
             cmd.set_defaults(dgp=None, seed=None, bootstrap_draws=None, estimator=None)
             cmd.add_argument("--baseline-demand-run-id", required=True)
@@ -159,6 +196,16 @@ def main(argv: list[str] | None = None) -> int:
                 config, evaluation=dataclasses.replace(config.evaluation, **updates)
             )
         pipeline = Pipeline(config, args.run_id)
+        if args.command in (
+            "compare-policies",
+            "evaluate-policies",
+            "plan-experiment",
+            "reconcile-experiment",
+            "export-handoff",
+        ):
+            stage = args.command.replace("-", "_")
+            if set(pipeline.run.manifest["stages"]) - {stage}:
+                raise ValueError("Week 4–5 commands require separate output runs")
         if args.command == "run-all":
             pipeline.run_all(include_evaluation=not args.skip_monte_carlo)
         elif args.command == "ingest":
@@ -232,6 +279,34 @@ def main(argv: list[str] | None = None) -> int:
                 args.protocol,
             )
             print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "compare-policies":
+            result = compare_policies_run(
+                pipeline.run, args.demand_run_id, args.rules, args.compensation, args.spec
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "evaluate-policies":
+            result = evaluate_policies_run(
+                pipeline.run, args.comparison_run_id, args.truth_run_id, args.spec
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "plan-experiment":
+            result = plan_experiment_run(pipeline.run, args.comparison_run_id, args.spec)
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "reconcile-experiment":
+            result = reconcile_experiment_run(
+                pipeline.run, args.experiment_run_id, args.observations
+            )
+            print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        elif args.command == "export-handoff":
+            result = export_handoff_run(pipeline.run, args.source_run_ids, args.max_bytes)
+            print(
+                json.dumps(
+                    {k: v for k, v in result.items() if k != "inventory"},
+                    ensure_ascii=False,
+                    indent=2,
+                    allow_nan=False,
+                )
+            )
         elif args.command == "simulate-marketplace":
             result = pipeline.simulate_marketplace(
                 args.demand_run_id,

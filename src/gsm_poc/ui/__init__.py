@@ -1,4 +1,4 @@
-"""User interface components and Streamlit dashboard."""
+"""Browser dashboard backed by the existing Python engine."""
 
 from __future__ import annotations
 

@@ -115,8 +115,8 @@ controlled truth và workload 2/20/100 tài xế theo
 Khoảng t cho trung bình Monte Carlo giữ demand fit và rules cố định; chưa phải
 CI nhân quả hoặc full-chain. UI có màn hình **Simulation results**, selector riêng
 và xuất CSV/JSON từ artifact hoàn thành đã kiểm checksum, không chạy simulator.
-**Week 3 đã triển khai và kiểm chứng trong phạm vi PoC Bun chốt ngày 12/10/2026,
-sẵn sàng để Bun đánh giá; chưa ghi nhận Bun nghiệm thu.**
+**Week 3 đã triển khai, kiểm chứng và được Bun nghiệm thu ngày 12/10/2026**;
+xem [biên bản nghiệm thu](submission/days/20261012/week3_poc_acceptance.md).
 [Báo cáo chốt kỹ thuật](submission/days/20261012/week3_poc_closeout.md) và
 [bằng chứng đối soát](../artifacts/research/20261012/week3_poc_verification.json) ghi
 609 tests đạt (hai Pandas FutureWarnings lịch sử), assessment độc lập seeds
@@ -148,10 +148,16 @@ support và benchmark RCT/null có protocol riêng. Xem
 Nhánh này được giữ làm bằng chứng khoa học controlled, ngoài đường triển khai
 PoC hiện tại; không dùng hiệu ứng incentive để thay đổi roster online.
 Availability là giả định synthetic C, chưa là hệ số GSM. Nhận đơn khác với
-tham gia/giờ lao động; PoC hiện đã kiểm chứng kỹ thuật và chờ Bun đánh giá,
+tham gia/giờ lao động; PoC hiện đã được nghiệm thu trong phạm vi cố định online,
 chưa hoàn tất ba đáp ứng nhân quả của đề tài hoặc calibration GSM.
 
 ## Tài liệu đang dùng
+
+Week 4–5 đã có luồng controlled để so sánh chính sách giá hữu hạn, truyền bất định
+bootstrap qua vận hành, kiểm tra ràng buộc/độ nhạy, chi phí có điều kiện, đánh giá
+oracle độc lập, lập kế hoạch A/A–A/B và đóng gói bàn giao có checksum. Xem
+[WEEK4_5.md](WEEK4_5.md). Đây là triển khai kỹ thuật evidence C; xác nhận nghiệp vụ,
+dữ liệu GSM, thực thi thí nghiệm thực tế và nghiệm thu của Bun vẫn là các gate riêng.
 
 | Tài liệu | Đọc khi cần |
 |---|---|

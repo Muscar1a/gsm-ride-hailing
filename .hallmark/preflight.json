@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-19",
+  "framework": "FastAPI with buildless HTML/CSS/JavaScript",
+  "tokens_source": "tokens.css",
+  "font_display": "Bahnschrift",
+  "font_body": "Segoe UI",
+  "font_mono": "Cascadia Code",
+  "palette": "existing cool paper and cobalt",
+  "motion": "none; native state feedback",
+  "audience": "GSM PoC reporting and analysis",
+  "language": "English; confirmed by Bun",
+  "preserve_design": true
+}

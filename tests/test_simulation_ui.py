@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
 
 import pandas as pd
 import pytest
-from streamlit.testing.v1 import AppTest
+from fastapi.testclient import TestClient
 
 from gsm_poc.core.artifacts import Run, write_frame, write_json
 from gsm_poc.pipeline.pipeline import Pipeline
-from gsm_poc.ui.tabs.simulation_tab import load_simulation
-
-APP_PATH = Path(__file__).parents[1] / "src/gsm_poc/ui/app.py"
+from gsm_poc.ui.app import create_app
+from gsm_poc.ui.results import load_simulation
 
 
 @pytest.fixture
@@ -115,46 +113,58 @@ def fixed_online_run(simulation_run):
 
 def test_simulation_only_dashboard_displays_frozen_results_and_exports(simulation_run, monkeypatch):
     run, _ = simulation_run
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    metrics = {item.label: item.value for item in app.metric}
-    assert metrics["Completed trips"] == "2"
-    assert metrics["Mean pickup wait (seconds)"] == "120.5"
-    assert metrics["Gross driver pay"] == "22.00"
-    assert any("not_calibrated" in item.value for item in app.caption)
-    assert any("confidence intervals are unavailable" in item.value for item in app.warning)
-    assert any("100% of displayed fare" in item.value for item in app.caption)
-    assert any("Legacy fixed-supply" in item.value for item in app.caption)
-    assert not any(item.label == "Inference method" for item in app.selectbox)
-    assert len(app.get("download_button")) == 4
-    next(item for item in app.selectbox if item.label == "Simulation data").select(
-        "driver_income"
-    ).run()
-    assert not app.exception
-    assert app.dataframe[0].value.total_driver_pay.tolist() == [22.0, 0.0]
+    client = TestClient(create_app(run.config.workspace))
+    response = client.get(f"/api/runs/{run.run_id}")
+    assert response.status_code == 200
+    data = response.json()
+    result = data["simulation"]["result"]
+    assert result["summary"]["completed_trips"] == 2
+    assert result["summary"]["mean_wait_seconds"] == 120.5
+    assert result["earnings"]["summary"]["total_driver_pay"] == 22.0
+    assert result["calibration_status"] == "not_calibrated"
+    assert result["interval_status"] == "interval_unavailable"
+    assert data["simulation"]["spec"]["compensation"]["contract"]["driver_fare_share"] == 1
+    table = client.get(
+        f"/api/runs/{run.run_id}/table", params={"artifact": f"runs/{run.run_id}/driver_income.csv"}
+    ).json()
+    assert [row["total_driver_pay"] for row in table["rows"]] == [22.0, 0.0]
+    for name in (
+        "requests.csv",
+        "simulation_result.json",
+        "simulation_spec.json",
+        "end_snapshot.json",
+    ):
+        response = client.get(
+            f"/api/runs/{run.run_id}/download", params={"artifact": f"runs/{run.run_id}/{name}"}
+        )
+        assert response.status_code == 200
+        assert response.content == (run.path / name).read_bytes()
 
 
 def test_simulation_checksum_failure_is_visible_and_withholds_metrics(simulation_run, monkeypatch):
     run, _ = simulation_run
     (run.path / "requests.csv").write_text("tampered", encoding="utf-8")
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    assert any("checksum mismatch" in item.value for item in app.error)
-    assert not app.metric
-    assert not app.get("download_button")
+    client = TestClient(create_app(run.config.workspace))
+    response = client.get(f"/api/runs/{run.run_id}")
+    assert response.status_code == 409
+    assert "checksum mismatch" in response.json()["detail"]
+    assert "simulation" not in response.json()
+    assert (
+        client.get(
+            f"/api/runs/{run.run_id}/download",
+            params={"artifact": f"runs/{run.run_id}/requests.csv"},
+        ).status_code
+        == 409
+    )
 
 
 def test_incomplete_simulation_is_not_selectable(simulation_run, monkeypatch):
     run, _ = simulation_run
     run.manifest["status"] = "running"
     run.save()
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    assert not app.selectbox
-    assert not app.metric
+    client = TestClient(create_app(run.config.workspace))
+    assert client.get("/api/runs").json()["runs"] == []
+    assert client.get(f"/api/runs/{run.run_id}").status_code == 409
     with pytest.raises(ValueError, match="not complete"):
         load_simulation(run.config.workspace, run.run_id)
 
@@ -164,11 +174,9 @@ def test_missing_wait_is_unavailable_not_zero(simulation_run, monkeypatch):
     result["summary"]["mean_wait_seconds"] = None
     write_json(run.path / "simulation_result.json", result)
     run.register([run.path / "simulation_result.json"])
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    metric = next(item for item in app.metric if item.label == "Mean pickup wait (seconds)")
-    assert metric.value == "—"
+    response = TestClient(create_app(run.config.workspace)).get(f"/api/runs/{run.run_id}")
+    assert response.status_code == 200
+    assert response.json()["simulation"]["result"]["summary"]["mean_wait_seconds"] is None
 
 
 def test_malformed_completed_result_is_reported(simulation_run, monkeypatch):
@@ -176,11 +184,9 @@ def test_malformed_completed_result_is_reported(simulation_run, monkeypatch):
     result["summary"].pop("completed_trips")
     write_json(run.path / "simulation_result.json", result)
     run.register([run.path / "simulation_result.json"])
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    assert any("completed_trips" in item.value for item in app.error)
-    assert not app.metric
+    response = TestClient(create_app(run.config.workspace)).get(f"/api/runs/{run.run_id}")
+    assert response.status_code == 409
+    assert "completed_trips" in response.json()["detail"]
 
 
 def test_missing_registration_is_rejected(simulation_run):
@@ -210,20 +216,17 @@ def test_unregistered_driver_offers_are_rejected_for_v3(simulation_run):
 
 def test_fixed_online_dashboard_uses_declared_offer_denominator(simulation_run, monkeypatch):
     run, _ = fixed_online_run(simulation_run)
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    metrics = {item.label: item.value for item in app.metric}
-    assert metrics["Online drivers"] == "2"
-    assert metrics["Offer acceptance"] == "50.0%"
-    assert metrics["Withdrawn offers"] == metrics["Pending offers at end"] == "1"
-    assert any("Acceptance denominator: 4" in item.value for item in app.caption)
-    assert any("withdrawals and pending offers are excluded" in item.value for item in app.caption)
-    assert any("4.00 online hours" in item.value for item in app.caption)
-    data = next(item for item in app.selectbox if item.label == "Simulation data")
-    data.select("driver_offers").run()
-    assert not app.exception
-    assert app.dataframe[0].value.state.tolist()[-1] == "offered"
+    client = TestClient(create_app(run.config.workspace))
+    result = client.get(f"/api/runs/{run.run_id}").json()["simulation"]["result"]
+    assert result["scope"]["online_drivers"] == 2
+    assert result["offers"]["acceptance_rate"] == 0.5
+    assert result["offers"]["withdrawn"] == result["offers"]["pending_end"] == 1
+    assert result["offers"]["acceptance_denominator"] == 4
+    assert result["summary"]["online_hours"] == 4.0
+    table = client.get(
+        f"/api/runs/{run.run_id}/table", params={"artifact": f"runs/{run.run_id}/driver_offers.csv"}
+    ).json()
+    assert table["rows"][-1]["state"] == "offered"
 
 
 def test_no_resolved_offer_is_unavailable_not_zero(simulation_run, monkeypatch):
@@ -234,17 +237,17 @@ def test_no_resolved_offer_is_unavailable_not_zero(simulation_run, monkeypatch):
         rejected=0,
         timed_out=0,
         withdrawn=0,
+        pending_start=0,
+        pending_end=1,
         acceptance_rate=None,
         acceptance_denominator=0,
         acceptance_status="unavailable_no_responses",
     )
     write_json(run.path / "simulation_result.json", result)
     run.register([run.path / "simulation_result.json"])
-    monkeypatch.chdir(run.config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    assert next(item for item in app.metric if item.label == "Offer acceptance").value == "—"
-    assert any("Acceptance denominator: 0" in item.value for item in app.caption)
+    response = TestClient(create_app(run.config.workspace)).get(f"/api/runs/{run.run_id}")
+    assert response.status_code == 200
+    assert response.json()["simulation"]["result"]["offers"]["acceptance_rate"] is None
 
 
 def test_inconsistent_offer_denominator_is_rejected(simulation_run):
@@ -265,22 +268,15 @@ def test_simulation_does_not_enter_choice_selector(simulation_run, monkeypatch):
         ),
     )
     Pipeline(config, "choice-ui").run_all(include_evaluation=False)
-    monkeypatch.chdir(config.workspace)
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    assert len(app.tabs) == 4
-    assert next(item for item in app.selectbox if item.label == "Run ID").options == ["choice-ui"]
-    assert next(item for item in app.selectbox if item.label == "Simulation run ID").options == [
-        run.run_id
-    ]
-    assert (
-        next(item for item in app.selectbox if item.label == "Inference method").value == "analytic"
-    )
+    client = TestClient(create_app(config.workspace))
+    records = client.get("/api/runs").json()["runs"]
+    models = [row["run_id"] for row in records if "fit" in row["stages"]]
+    simulations = [row["run_id"] for row in records if "simulate_marketplace" in row["stages"]]
+    assert models == ["choice-ui"]
+    assert simulations == [run.run_id]
 
 
 def test_explicit_simulation_opens_without_reading_corrupt_choice(simulation_run, monkeypatch):
-    import sys
-
     run, _ = fixed_online_run(simulation_run)
     choice = Pipeline(run.config, "corrupt-choice")
     with choice.run.stage("fit", {"fixture": True}):
@@ -289,12 +285,6 @@ def test_explicit_simulation_opens_without_reading_corrupt_choice(simulation_run
         choice.run.outputs("fit", [path])
     choice.run.complete()
     path.write_text("corrupt", encoding="utf-8")
-    monkeypatch.chdir(run.config.workspace)
-    monkeypatch.setattr(sys, "argv", ["app.py", "--run-id", run.run_id])
-    app = AppTest.from_file(str(APP_PATH)).run(timeout=30)
-    assert not app.exception
-    assert not app.error
-    assert next(item for item in app.selectbox if item.label == "Simulation run ID").value == (
-        run.run_id
-    )
-    assert not any(item.label in ("DGP", "Run ID") for item in app.selectbox)
+    client = TestClient(create_app(run.config.workspace, run.run_id))
+    assert client.get("/api/runs").json()["initial_run_id"] == run.run_id
+    assert client.get(f"/api/runs/{run.run_id}").status_code == 200

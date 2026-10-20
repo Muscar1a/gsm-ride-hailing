@@ -1,0 +1,30 @@
+/* Hallmark · macrostructure: Workbench · tone: technical · anchor hue: cobalt */
+:root {
+  --color-paper: oklch(98% 0.005 260);
+  --color-surface: oklch(100% 0 0);
+  --color-ink: oklch(25% 0.025 260);
+  --color-muted: oklch(49% 0.025 260);
+  --color-rule: oklch(86% 0.015 260);
+  --color-accent: oklch(47% 0.20 263);
+  --color-focus: oklch(47% 0.20 263);
+  --color-error: oklch(45% 0.18 25);
+  --color-success: oklch(38% 0.10 160);
+  --font-display: "Bahnschrift", "Arial Narrow", sans-serif;
+  --font-body: "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "Cascadia Code", "Consolas", monospace;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --text-sm: 0.875rem;
+  --text-body: 1rem;
+  --text-display: clamp(1.75rem, 3vw, 2.5rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --radius-sm: 6px;
+  --rule-thin: 1px;
+}

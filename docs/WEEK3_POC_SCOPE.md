@@ -62,7 +62,7 @@ rules; they do not define the current fixed-online PoC.
 independent seed protocol. It compares paired Poisson trajectories, checks a
 hand-computable separated-offer mechanism and measures 2/20/100-driver workloads.
 Its intervals concern Monte Carlo means conditional on fixed fitted demand/rules;
-causal/full-chain intervals remain unavailable. Streamlit displays completed
+causal/full-chain intervals remain unavailable. The browser dashboard displays completed
 simulation artifacts separately from choice fits and exports CSV/JSON without
 running the engine. See [USAGE](USAGE.md#week-3-fixed-online-poc) and
 [the operational protocol](BENCHMARK.md#week-3-fixed-online-operational-assessment).

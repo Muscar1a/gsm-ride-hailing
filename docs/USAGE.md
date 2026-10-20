@@ -14,7 +14,7 @@ versions tested on Python 3.11.9 / Windows.
 ```powershell
 uv sync --locked
 uv run python -m gsm_poc run-all --config configs/demo.toml
-uv run streamlit run src/gsm_poc/ui/app.py
+uv run gsm-web --workspace .
 ```
 
 The offline demo needs no raw-data download. It uses explicit synthetic contexts,
@@ -48,6 +48,46 @@ The verified TLC-context example recorded in [validation](submission/days/202610
 199 valid bootstrap draws per estimator and a supported scenario with intervals. The full-month
 data build also completed. This record describes its October 3 run; later
 reporting evidence is indexed in the [documentation index](README.md).
+
+## Browser dashboard
+
+`uv run gsm-web --workspace .` opens the replacement for Streamlit at
+`http://127.0.0.1:8000`. Use `--run-id <completed-id>` to open a particular model,
+simulation or policy result. The interface is English and uses local assets;
+there is no JavaScript build, CDN or separate frontend server.
+
+- **Price scenario** opens with a forecast from a verified model. Choose estimator,
+  zone, sessions, price changes and inference, then press Calculate forecast to update it.
+- **Observed / Methods / Simulation / Policies** browse verified artifacts and
+  download their CSV/JSON/Parquet/ZIP sources. Missing values remain unavailable.
+- **Run & data** generates a new controlled synthetic dataset and fits a selected
+  estimator, prepares demand from a completed model, or simulates a completed demand
+  run. Preparing demand uses `configs/week3_snapshot.json`; simulation uses
+  `configs/week3_poc.json` and `configs/week3_compensation.json`. These retain the
+  two-zone, fixed-online, 100%-fare-pay development scope.
+- CSV uploads accept UTF-8, at most 5 MiB, 100 columns and 100,000 rows. Generic
+  tables are previews, with missingness reported. Prescribed synthetic requests
+  require `request_id,created_at,origin_zone_id,destination_zone_id,service_id`,
+  optional `cancel_at`, at most 10,000 rows and unique request IDs. Existing
+  simulation validators enforce horizon, timezone, zones and cancellation rules.
+  Uploads do not establish GSM data validity or fit arbitrary raw causal data.
+
+One worker runs at a time, with a 600-second timeout and cancellation. Output goes
+to new `web-...` run IDs; originals are unchanged. Uploaded CSV bytes, their SHA256
+metadata and worker status/logs live in ignored `.cache/web/`. A completed simulation
+freezes its prescribed input in its registered artifacts. Training uses the bounded
+Week-4 source profile, up to 39 bootstrap draws and 20 trees; small-draw intervals
+remain development diagnostics. Run a single server process per workspace.
+
+For network hosting, set `GSM_WEB_TOKEN` to a private access token and
+`GSM_WEB_HOSTS` to the comma-separated hostnames serving the app, then launch
+`uv run gsm-web --host 0.0.0.0 --workspace .`. Enter the token in the browser when
+prompted. It is stored in that tab's session storage and sent in an Authorization
+header. Serve network deployments over HTTPS. `--port` overrides `PORT` (default
+8000). The server rejects network binding without a token, unexpected hosts and
+cross-origin API requests. Keep one instance and persist `runs/`, `data/` and
+`.cache/web/` on the host; ephemeral free hosting can discard them on restart.
+Heavy fitting/simulation needs Python compute and cannot run on static-only hosting.
 
 ## Commands
 
@@ -86,7 +126,9 @@ Carlo checkpoints preserve each attempted seed and its estimator-specific failur
 a failed estimator does not discard another estimator's valid results. Per-seed metrics
 record failure types/messages, and checkpoints retain each estimator's status. Seeds
 with any estimator failure are retried on resume; successful checkpoints are reused.
-No job runs in response to a dashboard slider.
+The dashboard calculates a forecast when opening Price scenario and when Calculate
+forecast is pressed. Run & data explicitly starts new bounded Python jobs;
+browsing completed artifacts starts no training or simulation.
 
 Fit reuse checks both observed blocks and the dataset manifest. Changed metadata
 invalidates reuse; a source kind, DGP or seed that conflicts with the run configuration
@@ -534,7 +576,7 @@ and ready for Bun's review; GSM/original research acceptance remains separate.
 ### View completed simulations
 
 ```powershell
-uv run streamlit run src/gsm_poc/ui/app.py -- --workspace . --run-id week3-poc-baseline-v3
+uv run gsm-web --workspace . --run-id week3-poc-baseline-v3
 ```
 
 An explicit simulation `--run-id` opens the simulation dashboard directly, before
@@ -763,6 +805,15 @@ intervals and exact binomial uncertainty alongside empirical coverage; a control
 gate pass does not certify nominal coverage or complete Week 3. No pipeline reads
 these estimates as a physical driver/vehicle admission plan yet. Supply runs are
 not added to the existing choice-only dashboard selector.
+
+## Week 4–5 policies, experiments and delivery
+
+See [WEEK4_5.md](WEEK4_5.md) for the complete controlled workflow and contracts.
+The CLI adds `compare-policies`, `evaluate-policies`, `plan-experiment`,
+`reconcile-experiment` and `export-handoff`. Each uses a separate output run and
+verified frozen inputs; the dashboard's **Policies and experiments** view reads
+their completed results. Real GSM economics and experiment execution remain
+unevaluated. No external data or new dependency is needed for the controlled path.
 
 ## Verification
 

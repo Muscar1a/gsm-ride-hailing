@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-16",
+  "timezone": "Asia/Bangkok",
+  "source_kind": "synthetic",
+  "evidence_level": "C",
+  "calibration_status": "not_calibrated",
+  "reviewer_acceptance": "pending",
+  "checks": {
+    "pytest": {
+      "passed": 637,
+      "failed": 0,
+      "warnings": 2,
+      "seconds": 176.59
+    },
+    "ruff": {
+      "passed": true,
+      "scope": "src tests"
+    },
+    "format": {
+      "passed": true,
+      "python_files": 86
+    },
+    "ty": {
+      "passed": true,
+      "scope": "src/gsm_poc",
+      "error_on_warning": true
+    },
+    "codegraph_sync": {
+      "passed": true
+    }
+  },
+  "source_runs": {
+    "week45-choice-20261016-v1": {
+      "manifest_sha256": "0d1e3466e9cef707f1377fed8d236bc9323a30d881cbacf59febc07f1062995f",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "791b7656b965ed079b6350fb49139c740dae79895e178d361af33cbc334a668b",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": []
+    },
+    "week45-demand-20261016-v1": {
+      "manifest_sha256": "f3cfbd00d79dfc67b988065fb59c979d69c87923cfedfb6b51bb60d3f6e513d2",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "791b7656b965ed079b6350fb49139c740dae79895e178d361af33cbc334a668b",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": []
+    },
+    "week45-policies-20261016-v2": {
+      "manifest_sha256": "8e6a781e876d34427268899761bbd516270bb3d510d67cfbfc19f409699ab482",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "ef2c4870f25684bb86ff2d768f62511ede5491b0ca34a5935dd09fee5652a2f9",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": [
+        "week45-demand-20261016-v1"
+      ]
+    },
+    "week45-assessment-20261016-v1": {
+      "manifest_sha256": "b6b5ff047ecda0a5901313281ad872fa1d479cf9b4ffd94fe595fd2d8423cc99",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "8934179c030537d74e3e896b3dcd095d5ed490d62ca2cd504811fdc71f6771a8",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": [
+        "week45-policies-20261016-v2",
+        "week45-choice-20261016-v1"
+      ]
+    },
+    "week45-experiment-20261016-v1": {
+      "manifest_sha256": "6aa005b6162b15dd8be5d9b7d5904e0de9ec35691f9de59adf425ce7515bb09d",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "8934179c030537d74e3e896b3dcd095d5ed490d62ca2cd504811fdc71f6771a8",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": [
+        "week45-policies-20261016-v2"
+      ]
+    },
+    "week45-aa-replay-20261016-v1": {
+      "manifest_sha256": "fe6e5f6b17a9975a9bbb696e5890e10239ad3324e9ef1c2c20c330e40a27b6e8",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "8934179c030537d74e3e896b3dcd095d5ed490d62ca2cd504811fdc71f6771a8",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": [
+        "week45-policies-20261016-v2",
+        "week45-experiment-20261016-v1"
+      ]
+    },
+    "week45-reconciliation-20261016-v1": {
+      "manifest_sha256": "4ea7c392f99d52d1d783a82a2e7a8872ae7c5fbfcbc1dc44458fcc8e0f347aaf",
+      "environment": {
+        "python": "3.11.9",
+        "packages": {
+          "gsm-poc": "0.1.0",
+          "numpy": "2.4.6",
+          "pandas": "2.3.3",
+          "duckdb": "1.5.6",
+          "pyarrow": "23.0.1",
+          "scikit-learn": "1.6.1",
+          "econml": "0.16.0",
+          "streamlit": "1.65.0",
+          "scipy": "1.17.1",
+          "joblib": "1.6.0",
+          "simpy": "4.1.2"
+        },
+        "git_revision": "c3e5ede232b28e772253130c5c02823e5c6f9556",
+        "source_code_sha256": "8934179c030537d74e3e896b3dcd095d5ed490d62ca2cd504811fdc71f6771a8",
+        "lock_sha256": "ffdce4328395cbbb00ae98726e88c5386e4ef9fad4cbd69e291f6c1fb97ad154"
+      },
+      "source_runs": [
+        "week45-experiment-20261016-v1"
+      ]
+    }
+  },
+  "comparison": {
+    "status": "completed",
+    "attempted_trajectories": 690,
+    "failed_trajectories": 0,
+    "selected_policy_id": "baseline",
+    "uncertainty": {
+      "method": "original-day bootstrap refits propagated through paired operational runs",
+      "target": "fixed candidate policy contrasts on frozen quote contexts and roster",
+      "model_interval": "percentiles of per-model paired replicate means",
+      "operation_interval": "Student-t Monte Carlo interval conditional on point fit",
+      "excludes": [
+        "policy-selection uncertainty",
+        "GSM calibration",
+        "unknown rule uncertainty",
+        "quote-population shifts",
+        "simultaneous coverage"
+      ],
+      "calibration_status": "not_evaluated",
+      "minimum_complete_model_draws": 20,
+      "limitation": "Finite inner replicates retain Monte Carlo error in model intervals"
+    },
+    "economics": {
+      "status": "not_evaluated_missing_costs",
+      "costs": {
+        "currency": "SYNTHETIC_UNIT",
+        "per_completed_trip": null,
+        "per_online_hour": null,
+        "per_horizon": null
+      },
+      "formula": "completed fare receipts - driver pay - trip/hour/horizon declared costs",
+      "profit_status": "not_evaluated",
+      "roi_status": "not_evaluated",
+      "reason": "Synthetic fare receipts and declared costs are not GSM accounting"
+    }
+  },
+  "independent_evaluation": {
+    "status": "completed",
+    "attempted_trajectories": 500,
+    "failed_trajectories": 0,
+    "decision_evaluation": {
+      "frozen_policy_id": "baseline",
+      "frozen_policy_value": 3.89,
+      "frozen_policy_guardrails_passed": true,
+      "baseline_value": 3.89,
+      "reference_best_policy_id": "x-plus10",
+      "reference_best_value": 4.49,
+      "regret": 0.6000000000000001,
+      "reference_scope": "finite declared candidates; controlled truth; Monte Carlo point means",
+      "regret_interval_status": "not_evaluated",
+      "reselection": false
+    },
+    "spec": {
+      "schema_version": 1,
+      "source_kind": "synthetic",
+      "candidates": [
+        {
+          "policy_id": "baseline",
+          "delta_x": 0.0,
+          "delta_y": 0.0
+        },
+        {
+          "policy_id": "x-plus5",
+          "delta_x": 0.05,
+          "delta_y": 0.0
+        },
+        {
+          "policy_id": "x-plus10",
+          "delta_x": 0.1,
+          "delta_y": 0.0
+        },
+        {
+          "policy_id": "y-plus5",
+          "delta_x": 0.0,
+          "delta_y": 0.05
+        },
+        {
+          "policy_id": "both-plus5",
+          "delta_x": 0.05,
+          "delta_y": 0.05
+        }
+      ],
+      "seed_start": 99001,
+      "n_seeds": 100,
+      "bootstrap_draws": 0,
+      "replicates_per_draw": 2,
+      "max_seconds": 600,
+      "interval_level": 0.95,
+      "criterion": {
+        "metric": "completed_trips",
+        "direction": "maximize",
+        "minimum_gain": 0.0
+      },
+      "guardrails": [
+        {
+          "metric": "mean_wait_seconds",
+          "direction": "maximum",
+          "limit": 300.0
+        },
+        {
+          "metric": "pay_per_presence_hour",
+          "direction": "minimum",
+          "limit": 0.0
+        }
+      ],
+      "costs": {
+        "currency": "SYNTHETIC_UNIT",
+        "per_completed_trip": null,
+        "per_online_hour": null,
+        "per_horizon": null
+      },
+      "sensitivities": []
+    }
+  },
+  "aa_reconciliation": {
+    "schema_version": 1,
+    "experiment_id": "week5-illustrative-aa",
+    "source_kind": "synthetic",
+    "evidence_level": "C",
+    "status": "completed",
+    "expected_blocks": 20,
+    "observed_blocks": 20,
+    "expected_pairs": 10,
+    "complete_pairs": 10,
+    "missing_blocks": 0,
+    "sample_ratio_pvalue": 1.0,
+    "sample_ratio_status": "ok",
+    "observed_effect": -0.7,
+    "interval": [
+      -2.050995914284862,
+      0.650995914284862
+    ],
+    "interval_status": "available_under_declared_independence",
+    "aa_zero_in_interval": true,
+    "frozen_prediction": {
+      "metric": "completed_trips",
+      "unit": "trips",
+      "scope": {
+        "zone_ids": [
+          161,
+          162
+        ],
+        "horizon_start": "2024-01-26T08:00:00-05:00",
+        "horizon_end": "2024-01-26T10:00:00-05:00",
+        "horizon_minutes": 120.0,
+        "roster_size": 2
+      },
+      "source_policy_version": "f5ba74e763599dd2226650f2c06583d367a1d3f020497842703262a54bde24b8",
+      "status": "available",
+      "delta": 0.0,
+      "lower": 0.0,
+      "upper": 0.0,
+      "transport_assumption": "Repeated future blocks match the frozen zone/context/roster population"
+    },
+    "forecast_error": -0.7,
+    "forecast_reconciliation_status": "matched_under_transport_assumption",
+    "gsm_causal_validation_status": "not_evaluated",
+    "source_runs": [
+      "week45-experiment-20261016-v1"
+    ]
+  },
+  "failed_development_run": {
+    "run_id": "week45-policies-20261016-v1",
+    "stage": {
+      "status": "failed",
+      "started_at": "2026-10-16T07:56:29.287155+00:00",
+      "input_hash": "6c06c3b2a891d28b2b7ba590c69799f8a2109cfb971d7135c3cac68b76e2a6fa",
+      "error_type": "TypeError",
+      "error": "ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''",
+      "duration_seconds": 186.71162659999754,
+      "ended_at": "2026-10-16T07:59:35.999815+00:00"
+    },
+    "raw_trajectory_records": "not_retained_after_summary_exception; not counted as additional independent evidence",
+    "resolution": "Numeric conversion preserves missing cost values; two regression tests and complete v2 replay"
+  },
+  "external_gates": [
+    "GSM data and mapping",
+    "business and accounting confirmation",
+    "calibrated uncertainty",
+    "real experiment authorization and execution",
+    "Bun acceptance"
+  ]
+}

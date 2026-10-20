@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "source_kind": "synthetic",
+  "experiment_id": "week5-illustrative-aa",
+  "candidate_id": "x-plus5",
+  "metric": "completed_trips",
+  "mode": "AA",
+  "start": "2026-11-02T08:00:00+07:00",
+  "clusters": ["illustrative-cluster"],
+  "pairs_per_cluster": 10,
+  "block_minutes": 120,
+  "washout_minutes": 30,
+  "seed": 104001,
+  "alpha": 0.05,
+  "power": 0.8,
+  "minimum_effect": 1.0,
+  "paired_difference_sd": null,
+  "independence_assumption": "Illustrative independent block pairs; real dependence must be estimated before GSM use",
+  "carryover_assumption": "Illustrative 30-minute washout; verify movement and queue carryover before GSM use"
+}

@@ -28,11 +28,8 @@ def utc_now() -> str:
 
 
 def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
     with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
 def _json_default(value: Any) -> Any:
@@ -87,9 +84,7 @@ def write_model(path: Path, model: Any) -> None:
         joblib.dump(model, temporary, compress=3)
 
 
-def freeze_artifacts(
-    source_dir: Path, target_dir: Path, artifacts: dict[str, str]
-) -> list[Path]:
+def freeze_artifacts(source_dir: Path, target_dir: Path, artifacts: dict[str, str]) -> list[Path]:
     """Atomically copy artifacts from source_dir into target_dir and verify SHA256 hashes."""
     paths = []
     for name, expected in artifacts.items():
@@ -134,7 +129,8 @@ def environment(workspace: Path) -> dict[str, Any]:
         "pyarrow",
         "scikit-learn",
         "econml",
-        "streamlit",
+        "fastapi",
+        "uvicorn",
         "scipy",
         "joblib",
         "simpy",

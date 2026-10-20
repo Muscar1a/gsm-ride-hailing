@@ -12,24 +12,21 @@ dependencies = [
   "econml>=0.16,<0.17",
   "scipy>=1.12,<2",
   "joblib>=1.4,<2",
-  "streamlit>=1.40,<2",
-  "altair>=5,<7",
   "simpy>=4.1,<5",
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
 ]
 
 [dependency-groups]
 dev = [
-    "playwright>=1.49,<2",
+    "httpx2>=2,<3",
     "pytest>=8,<10",
     "ruff>=0.9,<1",
-]
-reports = [
-    "markdown>=3.7,<4",
-    "pypdfium2>=4.30,<6",
 ]
 
 [project.scripts]
 gsm-poc = "gsm_poc.cli:main"
+gsm-web = "gsm_poc.ui.app:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -46,5 +43,6 @@ line-length = 100
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-ra"

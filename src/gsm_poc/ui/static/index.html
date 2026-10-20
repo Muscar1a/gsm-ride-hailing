@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GSM Causal Marketplace</title>
+  <link rel="stylesheet" href="/assets/tokens.css">
+  <link rel="stylesheet" href="/assets/dashboard.css">
+  <script src="/assets/dashboard.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#content">Skip to content</a>
+  <aside>
+    <a class="wordmark" href="/">GSM<span>Causal Marketplace</span></a>
+    <p class="muted">Controlled PoC · Weeks 1–5</p>
+    <nav aria-label="Workspace">
+      <button data-view="scenario" aria-current="page">Price scenario</button>
+      <button data-view="simulation">Simulation</button>
+      <button data-view="policy">Policies</button>
+      <button data-view="observed">Observed</button>
+      <button data-view="method">Methods</button>
+      <button data-view="actions">Run &amp; data</button>
+    </nav>
+    <div class="aside-note">Evidence C<br>Synthetic behavior<br>GSM calibration pending</div>
+  </aside>
+  <main id="content">
+    <header>
+      <div><h1 id="view-title">Price scenario</h1><p id="view-description" class="muted">Explore price changes within the model’s supported scope.</p></div>
+      <button id="refresh" type="button">Refresh runs</button>
+    </header>
+    <form id="access-form" hidden>
+      <label>Dashboard access token<input id="access-token" type="password" autocomplete="current-password" required></label>
+      <button>Connect</button>
+    </form>
+    <p id="message" role="status" aria-live="polite" hidden></p>
+    <section id="run-picker" aria-label="Completed run">
+      <label>DGP<select id="dgp-filter"><option value="">All DGPs</option></select></label>
+      <label>Seed<select id="seed-filter"><option value="">All seeds</option></select></label>
+      <label class="run-label">Completed run<select id="run-select"></select></label>
+    </section>
+    <p id="run-note" class="muted mono"></p>
+    <section id="scenario-controls" hidden>
+      <form id="scenario-form">
+        <div class="fields">
+          <label>Estimator<select name="estimator" id="estimator"></select></label>
+          <label>Context zone<select name="zone" id="zone"></select></label>
+          <label>Quote sessions<input name="n_sessions" id="n-sessions" type="number" min="1" max="10000000" value="10000" required></label>
+          <label>Inference method<select name="inference_method"><option value="analytic">Analytic</option><option value="bootstrap">Bootstrap</option></select></label>
+        </div>
+        <div class="fields price-fields">
+          <label>Price X change (%)<input name="delta_x" type="number" min="-90" max="100" step="1" value="10" required></label>
+          <label>Price Y change (%)<input name="delta_y" type="number" min="-90" max="100" step="1" value="0" required></label>
+          <button class="primary">Calculate forecast</button>
+        </div>
+      </form>
+    </section>
+    <section id="results" aria-label="Results"></section>
+    <section id="explorer" hidden>
+      <h2>Data and exports</h2>
+      <div class="fields">
+        <label class="run-label">Artifact<select id="artifact-select"></select></label>
+        <button id="download" type="button">Download artifact</button>
+      </div>
+      <form id="table-filters" class="fields" hidden>
+        <label data-observed-filter>Zone ID<input name="zone" type="number"></label>
+        <label data-observed-filter>Platform<input name="platform" type="text" placeholder="HV0003"></label>
+        <label data-observed-filter>From date<input name="start" type="date"></label>
+        <label data-observed-filter>To date<input name="end" type="date"></label>
+        <label id="method-filter" hidden>Estimator<select name="estimator" id="table-estimator"></select></label>
+        <button>Apply filters</button>
+        <button id="reset-filters" type="button">Reset</button>
+      </form>
+      <div id="table-summary" class="metrics"></div>
+      <div id="table-chart"></div>
+      <div id="table-content"></div>
+      <div class="pagination"><button id="previous" type="button">Previous</button><p id="page-note" class="muted"></p><button id="next" type="button">Next</button></div>
+    </section>
+    <section id="actions" hidden>
+      <div class="workbench">
+        <div>
+          <h2>Run the Python engine</h2>
+          <p class="muted">Each action creates a new run. Training uses controlled synthetic data; marketplace actions retain the fixed online roster and 100% displayed-fare pay.</p>
+          <form id="job-form">
+            <label>Action<select name="action" id="job-action"><option value="train">Generate data and fit a model</option><option value="prepare_demand">Prepare demand from a model</option><option value="simulate">Run marketplace simulation</option></select></label>
+            <label id="source-field" hidden>Completed source run<select name="source_run_id" id="job-source"></select></label>
+            <div id="train-fields" class="fields">
+              <label>Estimator<select name="estimator"><option>adjusted_ols</option><option>naive_ols</option><option>dml</option></select></label>
+              <label>Bootstrap draws<input name="bootstrap_draws" type="number" min="0" max="39" value="10" required></label>
+            </div>
+            <div id="demand-fields" class="fields" hidden>
+              <label>Price X change (%)<input name="delta_x" type="number" min="-90" max="100" value="0" required></label>
+              <label>Price Y change (%)<input name="delta_y" type="number" min="-90" max="100" value="0" required></label>
+            </div>
+            <label>Seed<input name="seed" type="number" min="0" max="4294967295" value="42" required></label>
+            <label id="requests-field" hidden>Requests<select name="upload_id" id="job-upload"><option value="">Generate Poisson arrivals</option></select></label>
+            <p class="muted">One job at a time · 10-minute worker limit · small development intervals are experimental.</p>
+            <button class="primary" id="start-job">Start new run</button>
+          </form>
+        </div>
+        <div>
+          <h2>Add a CSV</h2>
+          <p class="muted">Preview a table, or supply prescribed X/Y requests for simulation. Uploaded tables do not retrain models or establish causal effects.</p>
+          <form id="upload-form">
+            <label>Use as<select id="upload-kind"><option value="table">Table preview</option><option value="requests">Synthetic simulation requests</option></select></label>
+            <label>CSV file · UTF-8 · up to 5 MiB<input id="csv-file" type="file" accept=".csv,text/csv" required></label>
+            <p class="muted">Request columns: request_id, created_at, origin_zone_id, destination_zone_id, service_id; optional cancel_at. Timestamps need a timezone and must match the source horizon.</p>
+            <button>Add CSV</button>
+          </form>
+        </div>
+      </div>
+      <section id="job-status" hidden><h2>Current job</h2><p id="job-progress" role="status" aria-live="polite"></p><button id="cancel-job" type="button">Cancel job</button><button id="open-job" type="button" hidden>Open results</button><details><summary>Stage progress and log</summary><pre id="job-log"></pre></details></section>
+      <section id="upload-preview" hidden><h2>Uploaded data</h2><p id="upload-note" class="muted"></p><div id="upload-chart"></div><div id="upload-table"></div></section>
+    </section>
+    <details id="audit" hidden><summary>Evidence and frozen configuration</summary><pre id="audit-json"></pre></details>
+    <footer>Controlled results describe the declared fixtures. Real GSM effects, profit and ROI remain unevaluated.</footer>
+  </main>
+</body>
+</html>

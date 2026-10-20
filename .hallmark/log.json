@@ -5,5 +5,13 @@
     "theme": "Cobalt",
     "enrichment": "none",
     "brief": "Artifact-backed technical dashboard for controlled GSM price scenarios"
+  },
+  {
+    "date": "2026-10-19",
+    "macrostructure": "Workbench",
+    "theme": "Cobalt",
+    "enrichment": "none",
+    "brief": "Replace Streamlit with buildless browser UI and bounded Python actions; preserve existing English technical design at Bun's request",
+    "variation": "Native browser navigation, artifact explorer, explicit job and CSV workbench"
   }
 ]

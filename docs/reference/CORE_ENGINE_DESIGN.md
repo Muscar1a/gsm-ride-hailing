@@ -16,8 +16,8 @@ do not identify driver labor-supply elasticity.
 The current V3 implementation includes fixed-online offer decisions, immutable
 100%-fare terms/earnings, strict pending-offer continuation, read-only simulation
 views and a frozen paired/controlled/workload evaluator. Its scoped independent
-assessment and technical checks passed; it is ready for Bun's review, with no
-reviewer acceptance implied. See the
+assessment and technical checks passed; Bun accepted this scope on 12/10/2026.
+See the
 [12 October closeout](../submission/days/20261012/week3_poc_closeout.md),
 [current execution](../USAGE.md#week-3-fixed-online-poc) and
 [operational protocol](../BENCHMARK.md#week-3-fixed-online-operational-assessment).
@@ -150,7 +150,7 @@ flowchart TD
 
 Use Python/SQL batch jobs, DuckDB/Parquet tables, EconML DML, and SimPy
 discrete-event simulation. SimPy supplies event/process scheduling; marketplace
-rules must be implemented explicitly. Streamlit reads completed artifacts.
+rules must be implemented explicitly. The browser dashboard reads completed artifacts; explicit Run & data actions create new runs through the existing Python pipeline.
 
 Fitting, calibration, bootstrap, and equilibrium run as bounded jobs. Display
 changes read results; new scenarios create finite jobs with explicit status.

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "archive_sha256": "9cf7c56ffad5bb4bc031e87b5a6d2f5cd1a7e0cf7eb6105b77f57e338b13cdeb",
+  "archive_bytes": 4634412,
+  "payload_files": 371,
+  "verified_source_runs": 8,
+  "cleanroom": {
+    "all_registered_sources_verified": true,
+    "observed_bytes_reproduced": true,
+    "model_parameters_reproduced_atol": 1e-12,
+    "uses_packaged_source": true,
+    "dependency_environment": "existing Python 3.11 venv; fresh uv dependency installation not tested"
+  },
+  "actual_artifact_ui_views": {
+    "week45-policies-20261016-v2": "passed",
+    "week45-assessment-20261016-v1": "passed",
+    "week45-experiment-20261016-v1": "passed",
+    "week45-reconciliation-20261016-v1": "passed",
+    "week45-handoff-20261016-v1": "passed"
+  },
+  "source_kind": "synthetic",
+  "gsm_validation_status": "not_evaluated"
+}

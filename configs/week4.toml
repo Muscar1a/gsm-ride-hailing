@@ -1,0 +1,24 @@
+# Fresh controlled source; historical accepted Week 2/3 artifacts stay frozen.
+[project]
+name = "week4-5-controlled-policy"
+context_mode = "synthetic"
+
+[source]
+zones = [161, 162]
+
+[simulation]
+seed = 81001
+slot_minutes = 15
+sessions_per_block = 50
+dgp = "RCT_SYN"
+
+[model]
+estimators = ["adjusted_ols"]
+scenario_estimator = "adjusted_ols"
+
+[evaluation]
+bootstrap_draws = 39
+
+[scenario]
+delta_price_x = 0.10
+delta_price_y = 0.0

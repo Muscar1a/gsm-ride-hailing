@@ -26,6 +26,7 @@ phương pháp, kết quả kiểm chứng và nguồn tham chiếu.
 
 | Ngày / kỳ | Báo cáo PoC | Báo cáo tiến độ | Hồ sơ |
 |---|---|---|---|
+| 16/10/2026 — tuần 4–5 controlled | [Week-4/5 closeout](days/20261016/week45_closeout.md) | [Luồng nghiệp vụ và giới hạn](../WEEK4_5.md) | [README](days/20261016/README.md) |
 | 12/10/2026 — sync-up tuần 1–3 | [Slides sync-up](days/20261012/GSM_Syncup_Week1-3_20261012_v1.pptx) | [Week-3 closeout](days/20261012/week3_poc_closeout.md) | [README](days/20261012/README.md) |
 | 11/10/2026 — tổng hợp công việc 10–11/10 | [weekly_report.md](days/20261011/weekly_report.md) | [progress_update.md](days/20261011/progress_update.md) | [README](days/20261011/README.md) |
 | 07/10/2026 — Week 2 cập nhật | [weekly_report.md](days/20261007/weekly_report.md) | [progress_update.md](days/20261007/progress_update.md) | [README](days/20261007/README.md) |

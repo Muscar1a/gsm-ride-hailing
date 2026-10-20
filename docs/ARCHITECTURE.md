@@ -9,7 +9,7 @@ gsm-ride-hailing/
 │   │   └── benchmarks/       # Discrete choice and policy benchmarks
 │   ├── simulation/           # DGP generator, demand planning, and marketplace
 │   ├── pipeline/             # Batch orchestration and stage execution
-│   └── ui/                   # Streamlit dashboard and visual tabs
+│   └── ui/                   # Browser dashboard, API and bounded worker processes
 │       └── tabs/             # Operations, method checks, scenario explorer
 ├── configs/                  # TOML execution and experiment profiles
 ├── scripts/                  # Coverage evaluation runners and compute probes
@@ -73,7 +73,7 @@ flowchart TD
   Bootstrap --> Scenario
   Oracle --> Evaluate[Method evaluation only]
   Fit --> Evaluate
-  Mart --> UI[Streamlit]
+  Mart --> UI[Browser dashboard + FastAPI]
   Evaluate --> UI
   Scenario --> UI
   SupplySpec[Declared synthetic driver cohort + incentive assignment] --> SupplyGenerate[Controlled labor generator]
@@ -427,24 +427,26 @@ generation once; a fitted choice model alone does not forecast completed trips.
 
 ## Dashboard conventions
 
-The Streamlit workbench preserves the choice run/DGP/seed selector and its three
-sections: Observed, Method evaluation and Price scenario. A separate Simulation
-results view selects completed operational runs; it also works without a choice
-fit in the workspace. An explicit simulation `--run-id` routes directly to this
-view before loading any choice artifacts; a mixed workspace without that argument
-retains the separate simulation tab. It reads checksum-verified artifacts, shows fixed-online
-counts, trips/wait/idle/expiry, offer acceptance with unresolved denominators and
-gross driver pay, and exports frozen CSV/JSON. Invalid artifacts show an error and
-withhold results. UI actions do not execute simulations. Source, support and
-uncertainty labels remain adjacent; single-trajectory operational CI is unavailable.
+The browser workbench uses FastAPI and buildless HTML/CSS/JavaScript. It retains
+separate model, simulation and policy run selectors, DGP/seed filters, observed
+TLC tables, method evaluation, supported price scenarios, operational results,
+experiment plans and registered downloads. An explicit `--run-id` opens the
+matching view without reading unrelated choice artifacts. Data and model reads
+require completed runs and matching checksums. Missing metrics remain unavailable;
+source, support, denominators and uncertainty labels stay beside results.
 
-The existing Hallmark design uses cool paper, restrained cobalt, Bahnschrift
-display text and Segoe UI body text. Portable values live in `tokens.css`;
-layout styling lives in `src/gsm_poc/ui/ui.css` and native Streamlit theme settings.
-Widgets use native state/loading/error feedback, immediate focus rings and
-reduced-motion support. Tables retain local horizontal scrolling on narrow screens.
-The historical browser QA record is in
-[historical validation](submission/days/20261003/validation.md#browser-verification).
+Run & data explicitly launches one isolated Python worker at a time for controlled
+training, demand preparation or marketplace simulation. Every job creates a new
+run, has a ten-minute timeout, reports stage/error details and can be cancelled.
+CSV uploads are capped at 5 MiB: generic tables are previews, while synthetic
+request files can enter the existing validated simulation contract. Arbitrary
+uploaded data cannot silently retrain a causal model. See [web usage](USAGE.md#browser-dashboard).
+
+The Hallmark design retains cool paper, cobalt, Bahnschrift headings and Segoe UI
+body text from `tokens.css`. Packaged fallback tokens and layout assets live in
+`src/gsm_poc/ui/static/`. Native forms, visible focus, reduced-motion support and
+locally scrolling tables support desktop and narrow screens. The Python server
+serves both the interface and API; there is no frontend package installation.
 
 ## Statistical contract
 
