@@ -12,3 +12,7 @@ build/
 dist/
 .coverage
 htmlcov/
+
+.agents
+.codegraph
+.hallmark
